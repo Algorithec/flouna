@@ -1,13 +1,16 @@
 name: CI
 
-# Runs on every PR into main and on direct pushes to main. This is the status
+# Runs on every PR (into any base branch, so stacked PRs get checked too) and
+# on pushes to main and the active feature-stack branches. This is the status
 # check to require in branch protection, so nothing merges without the server
 # tests and the web lint/build passing.
 on:
   pull_request:
-    branches: [main]
   push:
-    branches: [main]
+    branches:
+      - main
+      - "feat/**"
+      - "fix/**"
 
 jobs:
   server:
