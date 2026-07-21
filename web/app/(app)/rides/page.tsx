@@ -28,6 +28,21 @@ type RouteInfo = {
 
 const VEHICLES = ["any", "bike", "auto", "cab"] as const;
 
+function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
 function PlaceSearch({
   label,
   icon,
@@ -150,6 +165,33 @@ function RidesInner() {
   const [locating, setLocating] = useState(
     () => typeof navigator !== "undefined" && !!navigator.geolocation,
   );
+  // "Suggested locations" (Figma) — the user's saved places with coordinates.
+  const [saved, setSaved] = useState<Place[]>([]);
+
+  useEffect(() => {
+    api<{
+      addresses: {
+        label: string;
+        line1: string;
+        city: string;
+        lat: number | null;
+        lng: number | null;
+      }[];
+    }>("/api/users/addresses")
+      .then((d) =>
+        setSaved(
+          d.addresses
+            .filter((a) => a.lat != null && a.lng != null)
+            .map((a) => ({
+              name: a.label,
+              area: `${a.line1}, ${a.city}`,
+              lat: a.lat as number,
+              lng: a.lng as number,
+            })),
+        ),
+      )
+      .catch(() => setSaved([]));
+  }, []);
 
   // Auto-fill pickup from the device's live location on first load. Falls back
   // silently to manual entry if permission is denied or GPS is unavailable.
@@ -343,19 +385,18 @@ function RidesInner() {
   }
 
   return (
-    <div className="relative flex h-[calc(100dvh-3.5rem)] flex-col lg:h-dvh lg:flex-row">
-      {/* Map — fills the screen (Figma: ~70%); the sheet floats over the bottom.
-          On desktop it's the left panel. */}
-      <div className="absolute inset-0 lg:static lg:h-full lg:flex-1">
-        <RideMap
-          pickup={mapPoints.pickup}
-          drop={mapPoints.drop}
-          routeGeometry={route?.geometry ?? null}
-        />
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col lg:h-dvh">
+      {/* Desktop header — brand mark above the panel+map split (Figma) */}
+      <div className="hidden items-center gap-2 px-8 py-4 lg:flex">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon.png" alt="" className="size-8 rounded-[8px]" />
+        <span className="text-[22px] font-bold text-accent">Radiues</span>
       </div>
 
-      {/* Booking panel — floating bottom sheet over the map (Figma) */}
-      <div className="absolute inset-x-0 bottom-0 z-10 flex max-h-[58dvh] min-h-0 flex-col gap-3 overflow-y-auto rounded-t-[25px] bg-white px-4 py-5 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.18)] lg:static lg:max-h-none lg:w-[420px] lg:flex-none lg:rounded-none lg:border-l lg:border-line lg:px-5 lg:shadow-none">
+      <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-0 lg:px-8 lg:pb-6">
+        {/* Booking panel — mobile: floating bottom sheet; desktop: LEFT panel
+            (Figma desktop places the location panel left of the map) */}
+        <div className="absolute inset-x-0 bottom-0 z-10 order-2 flex max-h-[58dvh] min-h-0 flex-col gap-3 overflow-y-auto rounded-t-[25px] bg-white px-4 py-5 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.18)] lg:static lg:order-1 lg:max-h-none lg:w-[420px] lg:flex-none lg:rounded-l-[18px] lg:rounded-tr-none lg:border lg:border-line lg:px-5 lg:shadow-card">
         <FadeIn y={8}>
           <div className="flex items-center justify-between">
             <h1 className="text-[17px] font-bold text-[#1a1a2e]">Select your location</h1>
@@ -409,6 +450,35 @@ function RidesInner() {
             <Plus size={15} /> Add stops
           </button>
         </div>
+
+        {/* Suggested locations — saved places, one tap to set as drop (Figma) */}
+        {!drop && saved.length > 0 && (
+          <div>
+            <p className="text-[13px] font-bold text-ink">Suggested locations</p>
+            <div className="mt-0.5 flex flex-col divide-y divide-line/70">
+              {saved.slice(0, 5).map((p) => (
+                <button
+                  key={`${p.lat}-${p.lng}`}
+                  onClick={() => setDrop(p)}
+                  className="flex items-center gap-2.5 py-2.5 text-left transition-colors hover:bg-beige/30"
+                >
+                  <MapPin size={15} className="shrink-0 text-cocoa/60" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-medium capitalize text-ink">
+                      {p.name}
+                    </span>
+                    <span className="block truncate text-[11px] text-cocoa">{p.area}</span>
+                  </span>
+                  {pickup && (
+                    <span className="shrink-0 text-[12px] text-cocoa">
+                      {Math.max(1, Math.round(haversineKm(pickup, p)))} km
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {route && (
           <p className="text-[12px] text-cocoa">
@@ -551,6 +621,16 @@ function RidesInner() {
               {t("rides.splitFare")}
             </button>
           )}
+          </div>
+        </div>
+
+        {/* Map — mobile: fills the screen behind the sheet; desktop: right pane */}
+        <div className="absolute inset-0 order-1 lg:static lg:order-2 lg:h-full lg:flex-1 lg:overflow-hidden lg:rounded-r-[18px] lg:border lg:border-l-0 lg:border-line">
+          <RideMap
+            pickup={mapPoints.pickup}
+            drop={mapPoints.drop}
+            routeGeometry={route?.geometry ?? null}
+          />
         </div>
       </div>
     </div>

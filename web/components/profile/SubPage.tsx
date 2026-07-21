@@ -11,7 +11,7 @@ export function SubPage({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto w-full max-w-xl px-4 py-5 lg:px-6 lg:py-8">
+    <div className="mx-auto w-full max-w-xl px-4 py-5 lg:max-w-[780px] lg:px-6 lg:py-10">
       <div className="relative flex items-center justify-center py-2">
         <Link
           href="/profile"
@@ -20,7 +20,7 @@ export function SubPage({
         >
           <ChevronLeft size={20} />
         </Link>
-        <h1 className="text-[17px] font-bold text-ink">{title}</h1>
+        <h1 className="text-[17px] font-bold text-ink lg:text-[24px]">{title}</h1>
       </div>
       <div className="mt-4">{children}</div>
     </div>

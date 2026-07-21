@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Phone, Mail, Lock, Eye, EyeOff, Apple } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api";
@@ -45,13 +46,51 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mt-6">
-      <h1 className="text-center text-[30px] font-bold text-ink">Welcome</h1>
-      <p className="mt-2 text-center text-[13px] leading-relaxed text-cocoa">
-        You&apos;ll get smarter responses and can upload files, images, and more.
-      </p>
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-8 lg:max-w-none lg:flex-row lg:px-0 lg:py-0">
+      {/* Left hero — desktop only (Figma: brand, big Welcome, illustration) */}
+      <div className="hidden lg:flex lg:min-h-dvh lg:flex-1 lg:flex-col lg:px-16 lg:py-10 xl:px-24">
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="" width={28} height={28} className="size-7" />
+          <span className="text-[16px] font-bold text-ink">Radiues</span>
+        </div>
+        <h1 className="mt-12 text-[64px] font-bold leading-none tracking-tight text-ink">
+          Welcome
+        </h1>
+        <p className="mt-5 max-w-sm text-[17px] leading-relaxed text-cocoa">
+          You&apos;ll get smarter responses and can upload files, images, and
+          more.
+        </p>
+        <Image
+          src="/illustrations/login-hero.png"
+          alt=""
+          width={569}
+          height={530}
+          priority
+          className="mt-6 w-full max-w-[540px] self-center"
+        />
+      </div>
 
-      <form onSubmit={onSubmit} className="mt-7 flex flex-col gap-4">
+      {/* Form column */}
+      <div className="flex w-full flex-col lg:min-h-dvh lg:w-[600px] lg:justify-center lg:px-16 lg:pb-16">
+        <div className="flex justify-center lg:hidden">
+          <Image
+            src="/logo.png"
+            alt="Radiues"
+            width={56}
+            height={56}
+            priority
+            className="h-14 w-14"
+          />
+        </div>
+
+        <h1 className="mt-6 text-center text-[30px] font-bold text-ink lg:hidden">
+          Welcome
+        </h1>
+        <p className="mt-2 text-center text-[13px] leading-relaxed text-cocoa lg:hidden">
+          You&apos;ll get smarter responses and can upload files, images, and more.
+        </p>
+
+        <form onSubmit={onSubmit} className="mt-7 flex flex-col gap-4 lg:mt-0">
         <Input
           label="Email address"
           type="email"
@@ -131,6 +170,7 @@ export default function LoginPage() {
           Create an account
         </Link>
       </p>
+      </div>
     </div>
   );
 }

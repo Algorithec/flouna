@@ -2,7 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Star, Clock, Sparkles, Truck, Package, Wallet, Zap, Award, Tag } from "lucide-react";
+import {
+  Star,
+  Clock,
+  Sparkles,
+  Truck,
+  Package,
+  Wallet,
+  Zap,
+  Award,
+  Tag,
+  Utensils,
+  Car,
+  CircleCheck,
+} from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { AdviceBanner } from "@/components/ui/AdviceBanner";
 import { FadeIn } from "@/components/ui/motion";
@@ -101,8 +114,49 @@ function FoodQuoteRow({ q, highlight }: { q: FoodQuote; highlight?: boolean }) {
   );
 }
 
+// Desktop-only section header + count pill (Figma "Results & Conversation").
+function SectionHeader({
+  icon: Icon,
+  label,
+  sub,
+  count,
+}: {
+  icon: typeof Star;
+  label: string;
+  sub: string;
+  count: number;
+}) {
+  return (
+    <div className="hidden items-start justify-between gap-4 lg:flex">
+      <div className="min-w-0">
+        <p className="flex items-center gap-1.5 text-[12px] font-medium text-cocoa">
+          <Icon size={13} /> {label}
+        </p>
+        <p className="mt-0.5 text-[13px] text-cocoa">{sub}</p>
+      </div>
+      <span className="flex shrink-0 items-center gap-1.5 rounded-pill border border-accent/40 bg-accent-soft px-3 py-1 text-[12px] font-semibold text-accent">
+        <span className="size-1.5 rounded-full bg-accent" /> {count} Option
+        {count === 1 ? "" : "s"} Found
+      </span>
+    </div>
+  );
+}
+
+// Tinted insight rail card (Figma desktop right rail).
+function InsightCard({ text }: { text: string }) {
+  return (
+    <div className="rounded-card border border-accent/30 bg-accent-soft/40 p-4">
+      <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent">
+        <Zap size={12} /> RADIUES INSIGHTS
+      </p>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-ink">{text}</p>
+    </div>
+  );
+}
+
 // Minimal, ChatGPT/Claude-style result: the AI's answer as clean text, the one
-// best pick, and other options tucked behind a toggle.
+// best pick, and other options tucked behind a toggle. On desktop the answer
+// moves into an insights rail and the alternatives spread into a card grid.
 export function FoodRecommendation({
   rec,
 }: {
@@ -111,8 +165,15 @@ export function FoodRecommendation({
   const [showMore, setShowMore] = useState(false);
   return (
     <FadeIn y={8} className="flex w-full flex-col gap-2.5">
+      <SectionHeader
+        icon={Utensils}
+        label="Food Order"
+        sub="Best dining experience based on preparation quality, delivery time & consistency"
+        count={1 + rec.alternatives.length}
+      />
+
       <PickBadge reason={rec.pickReason} />
-      <p className="text-[14px] leading-relaxed text-ink">{rec.why}</p>
+      <p className="text-[14px] leading-relaxed text-ink lg:hidden">{rec.why}</p>
 
       {rec.advice && <AdviceBanner advice={rec.advice} />}
 
@@ -130,25 +191,99 @@ export function FoodRecommendation({
 
       <PersonalNote note={rec.personalNote} />
 
-      <FoodQuoteRow q={rec.best} highlight />
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-4">
+        <FoodQuoteRow q={rec.best} highlight />
+
+        {/* Right rail — insights + offers (desktop only) */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-3">
+          <InsightCard text={rec.why} />
+          {rec.best.reviewSummary && (
+            <div className="rounded-card border border-accent/30 bg-accent-soft/40 p-4">
+              <p className="text-[13px] italic leading-relaxed text-ink">
+                “{rec.best.reviewSummary}”
+              </p>
+            </div>
+          )}
+          {rec.best.offers.length > 0 && (
+            <div className="rounded-card border border-success/30 bg-success/5 p-4">
+              <p className="flex items-center gap-1.5 text-[12px] font-bold text-success">
+                <Tag size={13} /> Available offers and coupons
+              </p>
+              <div className="mt-1.5 flex flex-col gap-1">
+                {rec.best.offers.map((o) => (
+                  <p key={o.label} className="flex items-center gap-1.5 text-[12px] text-ink">
+                    <CircleCheck size={13} className="shrink-0 text-success" />
+                    {o.label}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {rec.alternatives.length > 0 && (
         <>
-          <button
-            onClick={() => setShowMore((v) => !v)}
-            className="self-start text-[12px] font-semibold text-accent hover:underline"
-          >
-            {showMore
-              ? "Hide other options"
-              : `See ${rec.alternatives.length} other option${rec.alternatives.length === 1 ? "" : "s"}`}
-          </button>
-          {showMore &&
-            rec.alternatives.map((q) => (
-              <FoodQuoteRow key={`${q.dishId}-${q.platform}`} q={q} />
-            ))}
+          {/* Mobile: alternatives behind a toggle */}
+          <div className="flex flex-col gap-2.5 lg:hidden">
+            <button
+              onClick={() => setShowMore((v) => !v)}
+              className="self-start text-[12px] font-semibold text-accent hover:underline"
+            >
+              {showMore
+                ? "Hide other options"
+                : `See ${rec.alternatives.length} other option${rec.alternatives.length === 1 ? "" : "s"}`}
+            </button>
+            {showMore &&
+              rec.alternatives.map((q) => (
+                <FoodQuoteRow key={`${q.dishId}-${q.platform}`} q={q} />
+              ))}
+          </div>
+
+          {/* Desktop: "Options we think you'll like" card grid (Figma) */}
+          <div className="hidden lg:block">
+            <p className="mt-2 text-[15px] font-bold text-ink">
+              Options we think you&apos;ll like
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-3 xl:grid-cols-3">
+              {rec.alternatives.map((q) => (
+                <FoodAltCard key={`${q.dishId}-${q.platform}`} q={q} />
+              ))}
+            </div>
+          </div>
         </>
       )}
     </FadeIn>
+  );
+}
+
+// Compact alternative card for the desktop grid.
+function FoodAltCard({ q }: { q: FoodQuote }) {
+  return (
+    <Link href={`/food/order/${q.dishId}?platform=${q.platform}`} className="block">
+      <Card className="h-full py-3.5 transition-all hover:-translate-y-0.5 hover:shadow-card">
+        <div className="flex items-center gap-3">
+          <DishArt name={q.name} size={44} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-bold text-ink">{q.name}</p>
+            <p className="truncate text-[11px] text-cocoa">{q.restaurant}</p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-cocoa">
+              <span className="flex items-center gap-0.5">
+                <Star size={11} className="fill-accent text-accent" /> {q.rating}
+              </span>
+              {q.offers[0] && (
+                <span className="rounded-full bg-success/10 px-1.5 py-px text-[10px] font-semibold text-success">
+                  {q.offers[0].label}
+                </span>
+              )}
+            </p>
+          </div>
+          <span className="shrink-0 rounded-pill bg-ink px-3 py-1.5 text-[12px] font-bold text-white">
+            {rupees(q.effectivePaise)}
+          </span>
+        </div>
+      </Card>
+    </Link>
   );
 }
 
@@ -230,7 +365,14 @@ export function RideRecommendation({
 
   return (
     <FadeIn y={8} className="flex w-full flex-col gap-2.5">
-      <p className="text-[14px] leading-relaxed text-ink">{rec.why}</p>
+      <SectionHeader
+        icon={Car}
+        label="Ride Booking"
+        sub="Shortest pickup time with fair price & reliable availability"
+        count={shown.length}
+      />
+
+      <p className="text-[14px] leading-relaxed text-ink lg:hidden">{rec.why}</p>
 
       {rec.advice && <AdviceBanner advice={rec.advice} />}
 
@@ -246,32 +388,41 @@ export function RideRecommendation({
         </p>
       )}
 
-      {/* Vehicle switcher */}
-      {vehicles.length > 1 && (
-        <div className="flex rounded-pill bg-accent-soft/40 p-1">
-          {vehicles.map((v) => (
-            <button
-              key={v}
-              onClick={() => setVehicle(v)}
-              className={cn(
-                "flex-1 rounded-pill py-1.5 text-[13px] font-semibold capitalize transition-colors",
-                v === vehicle ? "bg-white text-accent shadow-soft" : "text-cocoa hover:text-ink",
-              )}
-            >
-              {v}
-            </button>
+      <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-4">
+        <div className="flex min-w-0 flex-col gap-2.5">
+          {/* Vehicle switcher — Figma desktop shows Bike / Cab / Auto tabs */}
+          {vehicles.length > 1 && (
+            <div className="flex rounded-pill bg-accent-soft/40 p-1">
+              {vehicles.map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setVehicle(v)}
+                  className={cn(
+                    "flex-1 rounded-pill py-1.5 text-[13px] font-semibold capitalize transition-colors",
+                    v === vehicle ? "bg-white text-accent shadow-soft" : "text-cocoa hover:text-ink",
+                  )}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {shown.map((q) => (
+            <RideQuoteRow
+              key={q.productName}
+              q={q}
+              drop={rec.drop}
+              scheduledAt={rec.scheduledAt}
+            />
           ))}
         </div>
-      )}
 
-      {shown.map((q) => (
-        <RideQuoteRow
-          key={q.productName}
-          q={q}
-          drop={rec.drop}
-          scheduledAt={rec.scheduledAt}
-        />
-      ))}
+        {/* Insights rail (desktop only) */}
+        <div className="hidden lg:block">
+          <InsightCard text={rec.why} />
+        </div>
+      </div>
     </FadeIn>
   );
 }

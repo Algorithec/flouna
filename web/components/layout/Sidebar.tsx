@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -8,9 +8,9 @@ import {
   History,
   Pizza,
   Car,
-  Plus,
-  User,
-  PenSquare,
+  Settings,
+  PenLine,
+  PanelLeft,
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -20,14 +20,28 @@ import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 type ChatSessionSummary = { id: string; title: string | null };
 
-// Matches the Figma sidebar: Home / History / Food / Rides (Shop is reachable
-// via chat and the food/shop surfaces, but not a top-level sidebar item).
+// Figma desktop sidebar: New chat / Home / History / Food / Rides with a
+// gear+Profile row pinned to the bottom. On desktop it collapses to an
+// icon-only rail (the PanelLeft toggle), remembered across visits. On mobile
+// it stays the full-width drawer.
 const navItems: { href: string; key: TranslationKey; icon: typeof Home }[] = [
   { href: "/home", key: "nav.home", icon: Home },
   { href: "/history", key: "nav.history", icon: History },
   { href: "/food", key: "nav.food", icon: Pizza },
   { href: "/rides", key: "nav.rides", icon: Car },
 ];
+
+const COLLAPSE_KEY = "radiues-sidebar-collapsed";
+const COLLAPSE_EVENT = "radiues-sidebar-collapse";
+
+function subscribeCollapse(cb: () => void) {
+  window.addEventListener(COLLAPSE_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(COLLAPSE_EVENT, cb);
+    window.removeEventListener("storage", cb);
+  };
+}
 
 export function Sidebar({
   open,
@@ -41,6 +55,17 @@ export function Sidebar({
   const { t } = useI18n();
   const [recent, setRecent] = useState<ChatSessionSummary[]>([]);
   const [showAll, setShowAll] = useState(false);
+  // Collapse preference lives in localStorage (SSR renders expanded).
+  const collapsed = useSyncExternalStore(
+    subscribeCollapse,
+    () => localStorage.getItem(COLLAPSE_KEY) === "1",
+    () => false,
+  );
+
+  function toggleCollapsed() {
+    localStorage.setItem(COLLAPSE_KEY, collapsed ? "0" : "1");
+    window.dispatchEvent(new Event(COLLAPSE_EVENT));
+  }
 
   // Refresh the list whenever navigation happens (a new chat updates the URL).
   useEffect(() => {
@@ -64,15 +89,37 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-beige/60 backdrop-blur px-5 py-6 transition-transform",
-          "lg:static lg:translate-x-0 lg:shrink-0 lg:border-r lg:border-line",
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-card px-4 py-5 transition-transform",
+          "lg:static lg:translate-x-0 lg:shrink-0 lg:border-r lg:border-line lg:bg-cream lg:transition-[width] lg:duration-200",
+          collapsed ? "lg:w-[88px] lg:px-3" : "lg:w-[264px]",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between">
-          <Link href="/home" className="text-[22px] font-bold text-ink">
-            Radiues
+        <div
+          className={cn(
+            "flex items-center",
+            collapsed ? "lg:flex-col lg:gap-4" : "justify-between",
+          )}
+        >
+          <Link href="/home" aria-label="Radiues home" className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.png" alt="" className="size-9 rounded-[10px]" />
+            <span
+              className={cn(
+                "text-[20px] font-bold text-ink",
+                collapsed && "lg:hidden",
+              )}
+            >
+              Radiues
+            </span>
           </Link>
+          <button
+            onClick={toggleCollapsed}
+            className="hidden rounded-[10px] p-2 text-cocoa transition-colors hover:bg-beige lg:block"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <PanelLeft size={20} />
+          </button>
           <button
             onClick={onClose}
             className="rounded-full p-1.5 text-cocoa hover:bg-beige lg:hidden"
@@ -82,16 +129,20 @@ export function Sidebar({
           </button>
         </div>
 
-        <Link
-          href="/home"
-          onClick={onClose}
-          className="mt-6 flex h-12 items-center justify-center gap-2 rounded-pill border border-line bg-card text-[14px] font-semibold text-ink shadow-soft transition-colors hover:bg-beige/40"
-        >
-          <Plus size={16} className="text-ink" />
-          {t("nav.newChat")}
-        </Link>
+        <nav className={cn("mt-8 flex flex-col gap-2", collapsed && "lg:items-center")}>
+          <Link
+            href="/home"
+            onClick={onClose}
+            title={t("nav.newChat")}
+            className={cn(
+              "flex items-center gap-3 rounded-pill px-4 py-3 text-[15px] font-medium text-ink/85 transition-colors hover:bg-beige/70",
+              collapsed && "lg:justify-center lg:px-3",
+            )}
+          >
+            <PenLine size={19} className="shrink-0 text-ink" />
+            <span className={cn(collapsed && "lg:hidden")}>{t("nav.newChat")}</span>
+          </Link>
 
-        <nav className="mt-6 flex flex-col gap-1.5">
           {navItems.map(({ href, key, icon: Icon }) => {
             const active = pathname.startsWith(href);
             return (
@@ -99,28 +150,39 @@ export function Sidebar({
                 key={href}
                 href={href}
                 onClick={onClose}
+                title={t(key)}
                 className={cn(
                   "flex items-center gap-3 rounded-pill px-4 py-3 text-[15px] transition-colors",
                   active
                     ? "bg-accent-soft font-semibold text-accent"
-                    : "text-ink/85 hover:bg-card/70",
+                    : "text-ink/85 hover:bg-beige/70",
+                  collapsed && "lg:justify-center lg:px-3",
                 )}
               >
-                <Icon size={18} className={active ? "text-accent" : "text-cocoa"} />
-                {t(key)}
+                <Icon
+                  size={19}
+                  className={cn("shrink-0", active ? "text-accent" : "text-cocoa")}
+                />
+                <span className={cn(collapsed && "lg:hidden")}>{t(key)}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-7 min-h-0 flex-1 overflow-y-auto">
+        {/* Recent chats — expanded sidebar and mobile drawer only */}
+        <div
+          className={cn(
+            "mt-7 min-h-0 flex-1 overflow-y-auto",
+            collapsed && "lg:invisible",
+          )}
+        >
           <p className="px-3 text-[12px] font-semibold text-accent">
             Recent Chats
           </p>
           <div className="mt-2 flex flex-col gap-0.5">
             {recent.length === 0 && (
               <p className="flex items-center gap-2 px-3 py-2 text-[13px] text-cocoa/70">
-                <PenSquare size={14} />
+                <PenLine size={14} />
                 No chats yet
               </p>
             )}
@@ -129,9 +191,9 @@ export function Sidebar({
                 key={s.id}
                 href={`/home?chat=${s.id}`}
                 onClick={onClose}
-                className="flex items-center gap-2 truncate rounded-[10px] px-3 py-2 text-[13px] text-ink/80 transition-colors hover:bg-card/70"
+                className="flex items-center gap-2 truncate rounded-[10px] px-3 py-2 text-[13px] text-ink/80 transition-colors hover:bg-beige/60"
               >
-                <PenSquare size={13} className="shrink-0 text-cocoa/60" />
+                <PenLine size={13} className="shrink-0 text-cocoa/60" />
                 <span className="truncate">{s.title ?? "New chat"}</span>
               </Link>
             ))}
@@ -146,15 +208,18 @@ export function Sidebar({
           </div>
         </div>
 
+        {/* Bottom pinned: gear + Profile, per the desktop design */}
         <Link
           href="/profile"
           onClick={onClose}
-          className="mt-4 flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-[15px] font-medium text-ink hover:bg-card/70 transition-colors"
+          title={t("nav.profile")}
+          className={cn(
+            "mt-4 flex items-center gap-3 rounded-pill px-4 py-3 text-[15px] font-semibold text-ink transition-colors hover:bg-beige/70",
+            collapsed && "lg:justify-center lg:px-3",
+          )}
         >
-          <span className="flex size-8 items-center justify-center rounded-full bg-card shadow-card">
-            <User size={16} className="text-cocoa" />
-          </span>
-          {t("nav.profile")}
+          <Settings size={19} className="shrink-0 text-ink" />
+          <span className={cn(collapsed && "lg:hidden")}>{t("nav.profile")}</span>
         </Link>
       </aside>
     </>

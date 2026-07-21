@@ -49,11 +49,14 @@ export function GoogleButton({ onError }: { onError: (msg: string) => void }) {
           }
         },
       });
+      // Size to the actual slot — a fixed width overflows the half-width grid
+      // cell on small screens.
+      const slot = ref.current.parentElement?.clientWidth ?? 320;
       window.google.accounts.id.renderButton(ref.current, {
         theme: "outline",
         size: "large",
         shape: "pill",
-        width: 320,
+        width: Math.max(120, Math.min(320, slot)),
       });
       setReady(true);
     };
@@ -82,7 +85,7 @@ export function GoogleButton({ onError }: { onError: (msg: string) => void }) {
   }
 
   return (
-    <div className="flex w-full justify-center">
+    <div className="flex w-full justify-center overflow-hidden">
       <div ref={ref} className={ready ? "" : "h-12"} />
     </div>
   );

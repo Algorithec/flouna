@@ -14,6 +14,7 @@ import {
   Coffee,
   Moon,
   Plus,
+  Search as SearchIcon,
   type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -160,7 +161,12 @@ function ChatHome() {
   const empty = messages.length === 0;
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-2xl flex-col px-4 lg:h-dvh lg:px-6">
+    <div
+      className={cn(
+        "mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-2xl flex-col px-4 lg:h-dvh lg:px-6",
+        empty ? "lg:max-w-3xl" : "lg:max-w-5xl",
+      )}
+    >
       {empty ? (
         <div className="flex flex-1 flex-col items-center justify-center px-2 text-center">
           {/* Proactive heads-up — the engine getting ahead of the user (rain
@@ -173,7 +179,7 @@ function ChatHome() {
 
           {/* Hero heading — exact Figma: navy line 1, terracotta line 2 */}
           <FadeIn y={10}>
-            <h1 className="flex flex-col gap-0.5 text-[26px] font-bold leading-[1.2] tracking-tight">
+            <h1 className="flex flex-col gap-0.5 text-[26px] font-bold leading-[1.2] tracking-tight lg:text-[44px]">
               <span className="text-navy">{t("chat.heading1")}</span>
               <span className="text-terracotta">{t("chat.heading2")}</span>
             </h1>
@@ -267,8 +273,9 @@ function ChatHome() {
         className="sticky bottom-0 z-10 pb-4 pt-2"
       >
         {/* Ask bar — matches Figma: white, soft border, plus left, terracotta send */}
-        <div className="flex items-center gap-2.5 rounded-[30px] border border-[#d0c8c0] bg-white py-2 pl-4 pr-2 shadow-[0px_3px_8px_rgba(0,0,0,0.07)]">
-          <Plus size={19} className="shrink-0 text-cocoa/70" />
+        <div className="flex items-center gap-2.5 rounded-[30px] border border-[#d0c8c0] bg-white py-2 pl-4 pr-2 shadow-[0px_3px_8px_rgba(0,0,0,0.07)] lg:py-3 lg:pl-6">
+          <Plus size={19} className="shrink-0 text-cocoa/70 lg:hidden" />
+          <SearchIcon size={20} className="hidden shrink-0 text-ink lg:block" />
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -281,7 +288,7 @@ function ChatHome() {
             type="submit"
             disabled={!input.trim() || thinking}
             aria-label="Send"
-            className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-send text-white transition-colors hover:bg-[#dc9450] disabled:opacity-40"
+            className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-send text-white transition-colors hover:bg-[#dc9450] disabled:opacity-40 lg:size-[42px] lg:bg-ink lg:hover:bg-ink/85"
           >
             <Send size={16} />
           </button>
