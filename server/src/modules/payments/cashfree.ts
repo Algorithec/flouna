@@ -83,6 +83,43 @@ export async function getCashfreeOrder(orderId: string) {
   };
 }
 
+// Initiate a refund with the gateway. `refundId` is our idempotency key —
+// Cashfree rejects a duplicate refund_id for the same order, so a double
+// approval can never move money twice. Sandbox refunds typically return
+// PENDING and settle asynchronously; both SUCCESS and PENDING mean the
+// gateway accepted the refund.
+export async function createCashfreeRefund(opts: {
+  orderId: string;
+  refundId: string;
+  amountRupees: number;
+  note?: string;
+}) {
+  const res = await fetch(`${BASE_URL}/orders/${opts.orderId}/refunds`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-version": API_VERSION,
+      "x-client-id": env.CASHFREE_APP_ID!,
+      "x-client-secret": env.CASHFREE_SECRET_KEY!,
+    },
+    body: JSON.stringify({
+      refund_id: opts.refundId,
+      refund_amount: opts.amountRupees,
+      refund_note: opts.note ?? "Refund approved from Radiues console",
+    }),
+  });
+  const body = await res.text();
+  if (!res.ok) {
+    throw new Error(`Cashfree refund failed (${res.status}): ${body.slice(0, 300)}`);
+  }
+  return JSON.parse(body) as {
+    cf_refund_id: number | string;
+    refund_id: string;
+    refund_status: string; // "SUCCESS" | "PENDING" | "ONHOLD" | "CANCELLED"
+    refund_amount: number;
+  };
+}
+
 // Reject webhooks whose timestamp is older than this — blocks replay of a
 // captured-but-valid delivery. Cashfree sends epoch-second timestamps.
 const WEBHOOK_MAX_AGE_MS = 5 * 60_000;

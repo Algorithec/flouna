@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FadeIn } from "@/components/ui/motion";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/components/i18n/I18nContext";
 
 type Status = {
   orderStatus: string;
@@ -52,6 +53,7 @@ export default function PayPage({
 }) {
   const { orderId } = use(params);
   const router = useRouter();
+  const { t } = useI18n();
   const [status, setStatus] = useState<Status | null>(null);
   const [stage, setStage] = useState<Stage>("select");
   const [method, setMethod] = useState<Method>("upi");
@@ -118,7 +120,7 @@ export default function PayPage({
   const d = status.details ?? {};
   const discount = d.offers?.reduce((s, o) => s + o.discountPaise, 0) ?? 0;
   const isFood = status.domain === "food";
-  const fareLabel = isFood ? "Total Amount" : "Total Fare";
+  const fareLabel = isFood ? t("bill.totalAmount") : t("bill.totalFare");
 
   return (
     <div className="mx-auto w-full max-w-md px-4 py-6 lg:py-10">
@@ -142,21 +144,21 @@ export default function PayPage({
       {stage === "select" && (
         <>
           {/* Payment pending */}
-          <p className="mt-5 text-[14px] font-bold text-accent">Payment Pending</p>
+          <p className="mt-5 text-[14px] font-bold text-accent">{t("pay.pending")}</p>
           <p className="mt-0.5 text-[12px] text-cocoa">
-            Please complete the payment to finish{isFood ? " your order." : " the ride."}
+            {isFood ? t("pay.pendingFoodSub") : t("pay.pendingRideSub")}
           </p>
 
           {/* Order summary breakdown */}
           {showSummary && (
             <Card className="mt-3">
               <div className="flex items-center justify-between">
-                <p className="text-[13px] font-bold text-ink">Order Summary</p>
+                <p className="text-[13px] font-bold text-ink">{t("pay.summary")}</p>
                 <Link
                   href={`/orders/${orderId}?invoice=1`}
                   className="text-[12px] font-semibold text-accent hover:underline"
                 >
-                  View Details
+                  {t("pay.viewDetails")}
                 </Link>
               </div>
               <p className="mt-0.5 truncate text-[11px] text-cocoa">{status.title}</p>
@@ -164,56 +166,56 @@ export default function PayPage({
                 {isFood ? (
                   <>
                     {d.basePaise !== undefined && (
-                      <Row label="Item Total" value={rupees(d.basePaise)} />
+                      <Row label={t("bill.itemTotal")} value={rupees(d.basePaise)} />
                     )}
                     {d.deliveryFeePaise !== undefined && (
-                      <Row label="Delivery Fee" value={rupees(d.deliveryFeePaise)} />
+                      <Row label={t("bill.deliveryFee")} value={rupees(d.deliveryFeePaise)} />
                     )}
                     {d.convenienceFeePaise ? (
-                      <Row label="Packaging Fee" value={rupees(d.convenienceFeePaise)} />
+                      <Row label={t("bill.packagingFee")} value={rupees(d.convenienceFeePaise)} />
                     ) : null}
                   </>
                 ) : (
-                  <Row label="Base Fare" value={rupees(d.farePaise ?? status.amount)} />
+                  <Row label={t("bill.baseFare")} value={rupees(d.farePaise ?? status.amount)} />
                 )}
                 {discount > 0 && (
-                  <Row label="Discount" value={`− ${rupees(discount)}`} accent />
+                  <Row label={t("bill.discount")} value={`− ${rupees(discount)}`} accent />
                 )}
                 <div className="my-1 h-px bg-line" />
-                <Row label={isFood ? "Total Amount" : "Total Fare"} value={rupees(status.amount)} bold />
+                <Row label={fareLabel} value={rupees(status.amount)} bold />
               </div>
             </Card>
           )}
 
           {/* Choose payment method */}
-          <h2 className="mt-6 text-[14px] font-bold text-ink">Choose Payment Method</h2>
+          <h2 className="mt-6 text-[14px] font-bold text-ink">{t("pay.chooseMethod")}</h2>
           <div className="mt-3 flex flex-col gap-2.5">
             <MethodRow
               active={method === "upi"}
               onClick={() => setMethod("upi")}
               icon={<Smartphone size={18} className="text-accent" />}
-              title="UPI"
-              subtitle="Pay with any UPI app"
+              title={t("pay.upi")}
+              subtitle={t("pay.upiSub")}
             />
             <MethodRow
               active={method === "cash"}
               onClick={() => setMethod("cash")}
               icon={<Wallet size={18} className="text-success" />}
-              title="Cash"
-              subtitle={isFood ? "Pay on delivery" : "Pay in cash to driver"}
+              title={t("pay.cash")}
+              subtitle={isFood ? t("pay.cashFoodSub") : t("pay.cashRideSub")}
             />
             <MethodRow
               active={method === "card"}
               onClick={() => setMethod("card")}
               icon={<CreditCard size={18} className="text-[#8b5cf6]" />}
-              title="Card"
-              subtitle="Debit / Credit Card"
+              title={t("pay.card")}
+              subtitle={t("pay.cardSub")}
             />
           </div>
 
           {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
           <Button onClick={pay} className="mt-6 w-full">
-            Pay {rupees(status.amount)}
+            {t("pay.pay")} {rupees(status.amount)}
           </Button>
         </>
       )}
@@ -222,7 +224,7 @@ export default function PayPage({
         <FadeIn className="mt-12 flex flex-col items-center text-center">
           <span className="flex items-center gap-2 text-[13px] font-semibold text-accent">
             <span className="size-4 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
-            Processing Payment
+            {t("pay.processing")}
           </span>
           {/* UPI card animation */}
           <div className="relative mt-7 flex size-24 items-center justify-center">
@@ -231,11 +233,9 @@ export default function PayPage({
               <Smartphone size={34} className="text-accent" />
             </div>
           </div>
-          <p className="mt-7 text-[14px] text-cocoa">
-            Please wait while we process your payment.
-          </p>
+          <p className="mt-7 text-[14px] text-cocoa">{t("pay.processingSub")}</p>
           <p className="mt-4 flex items-center gap-1.5 text-[12px] text-cocoa/70">
-            <CheckCircle2 size={13} className="text-success" /> Do not close this screen
+            <CheckCircle2 size={13} className="text-success" /> {t("pay.dontClose")}
           </p>
         </FadeIn>
       )}
@@ -245,22 +245,20 @@ export default function PayPage({
           <span className="flex size-16 items-center justify-center rounded-full bg-success/10">
             <CheckCircle2 size={40} className="text-success" />
           </span>
-          <p className="mt-4 text-[18px] font-bold text-ink">Payment successful</p>
+          <p className="mt-4 text-[18px] font-bold text-ink">{t("pay.success")}</p>
           <p className="mt-1 text-[13px] text-cocoa">
-            {isFood
-              ? "Your order has been placed successfully."
-              : "Your ride is confirmed — driver on the way."}
+            {isFood ? t("pay.successFood") : t("pay.successRide")}
           </p>
           <div className="mt-8 flex w-full flex-col gap-3">
             <Button onClick={() => router.push(`/orders/${orderId}`)} className="w-full">
-              {isFood ? "Track order" : "Track ride"}
+              {isFood ? t("pay.trackOrder") : t("pay.trackRide")}
             </Button>
             <Button
               variant="secondary"
               onClick={() => router.push(`/orders/${orderId}?invoice=1`)}
               className="w-full"
             >
-              View invoice
+              {t("pay.viewInvoice")}
             </Button>
           </div>
         </FadeIn>

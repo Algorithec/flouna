@@ -51,7 +51,7 @@ export default function DevHomePage() {
 
   if (state.status !== "ok") {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-slate-500">
+      <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
         <Loader2 className="animate-spin" />
       </div>
     );
@@ -110,13 +110,13 @@ export default function DevHomePage() {
 
       {providers && (
         <div className="mt-8">
-          <h2 className="mb-3 text-[14px] font-semibold text-slate-200">
+          <h2 className="mb-3 text-[14px] font-semibold text-(--c-ink)">
             Integrations
           </h2>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-2">
-            <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-800/40 px-3 py-2 text-[13px]">
-              <span className="text-slate-300">LLM provider</span>
-              <span className="font-mono text-emerald-300">
+          <div className="rounded-xl border border-(--c-border) bg-white p-2">
+            <div className="mb-2 flex items-center justify-between rounded-lg bg-(--c-ivory) px-3 py-2 text-[13px]">
+              <span className="text-(--c-ink)">LLM provider</span>
+              <span className="font-mono text-[#1a7a4a]">
                 {providers.llm.active} ({providers.llm.mode})
               </span>
             </div>
@@ -126,11 +126,11 @@ export default function DevHomePage() {
                   key={key}
                   className="flex items-center justify-between py-1 text-[13px]"
                 >
-                  <span className="capitalize text-slate-400">
+                  <span className="capitalize text-(--c-muted)">
                     {key.replace(/_/g, " ")}
                   </span>
                   <span
-                    className={on ? "text-emerald-400" : "text-slate-600"}
+                    className={on ? "text-[#1a7a4a]" : "text-(--c-muted)"}
                   >
                     {on ? "configured" : "—"}
                   </span>

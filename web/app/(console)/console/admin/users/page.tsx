@@ -63,7 +63,7 @@ export default function AdminUsersPage() {
 
   if (state.status !== "ok") {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-slate-500">
+      <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
         <Loader2 className="animate-spin" />
       </div>
     );
@@ -78,25 +78,25 @@ export default function AdminUsersPage() {
           e.preventDefault();
           load();
         }}
-        className="mb-4 flex max-w-md items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3"
+        className="mb-4 flex max-w-md items-center gap-2 rounded-lg border border-(--c-border) bg-white px-3"
       >
-        <Search size={16} className="text-slate-500" />
+        <Search size={16} className="text-(--c-muted)" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name, email or phone"
-          className="h-10 flex-1 bg-transparent text-[14px] text-slate-100 outline-none placeholder:text-slate-600"
+          className="h-10 flex-1 bg-transparent text-[14px] text-(--c-ink) outline-none placeholder:text-(--c-muted)"
         />
       </form>
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-600">
+        <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-800">
+        <div className="overflow-hidden rounded-xl border border-(--c-border)">
           <table className="w-full text-left text-[13px]">
-            <thead className="bg-slate-900/60 text-[12px] uppercase tracking-wide text-slate-500">
+            <thead className="bg-white text-[12px] uppercase tracking-wide text-(--c-muted)">
               <tr>
                 <th className="px-4 py-2.5 font-medium">User</th>
                 <th className="px-4 py-2.5 font-medium">Role</th>
@@ -105,37 +105,37 @@ export default function AdminUsersPage() {
                 <th className="px-4 py-2.5 font-medium text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
+            <tbody className="divide-y divide-(--c-line)">
               {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-900/40">
+                <tr key={r.id} className="hover:bg-[#f7f1e6]">
                   <td className="px-4 py-2.5">
-                    <p className="flex items-center gap-1.5 font-medium text-slate-100">
+                    <p className="flex items-center gap-1.5 font-medium text-(--c-ink)">
                       {r.name}
                       {r.emailVerified && (
-                        <BadgeCheck size={13} className="text-emerald-400" />
+                        <BadgeCheck size={13} className="text-[#1a7a4a]" />
                       )}
                     </p>
-                    <p className="text-[12px] text-slate-500">{r.email}</p>
+                    <p className="text-[12px] text-(--c-muted)">{r.email}</p>
                   </td>
                   <td className="px-4 py-2.5">
                     <span
                       className={
                         r.role === "user"
-                          ? "text-slate-400"
-                          : "font-medium text-amber-400"
+                          ? "text-(--c-muted)"
+                          : "font-medium text-(--c-gold)"
                       }
                     >
                       {r.role}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-slate-300">{r.orderCount}</td>
+                  <td className="px-4 py-2.5 text-(--c-ink)">{r.orderCount}</td>
                   <td className="px-4 py-2.5">
                     {r.suspended ? (
-                      <span className="text-rose-400">Suspended</span>
+                      <span className="text-(--c-red)">Suspended</span>
                     ) : r.plusActive ? (
-                      <span className="text-emerald-400">Plus</span>
+                      <span className="text-[#1a7a4a]">Plus</span>
                     ) : (
-                      <span className="text-slate-500">Active</span>
+                      <span className="text-(--c-muted)">Active</span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
@@ -143,7 +143,7 @@ export default function AdminUsersPage() {
                       <button
                         onClick={() => toggleSuspend(r)}
                         disabled={busy === r.id}
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-[12px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-md border border-(--c-border) px-2.5 py-1 text-[12px] text-(--c-ink) hover:bg-[#f0e8da] disabled:opacity-50"
                       >
                         {r.suspended ? (
                           <>
@@ -156,14 +156,14 @@ export default function AdminUsersPage() {
                         )}
                       </button>
                     ) : (
-                      <span className="text-[12px] text-slate-600">—</span>
+                      <span className="text-[12px] text-(--c-muted)">—</span>
                     )}
                   </td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-10 text-center text-(--c-muted)">
                     No users found.
                   </td>
                 </tr>

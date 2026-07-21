@@ -15,6 +15,7 @@ import { SubPage } from "@/components/profile/SubPage";
 import { Card } from "@/components/ui/Card";
 import { CountUp } from "@/components/ui/CountUp";
 import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
+import { useI18n } from "@/components/i18n/I18nContext";
 
 type Savings = {
   totalSavedPaise: number;
@@ -26,6 +27,7 @@ type Savings = {
 const EMPTY: Savings = { totalSavedPaise: 0, paidOrders: 0 };
 
 export default function RewardsPage() {
+  const { t } = useI18n();
   const [savings, setSavings] = useState<Savings | null>(null);
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function RewardsPage() {
   const splitTotal = food + ride;
 
   return (
-    <SubPage title="Rewards and Offers">
+    <SubPage title={t("profile.rewards")}>
       <FadeIn y={10}>
         <div
           className="relative overflow-hidden rounded-card p-5 text-white shadow-lift"
@@ -63,7 +65,7 @@ export default function RewardsPage() {
               <PiggyBank size={24} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-medium text-white/80">Total saved with Radiues</p>
+              <p className="text-[12px] font-medium text-white/80">{t("pp.rew.totalSaved")}</p>
               <p className="text-[30px] font-bold leading-tight tracking-tight">
                 {savings ? (
                   <CountUp
@@ -79,7 +81,7 @@ export default function RewardsPage() {
           <p className="relative mt-3 text-[12px] text-white/85">
             {savings?.paidOrders
               ? `Across ${savings.paidOrders} order${savings.paidOrders === 1 ? "" : "s"} — versus the next-best option each time.`
-              : "Every order shows exactly how much you saved versus the next-best option."}
+              : t("pp.rew.emptyNote")}
           </p>
         </div>
       </FadeIn>
@@ -88,8 +90,8 @@ export default function RewardsPage() {
       {hasTrend && (
         <FadeIn delay={0.1} className="mt-5">
           <Card>
-            <p className="text-[13px] font-bold text-ink">Your savings, week by week</p>
-            <p className="text-[11px] text-cocoa">Last 6 weeks · saved vs the next-best option</p>
+            <p className="text-[13px] font-bold text-ink">{t("pp.rew.weekly")}</p>
+            <p className="text-[11px] text-cocoa">{t("pp.rew.weeklySub")}</p>
             <div className="mt-3 h-[150px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 6, right: 4, left: 4, bottom: 0 }}>
@@ -120,7 +122,7 @@ export default function RewardsPage() {
       {splitTotal > 0 && (
         <FadeIn delay={0.15} className="mt-3">
           <Card>
-            <p className="text-[13px] font-bold text-ink">Where you save</p>
+            <p className="text-[13px] font-bold text-ink">{t("pp.rew.where")}</p>
             <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-beige">
               <div
                 className="bg-accent"
@@ -145,7 +147,7 @@ export default function RewardsPage() {
         </FadeIn>
       )}
 
-      <h2 className="mt-6 text-[14px] font-bold text-ink">Active offers</h2>
+      <h2 className="mt-6 text-[14px] font-bold text-ink">{t("pp.rew.activeOffers")}</h2>
       <Stagger delayChildren={0.15} className="mt-2 flex flex-col gap-2.5">
         <StaggerItem>
           <Card className="transition-all hover:-translate-y-0.5 hover:shadow-card">

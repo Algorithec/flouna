@@ -29,8 +29,8 @@ export default function DecisionsPage() {
   return (
     <ConsolePage accept={["admin", "super_admin"]}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">Decision logs</h1>
-        <p className="mt-1 text-[13px] text-slate-400">
+        <h1 className="text-xl font-semibold text-(--c-ink)">Decision logs</h1>
+        <p className="mt-1 text-[13px] text-(--c-muted)">
           {total} real AI decisions — the user intent and the domain it resolved to.
         </p>
       </div>
@@ -41,11 +41,11 @@ export default function DecisionsPage() {
         ) : (
           <Table head={["Time", "User intent", "Domain"]}>
             {logs.map((l, i) => (
-              <tr key={i} className="hover:bg-slate-900/40">
-                <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">
+              <tr key={i} className="hover:bg-[#f7f1e6]">
+                <td className="whitespace-nowrap px-4 py-2.5 text-(--c-muted)">
                   {new Date(l.time).toLocaleString("en-IN")}
                 </td>
-                <td className="px-4 py-2.5 text-slate-200">&ldquo;{l.intent}&rdquo;</td>
+                <td className="px-4 py-2.5 text-(--c-ink)">&ldquo;{l.intent}&rdquo;</td>
                 <td className="px-4 py-2.5">
                   <Badge tone={TONE[l.domain] ?? "slate"}>{l.domain}</Badge>
                 </td>

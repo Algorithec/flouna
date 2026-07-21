@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bell, Trash2, TrendingDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
+import { useI18n } from "@/components/i18n/I18nContext";
 import { SubPage } from "@/components/profile/SubPage";
 import { Card } from "@/components/ui/Card";
 
@@ -18,6 +19,7 @@ type Alert = {
 };
 
 export default function AlertsPage() {
+  const { t } = useI18n();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [error, setError] = useState("");
 
@@ -39,19 +41,18 @@ export default function AlertsPage() {
   const past = alerts.filter((a) => !a.active);
 
   return (
-    <SubPage title="Price alerts">
+    <SubPage title={t("profile.alerts")}>
       {error && <p className="text-[13px] text-danger">{error}</p>}
 
       {alerts.length === 0 && !error && (
         <p className="py-8 text-center text-[13px] text-cocoa">
-          No alerts yet. On any dish, tap “Track this price” to get notified when
-          it drops.
+          {t("pp.alerts.empty")}
         </p>
       )}
 
       {active.length > 0 && (
         <>
-          <h2 className="text-[13px] font-bold text-ink">Watching</h2>
+          <h2 className="text-[13px] font-bold text-ink">{t("pp.alerts.watching")}</h2>
           <div className="mt-2 flex flex-col gap-2">
             {active.map((a) => (
               <Card key={a.id} className="py-3">
@@ -64,7 +65,7 @@ export default function AlertsPage() {
                       {a.itemName}
                     </p>
                     <p className="text-[12px] text-cocoa">
-                      Notify below {rupees(a.targetPaise)} · last seen{" "}
+                      {t("pp.alerts.notifyBelow")} {rupees(a.targetPaise)} · {t("pp.alerts.lastSeen")}{" "}
                       {rupees(a.lastSeenPaise)}
                     </p>
                   </div>
@@ -84,7 +85,7 @@ export default function AlertsPage() {
 
       {past.length > 0 && (
         <>
-          <h2 className="mt-5 text-[13px] font-bold text-ink">Triggered</h2>
+          <h2 className="mt-5 text-[13px] font-bold text-ink">{t("pp.alerts.triggered")}</h2>
           <div className="mt-2 flex flex-col gap-2">
             {past.map((a) => (
               <Card key={a.id} className="py-3 opacity-80">

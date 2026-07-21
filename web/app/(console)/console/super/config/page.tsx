@@ -72,44 +72,44 @@ export default function SettingsPage() {
     <ConsolePage accept={["super_admin"]}>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Settings</h1>
-          <p className="mt-1 text-[13px] text-slate-400">
+          <h1 className="text-xl font-semibold text-(--c-ink)">Settings</h1>
+          <p className="mt-1 text-[13px] text-(--c-muted)">
             Commission and alert thresholds. ONDC margins are bounded by government norms.
           </p>
         </div>
         <button
           onClick={save}
           disabled={saving || !s}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+          className="rounded-lg bg-(--c-maroon) px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#690a17] disabled:opacity-50"
         >
           Save changes
         </button>
       </div>
 
       {msg && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[13px] text-slate-300">
-          <AlertCircle size={15} className="text-amber-400" /> {msg}
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-(--c-border) bg-white px-3 py-2 text-[13px] text-(--c-ink)">
+          <AlertCircle size={15} className="text-(--c-gold)" /> {msg}
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Thresholds">
-          <div className="divide-y divide-slate-800/60">
+          <div className="divide-y divide-(--c-line)">
             {s &&
               FIELDS.map((f) => {
                 const display = f.bps ? s[f.key] / 100 : s[f.key];
                 return (
                   <div key={f.key} className="flex items-center justify-between px-4 py-2.5 text-[13px]">
-                    <span className="text-slate-300">{f.label}</span>
+                    <span className="text-(--c-ink)">{f.label}</span>
                     <span className="flex items-center gap-2">
                       <input
                         type="number"
                         step={f.bps ? "0.1" : "1"}
                         value={display}
                         onChange={(e) => setField(f.key, Number(e.target.value), f.bps)}
-                        className="w-20 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-right text-[13px] text-slate-100"
+                        className="w-20 rounded-md border border-(--c-border) bg-white px-2 py-1 text-right text-[13px] text-(--c-ink)"
                       />
-                      <span className="w-6 text-slate-500">{f.unit}</span>
+                      <span className="w-6 text-(--c-muted)">{f.unit}</span>
                     </span>
                   </div>
                 );
@@ -120,24 +120,24 @@ export default function SettingsPage() {
         <Card title="Configuration status">
           {cfg && (
             <>
-              <div className="flex flex-wrap gap-2 border-b border-slate-800 px-4 py-3">
+              <div className="flex flex-wrap gap-2 border-b border-(--c-border) px-4 py-3">
                 {Object.entries(cfg.runtime).map(([k, v]) => (
-                  <span key={k} className="rounded bg-slate-800/60 px-2 py-1 text-[11px]">
-                    <span className="text-slate-400">{k.replace(/([A-Z])/g, " $1")}</span>{" "}
-                    <span className="font-mono text-emerald-300">{v}</span>
+                  <span key={k} className="rounded bg-(--c-ivory) px-2 py-1 text-[11px]">
+                    <span className="text-(--c-muted)">{k.replace(/([A-Z])/g, " $1")}</span>{" "}
+                    <span className="font-mono text-[#1a7a4a]">{v}</span>
                   </span>
                 ))}
               </div>
-              <ul className="divide-y divide-slate-800/60">
+              <ul className="divide-y divide-(--c-line)">
                 {Object.entries(cfg.secrets).map(([key, on]) => (
                   <li key={key} className="flex items-center justify-between px-4 py-2 text-[12px]">
-                    <span className="capitalize text-slate-300">{key.replace(/([A-Z])/g, " $1")}</span>
+                    <span className="capitalize text-(--c-ink)">{key.replace(/([A-Z])/g, " $1")}</span>
                     {on ? (
-                      <span className="flex items-center gap-1 text-emerald-400">
+                      <span className="flex items-center gap-1 text-[#1a7a4a]">
                         <CheckCircle2 size={13} /> set
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-slate-600">
+                      <span className="flex items-center gap-1 text-(--c-muted)">
                         <MinusCircle size={13} /> not set
                       </span>
                     )}

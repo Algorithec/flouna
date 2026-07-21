@@ -14,10 +14,10 @@ type Alert = {
 };
 
 const ICON = {
-  critical: <AlertCircle size={15} className="text-rose-400" />,
-  warning: <Clock size={15} className="text-amber-400" />,
-  info: <Info size={15} className="text-sky-400" />,
-  resolved: <CheckCircle2 size={15} className="text-emerald-400" />,
+  critical: <AlertCircle size={15} className="text-(--c-red)" />,
+  warning: <Clock size={15} className="text-(--c-gold)" />,
+  info: <Info size={15} className="text-[#2e6db4]" />,
+  resolved: <CheckCircle2 size={15} className="text-[#1a7a4a]" />,
 };
 
 export default function AlertsPage() {
@@ -38,8 +38,8 @@ export default function AlertsPage() {
   return (
     <ConsolePage accept={["developer", "super_admin"]}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">Alerts &amp; exceptions</h1>
-        <p className="mt-1 text-[13px] text-slate-400">
+        <h1 className="text-xl font-semibold text-(--c-ink)">Alerts &amp; exceptions</h1>
+        <p className="mt-1 text-[13px] text-(--c-muted)">
           Real, derived from server errors, pending refunds and urgent tickets.
         </p>
       </div>
@@ -54,13 +54,13 @@ export default function AlertsPage() {
         {alerts.length === 0 ? (
           <Empty>All clear — no active alerts.</Empty>
         ) : (
-          <ul className="divide-y divide-slate-800/60">
+          <ul className="divide-y divide-(--c-line)">
             {alerts.map((a, i) => (
               <li key={i} className="flex items-start gap-3 px-4 py-3">
                 <span className="mt-0.5">{ICON[a.severity]}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] text-slate-200">{a.message}</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
+                  <p className="text-[13px] text-(--c-ink)">{a.message}</p>
+                  <p className="mt-0.5 text-[11px] text-(--c-muted)">
                     {a.source} · {new Date(a.at).toLocaleString("en-IN")}
                   </p>
                 </div>

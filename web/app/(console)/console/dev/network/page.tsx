@@ -26,21 +26,21 @@ export default function NetworkPage() {
   return (
     <ConsolePage accept={["developer", "super_admin"]}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">ONDC network</h1>
-        <p className="mt-1 text-[13px] text-slate-400">
+        <h1 className="text-xl font-semibold text-(--c-ink)">ONDC network</h1>
+        <p className="mt-1 text-[13px] text-(--c-muted)">
           Per-domain network status. Simulated until ONDC participant registration.
         </p>
       </div>
 
       {net && (
         <div className="mb-4 flex flex-wrap gap-2">
-          <span className="rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-[13px]">
-            <span className="text-slate-400">Mode</span>{" "}
-            <span className="font-mono text-emerald-300">{net.mode}</span>
+          <span className="rounded-lg border border-(--c-border) bg-white px-3 py-1.5 text-[13px]">
+            <span className="text-(--c-muted)">Mode</span>{" "}
+            <span className="font-mono text-[#1a7a4a]">{net.mode}</span>
           </span>
-          <span className="rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-[13px]">
-            <span className="text-slate-400">Gateway ping</span>{" "}
-            <span className="font-mono text-slate-200">
+          <span className="rounded-lg border border-(--c-border) bg-white px-3 py-1.5 text-[13px]">
+            <span className="text-(--c-muted)">Gateway ping</span>{" "}
+            <span className="font-mono text-(--c-ink)">
               {net.gatewayPingMs != null ? `${net.gatewayPingMs} ms` : "— (offline)"}
             </span>
           </span>
@@ -48,10 +48,10 @@ export default function NetworkPage() {
       )}
 
       <Card title="Domain networks">
-        <ul className="divide-y divide-slate-800/60">
+        <ul className="divide-y divide-(--c-line)">
           {net?.domains.map((d) => (
             <li key={d.domain} className="flex items-center justify-between px-4 py-3 text-[13px]">
-              <span className="capitalize text-slate-200">{d.domain}</span>
+              <span className="capitalize text-(--c-ink)">{d.domain}</span>
               {statusBadge(d.status)}
             </li>
           ))}

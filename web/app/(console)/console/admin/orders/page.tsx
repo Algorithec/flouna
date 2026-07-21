@@ -63,7 +63,7 @@ export default function AdminOrdersPage() {
 
   if (state.status !== "ok") {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-slate-500">
+      <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
         <Loader2 className="animate-spin" />
       </div>
     );
@@ -76,7 +76,7 @@ export default function AdminOrdersPage() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-[13px] text-slate-200"
+          className="rounded-lg border border-(--c-border) bg-white px-3 py-2 text-[13px] text-(--c-ink)"
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -87,13 +87,13 @@ export default function AdminOrdersPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-600">
+        <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-800">
+        <div className="overflow-hidden rounded-xl border border-(--c-border)">
           <table className="w-full text-left text-[13px]">
-            <thead className="bg-slate-900/60 text-[12px] uppercase tracking-wide text-slate-500">
+            <thead className="bg-white text-[12px] uppercase tracking-wide text-(--c-muted)">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Order</th>
                 <th className="px-4 py-2.5 font-medium">Customer</th>
@@ -103,28 +103,28 @@ export default function AdminOrdersPage() {
                 <th className="px-4 py-2.5 font-medium text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
+            <tbody className="divide-y divide-(--c-line)">
               {orders.map((o) => (
-                <tr key={o.id} className="hover:bg-slate-900/40">
+                <tr key={o.id} className="hover:bg-[#f7f1e6]">
                   <td className="px-4 py-2.5">
-                    <p className="font-medium text-slate-100">{o.title}</p>
-                    <p className="text-[12px] capitalize text-slate-500">
+                    <p className="font-medium text-(--c-ink)">{o.title}</p>
+                    <p className="text-[12px] capitalize text-(--c-muted)">
                       {o.domain} · {o.provider}
                     </p>
                   </td>
-                  <td className="px-4 py-2.5 text-slate-400">{o.user.email}</td>
-                  <td className="px-4 py-2.5 text-slate-200">{rupees(o.amount)}</td>
-                  <td className="px-4 py-2.5 capitalize text-slate-300">
+                  <td className="px-4 py-2.5 text-(--c-muted)">{o.user.email}</td>
+                  <td className="px-4 py-2.5 text-(--c-ink)">{rupees(o.amount)}</td>
+                  <td className="px-4 py-2.5 capitalize text-(--c-ink)">
                     {o.status.replace(/_/g, " ")}
                   </td>
                   <td className="px-4 py-2.5">
                     <span
                       className={
                         o.payment?.status === "success"
-                          ? "text-emerald-400"
+                          ? "text-[#1a7a4a]"
                           : o.payment?.status === "refund_pending"
-                            ? "text-amber-400"
-                            : "text-slate-500"
+                            ? "text-(--c-gold)"
+                            : "text-(--c-muted)"
                       }
                     >
                       {o.payment?.status ?? "—"}
@@ -135,19 +135,19 @@ export default function AdminOrdersPage() {
                       <button
                         onClick={() => flagRefund(o.id)}
                         disabled={busy === o.id}
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-[12px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-md border border-(--c-border) px-2.5 py-1 text-[12px] text-(--c-ink) hover:bg-[#f0e8da] disabled:opacity-50"
                       >
                         <RefreshCcw size={12} /> Flag refund
                       </button>
                     ) : (
-                      <span className="text-[12px] text-slate-600">—</span>
+                      <span className="text-[12px] text-(--c-muted)">—</span>
                     )}
                   </td>
                 </tr>
               ))}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-10 text-center text-(--c-muted)">
                     No orders.
                   </td>
                 </tr>

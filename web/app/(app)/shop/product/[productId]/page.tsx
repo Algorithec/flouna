@@ -5,6 +5,7 @@ import { Star, Truck, BadgePercent, ChevronLeft, ShieldCheck } from "lucide-reac
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
+import { useI18n } from "@/components/i18n/I18nContext";
 import { sellerName } from "@/lib/sellerName";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +19,7 @@ export default function ProductPage({
   params: Promise<{ productId: string }>;
 }) {
   const { productId } = use(params);
+  const { t } = useI18n();
   const [quotes, setQuotes] = useState<ProductQuote[]>([]);
   const [platform, setPlatform] = useState("");
   const [error, setError] = useState("");
@@ -96,7 +98,7 @@ export default function ProductPage({
       </p>
 
       {/* Platform comparison */}
-      <h2 className="mt-6 text-[14px] font-bold text-ink">Compare across stores</h2>
+      <h2 className="mt-6 text-[14px] font-bold text-ink">{t("shop.compare")}</h2>
       <div className="mt-2 flex flex-col gap-2">
         {quotes.map((q) => (
           <button key={q.platform} onClick={() => setPlatform(q.platform)} className="text-left">
@@ -110,7 +112,7 @@ export default function ProductPage({
                 <div>
                   <p className="text-[14px] font-bold text-ink">{sellerName(q.platform)}</p>
                   <p className="flex items-center gap-1 text-[12px] text-cocoa">
-                    <Truck size={12} /> {q.deliveryDays}-day delivery
+                    <Truck size={12} /> {q.deliveryDays}{t("shop.dayDelivery")}
                   </p>
                   {q.offers[0] && (
                     <p className="flex items-center gap-1 text-[12px] text-success">
@@ -127,7 +129,7 @@ export default function ProductPage({
 
       {/* Coupons */}
       <Card className="mt-4">
-        <p className="text-[13px] font-bold text-ink">Coupons we found</p>
+        <p className="text-[13px] font-bold text-ink">{t("shop.coupons")}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {["WELCOME100", "HDFC10"].map((code) => (
             <span
@@ -145,15 +147,15 @@ export default function ProductPage({
 
       {/* Bill */}
       <Card className="mt-4">
-        <Row label="List price" value={rupees(selected.basePaise)} />
-        {discount > 0 && <Row label="Offers" value={`− ${rupees(discount)}`} accent />}
+        <Row label={t("shop.listPrice")} value={rupees(selected.basePaise)} />
+        {discount > 0 && <Row label={t("bill.offers")} value={`− ${rupees(discount)}`} accent />}
         <div className="my-2 h-px bg-line" />
-        <Row label="Effective price" value={rupees(selected.effectivePaise)} bold />
+        <Row label={t("shop.effectivePrice")} value={rupees(selected.effectivePaise)} bold />
       </Card>
 
       {/* Bought in-app — the order is routed to the seller via ONDC. */}
       <Button className="mt-5 w-full" onClick={() => {}}>
-        Buy now · {rupees(selected.effectivePaise)}
+        {t("shop.buyNow")} · {rupees(selected.effectivePaise)}
       </Button>
       <p className="mt-3 flex items-center justify-center gap-1 text-center text-[11px] text-cocoa/70">
         <ShieldCheck size={12} /> Order &amp; pay in-app · best offer pre-applied

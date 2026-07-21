@@ -55,18 +55,18 @@ export default function TransactionsPage() {
     <ConsolePage accept={["developer", "super_admin"]}>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">ONDC transactions</h1>
-          <p className="mt-1 text-[13px] text-slate-400">
+          <h1 className="text-xl font-semibold text-(--c-ink)">ONDC transactions</h1>
+          <p className="mt-1 text-[13px] text-(--c-muted)">
             Beckn request/callback envelopes per order journey.{" "}
             {meta.mode && meta.mode !== "ondc" && (
-              <span className="text-amber-400">Simulated until registration.</span>
+              <span className="text-(--c-gold)">Simulated until registration.</span>
             )}
           </p>
         </div>
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-[13px] text-slate-200"
+          className="rounded-lg border border-(--c-border) bg-white px-3 py-2 text-[13px] text-(--c-ink)"
         >
           {ACTIONS.map((a) => (
             <option key={a} value={a}>
@@ -82,23 +82,23 @@ export default function TransactionsPage() {
         ) : (
           <Table head={["Action", "Domain", "BPP", "Status", "Signed", "Latency", "When", ""]}>
             {txns.map((t) => (
-              <tr key={t.id} className="cursor-pointer hover:bg-slate-900/40" onClick={() => openDetail(t.id)}>
+              <tr key={t.id} className="cursor-pointer hover:bg-[#f7f1e6]" onClick={() => openDetail(t.id)}>
                 <td className="px-4 py-2.5">
                   <Badge tone={actionTone(t.action)}>{t.action}</Badge>
                 </td>
-                <td className="px-4 py-2.5 font-mono text-slate-400">{t.domain}</td>
-                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-500">{t.bppId ?? "—"}</td>
+                <td className="px-4 py-2.5 font-mono text-(--c-muted)">{t.domain}</td>
+                <td className="px-4 py-2.5 font-mono text-[11px] text-(--c-muted)">{t.bppId ?? "—"}</td>
                 <td className="px-4 py-2.5">
                   <Badge tone={t.status === "ack" ? "green" : "red"}>{t.status}</Badge>
                 </td>
                 <td className="px-4 py-2.5">
-                  {t.signed ? <ShieldCheck size={14} className="text-emerald-400" /> : "—"}
+                  {t.signed ? <ShieldCheck size={14} className="text-[#1a7a4a]" /> : "—"}
                 </td>
-                <td className="px-4 py-2.5 text-slate-300">{t.latencyMs != null ? `${t.latencyMs} ms` : "—"}</td>
-                <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">
+                <td className="px-4 py-2.5 text-(--c-ink)">{t.latencyMs != null ? `${t.latencyMs} ms` : "—"}</td>
+                <td className="whitespace-nowrap px-4 py-2.5 text-(--c-muted)">
                   {new Date(t.createdAt).toLocaleTimeString("en-IN")}
                 </td>
-                <td className="px-4 py-2.5 text-right text-slate-600">
+                <td className="px-4 py-2.5 text-right text-(--c-muted)">
                   <ArrowRightLeft size={13} />
                 </td>
               </tr>
@@ -111,49 +111,49 @@ export default function TransactionsPage() {
       {open && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={() => setOpen(null)}>
           <div
-            className="h-full w-full max-w-xl overflow-y-auto border-l border-slate-800 bg-slate-950 p-6"
+            className="h-full w-full max-w-xl overflow-y-auto border-l border-(--c-border) bg-white p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <Badge tone={actionTone(open.action)}>{open.action}</Badge>
-                <p className="mt-2 font-mono text-[12px] text-slate-400">txn {open.txnId}</p>
+                <p className="mt-2 font-mono text-[12px] text-(--c-muted)">txn {open.txnId}</p>
                 {open.orderId && (
-                  <p className="font-mono text-[11px] text-slate-600">order {open.orderId}</p>
+                  <p className="font-mono text-[11px] text-(--c-muted)">order {open.orderId}</p>
                 )}
               </div>
-              <button onClick={() => setOpen(null)} className="text-slate-500 hover:text-slate-300">
+              <button onClick={() => setOpen(null)} className="text-(--c-muted) hover:text-(--c-ink)">
                 <X size={18} />
               </button>
             </div>
 
             <div className="mb-3 flex flex-wrap gap-2 text-[12px]">
-              <span className="rounded bg-slate-900 px-2 py-1 text-slate-400">
-                domain <span className="font-mono text-slate-200">{open.domain}</span>
+              <span className="rounded bg-white px-2 py-1 text-(--c-muted)">
+                domain <span className="font-mono text-(--c-ink)">{open.domain}</span>
               </span>
-              <span className="rounded bg-slate-900 px-2 py-1 text-slate-400">
-                status <span className="font-mono text-emerald-300">{open.status}</span>
+              <span className="rounded bg-white px-2 py-1 text-(--c-muted)">
+                status <span className="font-mono text-[#1a7a4a]">{open.status}</span>
               </span>
               {open.signed && (
-                <span className="rounded bg-emerald-900/40 px-2 py-1 text-emerald-300">Ed25519 signed</span>
+                <span className="rounded bg-[#e5f3ea] px-2 py-1 text-[#1a7a4a]">Ed25519 signed</span>
               )}
               {open.simulated && (
-                <span className="rounded bg-amber-900/40 px-2 py-1 text-amber-300">simulated</span>
+                <span className="rounded bg-[#fef3dc] px-2 py-1 text-(--c-gold)">simulated</span>
               )}
             </div>
 
             {open.request && (
               <div className="mb-4">
-                <p className="mb-1 text-[12px] font-semibold text-slate-400">Request envelope</p>
-                <pre className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-[11px] leading-relaxed text-slate-300">
+                <p className="mb-1 text-[12px] font-semibold text-(--c-muted)">Request envelope</p>
+                <pre className="overflow-x-auto rounded-lg border border-(--c-border) bg-white p-3 text-[11px] leading-relaxed text-(--c-ink)">
                   {JSON.stringify(JSON.parse(open.request), null, 2)}
                 </pre>
               </div>
             )}
             {open.response && (
               <div>
-                <p className="mb-1 text-[12px] font-semibold text-slate-400">Callback envelope</p>
-                <pre className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-[11px] leading-relaxed text-slate-300">
+                <p className="mb-1 text-[12px] font-semibold text-(--c-muted)">Callback envelope</p>
+                <pre className="overflow-x-auto rounded-lg border border-(--c-border) bg-white p-3 text-[11px] leading-relaxed text-(--c-ink)">
                   {JSON.stringify(JSON.parse(open.response), null, 2)}
                 </pre>
               </div>

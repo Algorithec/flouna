@@ -7,6 +7,7 @@ import { SubPage } from "@/components/profile/SubPage";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { useI18n } from "@/components/i18n/I18nContext";
 
 type Address = {
   id: string;
@@ -21,6 +22,7 @@ type Address = {
 const EMPTY = { label: "", line1: "", city: "", state: "", pincode: "" };
 
 export default function AddressesPage() {
+  const { t } = useI18n();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [form, setForm] = useState(EMPTY);
   const [adding, setAdding] = useState(false);
@@ -61,7 +63,7 @@ export default function AddressesPage() {
   }
 
   return (
-    <SubPage title="Address">
+    <SubPage title={t("profile.address")}>
       <div className="flex flex-col gap-2.5">
         {addresses.map((a) => (
           <Card key={a.id}>
@@ -72,7 +74,7 @@ export default function AddressesPage() {
                   {a.label}
                   {a.isDefault && (
                     <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">
-                      Default
+                      {t("pp.addr.default")}
                     </span>
                   )}
                 </p>
@@ -92,7 +94,7 @@ export default function AddressesPage() {
         ))}
         {addresses.length === 0 && !adding && (
           <p className="py-6 text-center text-[13px] text-cocoa">
-            No saved addresses yet.
+            {t("pp.addr.empty")}
           </p>
         )}
       </div>
@@ -100,35 +102,35 @@ export default function AddressesPage() {
       {adding ? (
         <form onSubmit={add} className="mt-4 flex flex-col gap-3">
           <Input
-            label="Label"
-            placeholder="Home / Work"
+            label={t("pp.addr.label")}
+            placeholder={t("pp.addr.labelPh")}
             value={form.label}
             onChange={(e) => setForm({ ...form, label: e.target.value })}
             required
           />
           <Input
-            label="Address"
-            placeholder="Flat, street, area"
+            label={t("pp.addr.address")}
+            placeholder={t("pp.addr.addressPh")}
             value={form.line1}
             onChange={(e) => setForm({ ...form, line1: e.target.value })}
             required
           />
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="City"
+              label={t("pp.addr.city")}
               value={form.city}
               onChange={(e) => setForm({ ...form, city: e.target.value })}
               required
             />
             <Input
-              label="State"
+              label={t("pp.addr.state")}
               value={form.state}
               onChange={(e) => setForm({ ...form, state: e.target.value })}
               required
             />
           </div>
           <Input
-            label="PIN code"
+            label={t("pp.addr.pin")}
             inputMode="numeric"
             value={form.pincode}
             onChange={(e) =>
@@ -139,7 +141,7 @@ export default function AddressesPage() {
           {error && <p className="text-[13px] text-danger">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" size="md" disabled={busy} className="flex-1">
-              {busy ? "Saving…" : "Save address"}
+              {busy ? t("pp.addr.saving") : t("pp.addr.save")}
             </Button>
             <Button
               type="button"
@@ -147,7 +149,7 @@ export default function AddressesPage() {
               variant="secondary"
               onClick={() => setAdding(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </form>
@@ -158,7 +160,7 @@ export default function AddressesPage() {
           onClick={() => setAdding(true)}
           className="mt-4 w-full"
         >
-          <Plus size={16} /> Add new address
+          <Plus size={16} /> {t("pp.addr.addNew")}
         </Button>
       )}
     </SubPage>

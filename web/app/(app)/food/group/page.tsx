@@ -39,7 +39,10 @@ export default function GroupStartPage() {
         method: "POST",
         json: { code: code.trim().toUpperCase() },
       });
-      router.push(`/food/group/${cart.id}`);
+      // One code space for both kinds — ride codes land on the shared-ride screen.
+      router.push(
+        cart.domain === "ride" ? `/rides/group/${cart.id}` : `/food/group/${cart.id}`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not join");
       setBusy(false);

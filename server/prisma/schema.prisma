@@ -73,7 +73,14 @@ model GroupCart {
   code        String   @unique // short human-shareable join code
   hostId      String
   host        User     @relation("HostedCarts", fields: [hostId], references: [id], onDelete: Cascade)
-  platform    String // "ondc" | "swiggy" | "zomato"
+  // "food": members add dishes, host checks out the combined cart.
+  // "ride": one shared trip, fare split equally among members.
+  domain      String   @default("food")
+  platform    String // food: source network id · ride: provider id
+  // Ride carts only: JSON snapshot of the trip taken at creation —
+  // pickup/drop labels + coords, product/display name, vehicle, fare estimate.
+  // The fare is recomputed server-side at checkout; this is the display copy.
+  rideDetails String?
   status      String   @default("open") // "open" | "locked" | "ordered" | "cancelled"
   orderId     String? // set once the host places the combined order
   createdAt   DateTime @default(now())

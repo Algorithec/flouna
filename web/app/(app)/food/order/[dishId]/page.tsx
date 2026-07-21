@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import dynamic from "next/dynamic";
 import { useBudget } from "@/components/food/BudgetBar";
 import { DishArt } from "@/components/food/DishArt";
+import { useI18n } from "@/components/i18n/I18nContext";
 import { cn } from "@/lib/cn";
 import type { FoodQuote } from "@/components/chat/types";
 
@@ -37,6 +38,7 @@ export default function FoodOrderPage({
     { label: string; line1: string; city: string } | null | undefined
   >(undefined);
   const budget = useBudget();
+  const { t } = useI18n();
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertTarget, setAlertTarget] = useState("");
   const [alertDone, setAlertDone] = useState(false);
@@ -133,15 +135,15 @@ export default function FoodOrderPage({
       {/* The engine's pick. Radiues compared this dish across sources and locked
           the best deal — users see one price and an anonymous comparison, never
           which networks were checked. */}
-      <h2 className="mt-6 text-[14px] font-bold text-ink">Radiues price</h2>
+      <h2 className="mt-6 text-[14px] font-bold text-ink">{t("foodOrder.radiuesPrice")}</h2>
       <Card className="mt-2 border-accent/70 ring-1 ring-accent/30">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="inline-flex items-center rounded-pill bg-accent-soft px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent">
-              Best deal found
+              {t("foodOrder.bestDeal")}
             </p>
             <p className="mt-1.5 text-[12px] text-cocoa">
-              Delivery {rupees(selected.deliveryFeePaise)} · {selected.etaMinutes} min
+              {t("foodOrder.delivery")} {rupees(selected.deliveryFeePaise)} · {selected.etaMinutes} min
             </p>
             {selected.offers[0] && (
               <p className="flex items-center gap-1 text-[12px] text-success">
@@ -181,7 +183,7 @@ export default function FoodOrderPage({
         <div className="flex items-center gap-2.5">
           <MapPin size={16} className="shrink-0 text-accent" />
           {address === undefined ? (
-            <p className="text-[13px] text-cocoa">Loading address…</p>
+            <p className="text-[13px] text-cocoa">{t("foodOrder.loadingAddress")}</p>
           ) : address ? (
             <p className="min-w-0 flex-1 truncate text-[13px] text-ink">
               <span className="font-semibold">{address.label}</span> —{" "}
@@ -189,27 +191,27 @@ export default function FoodOrderPage({
             </p>
           ) : (
             <p className="min-w-0 flex-1 text-[13px] text-cocoa">
-              No delivery address saved yet
+              {t("foodOrder.noAddress")}
             </p>
           )}
           <Link
             href="/profile/addresses"
             className="shrink-0 text-[12px] font-semibold text-accent hover:underline"
           >
-            {address ? "Change" : "Add"}
+            {address ? t("foodOrder.change") : t("foodOrder.add")}
           </Link>
         </div>
       </Card>
 
       {/* Bill summary */}
       <Card className="mt-6">
-        <Row label="Item total" value={rupees(selected.basePaise)} />
-        <Row label="Delivery fee" value={rupees(selected.deliveryFeePaise)} />
+        <Row label={t("bill.itemTotal")} value={rupees(selected.basePaise)} />
+        <Row label={t("bill.deliveryFee")} value={rupees(selected.deliveryFeePaise)} />
         {discount > 0 && (
-          <Row label="Offers applied" value={`− ${rupees(discount)}`} accent />
+          <Row label={t("bill.offers")} value={`− ${rupees(discount)}`} accent />
         )}
         <div className="my-2 h-px bg-line" />
-        <Row label="Total" value={rupees(selected.effectivePaise)} bold />
+        <Row label={t("bill.totalAmount")} value={rupees(selected.effectivePaise)} bold />
       </Card>
 
       {/* Budget Guardian check */}
@@ -226,10 +228,10 @@ export default function FoodOrderPage({
       {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
       <Button onClick={placeOrder} disabled={busy} className="mt-5 w-full">
-        {busy ? "Placing order…" : `Pay ${rupees(selected.effectivePaise)}`}
+        {busy ? t("foodOrder.placing") : `${t("foodOrder.pay")} ${rupees(selected.effectivePaise)}`}
       </Button>
       <p className="mt-3 flex items-center justify-center gap-1 text-[11px] text-cocoa/70">
-        <ShieldCheck size={12} /> Order &amp; pay in-app · offers pre-applied
+        <ShieldCheck size={12} /> {t("foodOrder.inApp")}
       </p>
 
       {/* Price trend chart (shows only when we have ≥2 days of data) */}
@@ -274,7 +276,7 @@ export default function FoodOrderPage({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13px] font-bold text-ink">
-                Track this price
+                {t("foodOrder.trackPrice")}
               </span>
               <span className="block text-[12px] text-cocoa">
                 Get a live alert if {selected.name} gets cheaper

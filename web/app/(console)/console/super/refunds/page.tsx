@@ -98,7 +98,7 @@ export default function RefundsPage() {
         ) : (
           <Table head={["Order", "Customer", "Amount", "Method", "Flagged", "Decision"]}>
             {queue.map((r) => (
-              <tr key={r.paymentId} className="hover:bg-slate-900/40">
+              <tr key={r.paymentId} className="hover:bg-[#f7f1e6]">
                 <td className="px-4 py-2.5">
                   <p className="font-medium" style={{ color: "var(--c-ink)" }}>{r.orderTitle}</p>
                   <p className="font-mono text-[10.5px]" style={{ color: "var(--c-muted)" }}>

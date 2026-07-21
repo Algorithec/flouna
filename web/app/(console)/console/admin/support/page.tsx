@@ -19,10 +19,10 @@ type Ticket = {
 };
 
 const PRIORITY_TONE: Record<string, string> = {
-  urgent: "text-rose-400",
-  high: "text-amber-400",
-  normal: "text-slate-400",
-  low: "text-slate-500",
+  urgent: "text-(--c-red)",
+  high: "text-(--c-gold)",
+  normal: "text-(--c-muted)",
+  low: "text-(--c-muted)",
 };
 
 export default function AdminSupportPage() {
@@ -58,7 +58,7 @@ export default function AdminSupportPage() {
 
   if (state.status !== "ok") {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-slate-500">
+      <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
         <Loader2 className="animate-spin" />
       </div>
     );
@@ -71,7 +71,7 @@ export default function AdminSupportPage() {
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-[13px] text-slate-200"
+          className="rounded-lg border border-(--c-border) bg-white px-3 py-2 text-[13px] text-(--c-ink)"
         >
           <option value="">All</option>
           <option value="open">Open</option>
@@ -82,11 +82,11 @@ export default function AdminSupportPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-600">
+        <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>
       ) : tickets.length === 0 ? (
-        <p className="py-16 text-center text-[14px] text-slate-500">
+        <p className="py-16 text-center text-[14px] text-(--c-muted)">
           No tickets {filter && `(${filter})`}.
         </p>
       ) : (
@@ -94,23 +94,23 @@ export default function AdminSupportPage() {
           {tickets.map((t) => (
             <div
               key={t.id}
-              className="rounded-xl border border-slate-800 bg-slate-900/40 p-4"
+              className="rounded-xl border border-(--c-border) bg-white p-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="flex items-center gap-2 text-[14px] font-medium text-slate-100">
+                  <p className="flex items-center gap-2 text-[14px] font-medium text-(--c-ink)">
                     {t.subject}
                     <span className={`text-[11px] uppercase ${PRIORITY_TONE[t.priority]}`}>
                       {t.priority}
                     </span>
                   </p>
-                  <p className="mt-0.5 text-[12px] text-slate-500">
+                  <p className="mt-0.5 text-[12px] text-(--c-muted)">
                     <span className="capitalize">{t.category}</span> · {t.user.email} ·{" "}
                     {new Date(t.createdAt).toLocaleDateString("en-IN")}
                     {t.orderId && <span> · order {t.orderId.slice(0, 8)}</span>}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-md bg-slate-800 px-2 py-1 text-[11px] capitalize text-slate-300">
+                <span className="shrink-0 rounded-md bg-(--c-ivory) px-2 py-1 text-[11px] capitalize text-(--c-ink)">
                   {t.status.replace(/_/g, " ")}
                 </span>
               </div>
@@ -120,7 +120,7 @@ export default function AdminSupportPage() {
                   <button
                     onClick={() => patch(t.id, { assignToMe: true, status: "in_progress" })}
                     disabled={busy === t.id}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-[12px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-md border border-(--c-border) px-2.5 py-1 text-[12px] text-(--c-ink) hover:bg-[#f0e8da] disabled:opacity-50"
                   >
                     <UserPlus size={12} /> Assign to me
                   </button>
@@ -131,7 +131,7 @@ export default function AdminSupportPage() {
                       patch(t.id, { status: "resolved", resolution: "Handled by support." })
                     }
                     disabled={busy === t.id}
-                    className="inline-flex items-center gap-1 rounded-md border border-emerald-700/60 bg-emerald-600/10 px-2.5 py-1 text-[12px] text-emerald-300 hover:bg-emerald-600/20 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-md border border-[#9fd8bc] bg-[#e5f3ea] px-2.5 py-1 text-[12px] text-[#1a7a4a] hover:bg-[#d8ecdf] disabled:opacity-50"
                   >
                     <CheckCircle2 size={12} /> Resolve
                   </button>

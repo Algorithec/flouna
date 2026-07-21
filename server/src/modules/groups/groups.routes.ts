@@ -6,6 +6,8 @@ import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
 import { quotesForDish } from "../food/food.service.js";
+import { quoteRides, fetchRoute } from "../rides/rides.service.js";
+import { env } from "../../config/env.js";
 import { sendPushToUser } from "../notifications/push.service.js";
 import { joinLimiter } from "../../middleware/rateLimit.js";
 
@@ -25,7 +27,9 @@ type CartWithItems = {
   id: string;
   code: string;
   hostId: string;
+  domain: string;
   platform: string;
+  rideDetails: string | null;
   status: string;
   orderId: string | null;
   items: {
@@ -37,17 +41,75 @@ type CartWithItems = {
     qty: number;
     user: { name: string };
   }[];
+  members: { userId: string; user: { name: string } }[];
 };
 
-// Builds the per-member breakdown + equal split shown to everyone.
+// The trip snapshot stored on ride carts — display copy plus the coordinates
+// the checkout recomputes the authoritative fare from.
+type RideSnapshot = {
+  pickup: string;
+  drop: string;
+  pickupLat: number;
+  pickupLng: number;
+  dropLat: number;
+  dropLng: number;
+  provider: string;
+  productName: string;
+  displayName: string;
+  vehicle: string;
+  farePaise: number;
+  seats: number;
+};
+
+// How many people can actually share the vehicle (driver excluded).
+const SEATS: Record<string, number> = { auto: 3, cab: 4 };
+
+// Builds the per-member breakdown + split shown to everyone. Food carts split
+// by what each member added; ride carts split the fare equally.
 async function summarize(cartId: string, viewerId: string) {
   const cart = (await prisma.groupCart.findUnique({
     where: { id: cartId },
     include: {
       items: { include: { user: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
+      members: { include: { user: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
     },
   })) as CartWithItems | null;
   if (!cart) throw new ApiError(404, "Group order not found");
+
+  const base = {
+    id: cart.id,
+    code: cart.code,
+    domain: cart.domain,
+    platform: cart.platform,
+    status: cart.status,
+    orderId: cart.orderId,
+    isHost: cart.hostId === viewerId,
+  };
+
+  if (cart.domain === "ride") {
+    const ride = JSON.parse(cart.rideDetails ?? "{}") as RideSnapshot;
+    const memberCount = Math.max(1, cart.members.length);
+    const equalSplitPaise = Math.round(ride.farePaise / memberCount);
+    return {
+      ...base,
+      ride: {
+        pickup: ride.pickup,
+        drop: ride.drop,
+        displayName: ride.displayName,
+        vehicle: ride.vehicle,
+        seats: ride.seats,
+      },
+      totalPaise: ride.farePaise,
+      equalSplitPaise,
+      members: cart.members.map((m) => ({
+        userId: m.userId,
+        name: m.user.name,
+        subtotalPaise: equalSplitPaise,
+        isYou: m.userId === viewerId,
+      })),
+      items: [],
+    };
+  }
 
   const members = new Map<string, { name: string; subtotalPaise: number }>();
   for (const item of cart.items) {
@@ -60,12 +122,8 @@ async function summarize(cartId: string, viewerId: string) {
   const equalSplitPaise = Math.round(totalPaise / memberCount);
 
   return {
-    id: cart.id,
-    code: cart.code,
-    platform: cart.platform,
-    status: cart.status,
-    orderId: cart.orderId,
-    isHost: cart.hostId === viewerId,
+    ...base,
+    ride: null,
     totalPaise,
     equalSplitPaise,
     members: [...members.entries()].map(([userId, m]) => ({
@@ -109,18 +167,88 @@ async function addMember(cartId: string, userId: string) {
 }
 
 // ---------- create ----------
+const createFoodGroup = z.object({
+  domain: z.literal("food").default("food"),
+  platform: z.enum(["ondc", "swiggy", "zomato"]),
+});
+const createRideGroup = z.object({
+  domain: z.literal("ride"),
+  ride: z.object({
+    provider: z.enum(["uber", "ola", "rapido", "ondc"]),
+    productName: z.string().max(60),
+    pickup: z.string().max(160),
+    drop: z.string().max(160),
+    pickupLat: z.number().min(-90).max(90),
+    pickupLng: z.number().min(-180).max(180),
+    dropLat: z.number().min(-90).max(90),
+    dropLng: z.number().min(-180).max(180),
+  }),
+});
+
 groupsRouter.post(
   "/",
-  validateBody(z.object({ platform: z.enum(["ondc", "swiggy", "zomato"]) })),
+  validateBody(z.union([createRideGroup, createFoodGroup])),
   async (req, res, next) => {
     try {
-      const { platform } = req.body as { platform: "ondc" | "swiggy" | "zomato" };
+      const body = req.body as
+        | z.infer<typeof createFoodGroup>
+        | z.infer<typeof createRideGroup>;
+
+      let platform: string;
+      let rideDetails: string | null = null;
+      if (body.domain === "ride") {
+        // Snapshot the trip server-side — fare from our engine, never the client.
+        const route = await fetchRoute(
+          body.ride.pickupLat,
+          body.ride.pickupLng,
+          body.ride.dropLat,
+          body.ride.dropLng,
+          env.ORS_KEY,
+        );
+        const quote = quoteRides({
+          distanceKm: route.distanceKm,
+          rideMinutes: route.rideMinutes,
+        }).find(
+          (q) =>
+            q.provider === body.ride.provider &&
+            q.productName === body.ride.productName,
+        );
+        if (!quote) throw new ApiError(404, "That ride option is no longer available");
+        const seats = SEATS[quote.vehicle];
+        if (!seats) {
+          throw new ApiError(400, "Only autos and cabs can be shared");
+        }
+        platform = quote.provider;
+        rideDetails = JSON.stringify({
+          pickup: body.ride.pickup,
+          drop: body.ride.drop,
+          pickupLat: body.ride.pickupLat,
+          pickupLng: body.ride.pickupLng,
+          dropLat: body.ride.dropLat,
+          dropLng: body.ride.dropLng,
+          provider: quote.provider,
+          productName: quote.productName,
+          displayName: quote.displayName,
+          vehicle: quote.vehicle,
+          farePaise: quote.effectivePaise,
+          seats,
+        } satisfies RideSnapshot);
+      } else {
+        platform = body.platform;
+      }
+
       // Retry on the rare code collision.
       let cart;
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
           cart = await prisma.groupCart.create({
-            data: { code: generateCode(), hostId: req.userId!, platform },
+            data: {
+              code: generateCode(),
+              hostId: req.userId!,
+              domain: body.domain,
+              platform,
+              rideDetails,
+            },
           });
           break;
         } catch {
@@ -144,10 +272,21 @@ groupsRouter.post(
   async (req, res, next) => {
     try {
       const { code } = req.body as { code: string };
-      const cart = await prisma.groupCart.findUnique({ where: { code } });
+      const cart = await prisma.groupCart.findUnique({
+        where: { code },
+        include: { members: { select: { userId: true } } },
+      });
       if (!cart) throw new ApiError(404, "No group order with that code");
       if (cart.status !== "open") {
         throw new ApiError(409, "This group order is closed");
+      }
+      // Shared rides have physical seats — don't let a 5th person into a cab.
+      if (cart.domain === "ride") {
+        const ride = JSON.parse(cart.rideDetails ?? "{}") as RideSnapshot;
+        const alreadyIn = cart.members.some((m) => m.userId === req.userId!);
+        if (!alreadyIn && cart.members.length >= ride.seats) {
+          throw new ApiError(409, "This ride is full");
+        }
       }
       await addMember(cart.id, req.userId!); // joining establishes membership
       res.json(await summarize(cart.id, req.userId!));
@@ -180,6 +319,9 @@ groupsRouter.post(
       const { dishId, qty } = req.body as { dishId: string; qty: number };
       // H2: only members (host or someone who joined via code) may add items.
       const cart = await assertMember(req.params.id!, req.userId!);
+      if (cart.domain === "ride") {
+        throw new ApiError(400, "This is a shared ride — there's nothing to add");
+      }
       if (cart.status !== "open") throw new ApiError(409, "This group order is closed");
 
       // Price comes from the cart's platform — server-trusted, never the client.
@@ -270,13 +412,109 @@ groupsRouter.post(
       const { hostUpiId } = req.body as { hostUpiId?: string };
       const cart = await prisma.groupCart.findUnique({
         where: { id: req.params.id },
-        include: { items: { include: { user: { select: { id: true, name: true } } } } },
+        include: {
+          items: { include: { user: { select: { id: true, name: true } } } },
+          members: { include: { user: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
+        },
       });
       if (!cart) throw new ApiError(404, "Group order not found");
       if (cart.hostId !== req.userId!) {
         throw new ApiError(403, "Only the host can place the order");
       }
       if (cart.status !== "open") throw new ApiError(409, "Already checked out");
+
+      // ---------- shared ride: equal split, one trackable ride order ----------
+      if (cart.domain === "ride") {
+        const ride = JSON.parse(cart.rideDetails ?? "{}") as RideSnapshot;
+        // Recompute the authoritative fare from coordinates at booking time —
+        // the snapshot fare is a display estimate only.
+        const route = await fetchRoute(
+          ride.pickupLat,
+          ride.pickupLng,
+          ride.dropLat,
+          ride.dropLng,
+          env.ORS_KEY,
+        );
+        const quotes = quoteRides({
+          distanceKm: route.distanceKm,
+          rideMinutes: route.rideMinutes,
+        });
+        const quote = quotes.find(
+          (q) => q.provider === ride.provider && q.productName === ride.productName,
+        );
+        if (!quote) throw new ApiError(404, "That ride option is no longer available");
+
+        const hostName =
+          cart.members.find((m) => m.userId === cart.hostId)?.user.name ?? "Host";
+        const memberCount = Math.max(1, cart.members.length);
+        const sharePaise = Math.round(quote.effectivePaise / memberCount);
+        const shares = cart.members.map((m) => ({
+          userId: m.userId,
+          name: m.user.name,
+          sharePaise,
+          isHost: m.userId === cart.hostId,
+          upiLink:
+            m.userId === cart.hostId || !hostUpiId
+              ? null
+              : upiLink({
+                  payeeUpi: hostUpiId,
+                  payeeName: hostName,
+                  amountPaise: sharePaise,
+                  note: `Shared ride (${m.user.name})`,
+                }),
+        }));
+
+        const order = await prisma.order.create({
+          data: {
+            userId: req.userId!,
+            domain: "ride",
+            status: "pending_payment",
+            provider: quote.provider,
+            fulfillment: quote.fulfillment,
+            title: `${quote.displayName}: ${ride.pickup} → ${ride.drop} · ${memberCount} riders`,
+            details: JSON.stringify({
+              ...quote,
+              pickup: ride.pickup,
+              drop: ride.drop,
+              pickupLat: ride.pickupLat,
+              pickupLng: ride.pickupLng,
+              dropLat: ride.dropLat,
+              dropLng: ride.dropLng,
+              distanceKm: route.distanceKm,
+              vehicle: quote.vehicle,
+              routeGeometry: route.geometry,
+              comparedOptions: quotes.length,
+              comparedPlatforms: new Set(quotes.map((q) => q.provider)).size,
+              group: true,
+              memberCount,
+              shares: shares.map((s) => ({
+                name: s.name,
+                sharePaise: s.sharePaise,
+                isHost: s.isHost,
+              })),
+            }),
+            amount: quote.effectivePaise,
+          },
+        });
+
+        await prisma.groupCart.update({
+          where: { id: cart.id },
+          data: { status: "ordered", orderId: order.id },
+        });
+
+        // Everyone in the ride learns it's booked (host is on the pay screen).
+        for (const m of cart.members) {
+          if (m.userId === cart.hostId) continue;
+          void sendPushToUser(m.userId, {
+            title: "Your shared ride is booked 🚕",
+            body: `${quote.displayName} to ${ride.drop} — your share is ₹${(sharePaise / 100).toFixed(0)}.`,
+            url: `/rides/group/${cart.id}`,
+          });
+        }
+
+        return res.json({ orderId: order.id, totalPaise: quote.effectivePaise, shares });
+      }
+
       if (cart.items.length === 0) throw new ApiError(400, "The cart is empty");
 
       const totalPaise = cart.items.reduce((s, i) => s + i.pricePaise * i.qty, 0);

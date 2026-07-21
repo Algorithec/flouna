@@ -25,8 +25,8 @@ export default function CouponsPage() {
   return (
     <ConsolePage accept={["admin", "super_admin"]}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">Coupon engine</h1>
-        <p className="mt-1 text-[13px] text-slate-400">
+        <h1 className="text-xl font-semibold text-(--c-ink)">Coupon engine</h1>
+        <p className="mt-1 text-[13px] text-(--c-muted)">
           Offers the AI applied on real orders, and the savings each generated.
         </p>
       </div>
@@ -42,13 +42,13 @@ export default function CouponsPage() {
         ) : (
           <Table head={["Code / label", "Domain", "Times applied", "Savings generated"]}>
             {coupons.map((c) => (
-              <tr key={c.code} className="hover:bg-slate-900/40">
-                <td className="px-4 py-2.5 font-medium text-slate-100">{c.code}</td>
+              <tr key={c.code} className="hover:bg-[#f7f1e6]">
+                <td className="px-4 py-2.5 font-medium text-(--c-ink)">{c.code}</td>
                 <td className="px-4 py-2.5">
                   <Badge tone={c.domain === "food" ? "amber" : "blue"}>{c.domain}</Badge>
                 </td>
-                <td className="px-4 py-2.5 text-slate-300">{c.timesApplied}</td>
-                <td className="px-4 py-2.5 text-emerald-400">{rupees(c.savedPaise)}</td>
+                <td className="px-4 py-2.5 text-(--c-ink)">{c.timesApplied}</td>
+                <td className="px-4 py-2.5 text-[#1a7a4a]">{rupees(c.savedPaise)}</td>
               </tr>
             ))}
           </Table>

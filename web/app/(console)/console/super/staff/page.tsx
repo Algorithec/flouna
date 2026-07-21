@@ -76,7 +76,7 @@ export default function SuperStaffPage() {
 
   if (state.status !== "ok") {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-slate-500">
+      <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
         <Loader2 className="animate-spin" />
       </div>
     );
@@ -92,23 +92,23 @@ export default function SuperStaffPage() {
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-rose-900/60 bg-rose-950/50 px-3 py-2 text-[13px] text-rose-300">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#e4b7b0] bg-[#f6e7e5] px-3 py-2 text-[13px] text-(--c-red)">
           <AlertCircle size={15} /> {error}
         </div>
       )}
 
-      <p className="mb-3 text-[12px] text-slate-500">
+      <p className="mb-3 text-[12px] text-(--c-muted)">
         To add a new operator: have them sign up, then promote their account here.
       </p>
 
-      <div className="overflow-hidden rounded-xl border border-slate-800">
+      <div className="overflow-hidden rounded-xl border border-(--c-border)">
         {loading ? (
-          <div className="flex justify-center py-16 text-slate-600">
+          <div className="flex justify-center py-16 text-(--c-muted)">
             <Loader2 className="animate-spin" />
           </div>
         ) : (
           <table className="w-full text-left text-[13px]">
-            <thead className="bg-slate-900/60 text-[12px] uppercase tracking-wide text-slate-500">
+            <thead className="bg-white text-[12px] uppercase tracking-wide text-(--c-muted)">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Operator</th>
                 <th className="px-4 py-2.5 font-medium">Role</th>
@@ -116,26 +116,26 @@ export default function SuperStaffPage() {
                 <th className="px-4 py-2.5 font-medium text-right">Suspend</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
+            <tbody className="divide-y divide-(--c-line)">
               {operators.map((op) => {
                 const isSelf = op.id === me.id;
                 return (
-                  <tr key={op.id} className="hover:bg-slate-900/40">
+                  <tr key={op.id} className="hover:bg-[#f7f1e6]">
                     <td className="px-4 py-2.5">
-                      <p className="font-medium text-slate-100">
+                      <p className="font-medium text-(--c-ink)">
                         {op.name}
                         {isSelf && (
-                          <span className="ml-2 text-[11px] text-emerald-400">you</span>
+                          <span className="ml-2 text-[11px] text-[#1a7a4a]">you</span>
                         )}
                       </p>
-                      <p className="text-[12px] text-slate-500">{op.email}</p>
+                      <p className="text-[12px] text-(--c-muted)">{op.email}</p>
                     </td>
                     <td className="px-4 py-2.5">
                       <select
                         value={op.role}
                         disabled={busy === op.id || isSelf}
                         onChange={(e) => changeRole(op, e.target.value)}
-                        className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[13px] text-slate-200 disabled:opacity-50"
+                        className="rounded-md border border-(--c-border) bg-white px-2 py-1 text-[13px] text-(--c-ink) disabled:opacity-50"
                       >
                         {ROLES.map((r) => (
                           <option key={r} value={r}>
@@ -146,16 +146,16 @@ export default function SuperStaffPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       {op.suspended ? (
-                        <span className="text-rose-400">Suspended</span>
+                        <span className="text-(--c-red)">Suspended</span>
                       ) : (
-                        <span className="text-emerald-400">Active</span>
+                        <span className="text-[#1a7a4a]">Active</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <button
                         onClick={() => toggleSuspend(op)}
                         disabled={busy === op.id || isSelf}
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-[12px] text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                        className="inline-flex items-center gap-1 rounded-md border border-(--c-border) px-2.5 py-1 text-[12px] text-(--c-ink) hover:bg-[#f0e8da] disabled:opacity-40"
                       >
                         {op.suspended ? (
                           <>
@@ -173,7 +173,7 @@ export default function SuperStaffPage() {
               })}
               {operators.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={4} className="px-4 py-10 text-center text-(--c-muted)">
                     No operators yet.
                   </td>
                 </tr>

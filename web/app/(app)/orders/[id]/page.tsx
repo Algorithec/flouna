@@ -11,6 +11,7 @@ import { DecisionReceipt } from "@/components/orders/DecisionReceipt";
 import { RideTracker } from "@/components/orders/RideTracker";
 import { LoadingView, ErrorView } from "@/components/ui/StatusView";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/components/i18n/I18nContext";
 
 type TrackingEvent = {
   id: string;
@@ -59,6 +60,7 @@ export default function OrderDetailPage({
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [error, setError] = useState("");
   const [now, setNow] = useState(() => Date.now());
+  const { t } = useI18n();
 
   useEffect(() => {
     const load = () =>
@@ -82,10 +84,10 @@ export default function OrderDetailPage({
     return error ? (
       <ErrorView
         notFound
-        title="Order not found"
+        title={t("order.notFound")}
         message="We couldn't find this order — it may have been removed."
         backHref="/history"
-        backLabel="Back to History"
+        backLabel={t("order.backToHistory")}
       />
     ) : (
       <LoadingView rows={4} />
@@ -119,7 +121,7 @@ export default function OrderDetailPage({
         href="/history"
         className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
-        <ChevronLeft size={16} /> History
+        <ChevronLeft size={16} /> {t("nav.history")}
       </Link>
 
       <h1 className="mt-3 text-[19px] font-bold text-ink">{order.title}</h1>
@@ -146,11 +148,11 @@ export default function OrderDetailPage({
           <h2 className="text-[14px] font-bold text-ink">
             {allDone
               ? order.domain === "food"
-                ? "Delivered"
-                : "Trip completed"
+                ? t("order.delivered")
+                : t("order.tripCompleted")
               : order.domain === "food"
-                ? "Tracking your order"
-                : "Tracking your ride"}
+                ? t("order.trackingOrder")
+                : t("order.trackingRide")}
           </h2>
           <div className="mt-3 flex flex-col">
             {order.trackingEvents.map((e, i) => {
@@ -205,60 +207,60 @@ export default function OrderDetailPage({
       <Card className={cn("mt-4", showInvoice && "border-accent/60 ring-1 ring-accent/30")}>
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-1.5 text-[14px] font-bold text-ink">
-            <Receipt size={15} className="text-cocoa" /> Invoice
+            <Receipt size={15} className="text-cocoa" /> {t("order.invoice")}
           </h2>
           <Link
             href={`/orders/${order.id}/invoice`}
             className="text-[12px] font-semibold text-accent hover:underline"
           >
-            View / download →
+            {t("order.viewDownload")}
           </Link>
         </div>
         <div className="mt-3 flex flex-col gap-1.5 text-[13px]">
           {order.domain === "food" ? (
             <>
-              <Row label="Item total" value={rupees(order.details.basePaise ?? order.amount)} />
+              <Row label={t("bill.itemTotal")} value={rupees(order.details.basePaise ?? order.amount)} />
               {order.details.deliveryFeePaise !== undefined && (
-                <Row label="Delivery fee" value={rupees(order.details.deliveryFeePaise)} />
+                <Row label={t("bill.deliveryFee")} value={rupees(order.details.deliveryFeePaise)} />
               )}
               {order.details.convenienceFeePaise !== undefined &&
                 (order.details.convenienceFeePaise > 0 ? (
                   <Row
-                    label="Convenience fee"
+                    label={t("bill.convenienceFee")}
                     value={rupees(order.details.convenienceFeePaise)}
                   />
                 ) : (
-                  <Row label="Convenience fee (Plus)" value="Waived" accent />
+                  <Row label={t("bill.convenienceFeePlus")} value={t("bill.waived")} accent />
                 ))}
             </>
           ) : (
             <>
               {order.details.pickup && (
-                <Row label="Pickup" value={order.details.pickup} />
+                <Row label={t("bill.pickup")} value={order.details.pickup} />
               )}
-              {order.details.drop && <Row label="Drop" value={order.details.drop} />}
-              <Row label="Base fare" value={rupees(order.details.farePaise ?? order.amount)} />
+              {order.details.drop && <Row label={t("bill.drop")} value={order.details.drop} />}
+              <Row label={t("bill.baseFare")} value={rupees(order.details.farePaise ?? order.amount)} />
             </>
           )}
-          {discount > 0 && <Row label="Offers" value={`− ${rupees(discount)}`} accent />}
+          {discount > 0 && <Row label={t("bill.offers")} value={`− ${rupees(discount)}`} accent />}
           <div className="my-1.5 h-px bg-line" />
-          <Row label="Total paid" value={rupees(order.amount)} bold />
+          <Row label={t("bill.totalPaid")} value={rupees(order.amount)} bold />
           {order.savedPaise > 0 && (
             <Row
-              label="You saved vs next-best option"
+              label={t("bill.savedVsNext")}
               value={rupees(order.savedPaise)}
               accent
             />
           )}
           <Row
-            label="Payment"
+            label={t("bill.payment")}
             value={
               order.payment
                 ? `${order.payment.method?.toUpperCase() ?? "—"} · ${order.payment.status}`
                 : "—"
             }
           />
-          <Row label="Order ID" value={order.id} mono />
+          <Row label={t("bill.orderId")} value={order.id} mono />
         </div>
       </Card>
 
@@ -267,7 +269,7 @@ export default function OrderDetailPage({
         href={`/profile/help?order=${order.id}`}
         className="mt-4 flex items-center justify-center gap-2 rounded-pill border border-line bg-card py-3 text-[13px] font-semibold text-cocoa transition-colors hover:bg-beige/40"
       >
-        <LifeBuoy size={15} className="text-accent" /> Report an issue with this order
+        <LifeBuoy size={15} className="text-accent" /> {t("order.reportIssue")}
       </Link>
     </div>
   );

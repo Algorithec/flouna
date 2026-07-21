@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { AdviceBanner, type Advice } from "@/components/ui/AdviceBanner";
 import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/components/i18n/I18nContext";
 import type { RideQuote } from "@/components/chat/types";
 
 const RideMap = dynamic(
@@ -113,6 +114,7 @@ export default function RidesPage() {
 function RidesInner() {
   const router = useRouter();
   const search = useSearchParams();
+  const { t } = useI18n();
   const [pickup, setPickup] = useState<Place | null>(null);
   const [drop, setDrop] = useState<Place | null>(null);
   const [route, setRoute] = useState<RouteInfo | null>(null);
@@ -280,6 +282,36 @@ function RidesInner() {
     }),
     [pickup, drop],
   );
+
+  // Shared ride: create the group cart for the selected trip and open the
+  // invite screen. Only autos/cabs can be shared (server enforces seats too).
+  async function splitWithFriends() {
+    if (!selected || !pickup || !drop) return;
+    setBusy(true);
+    setError("");
+    try {
+      const cart = await api<{ id: string }>("/api/groups", {
+        method: "POST",
+        json: {
+          domain: "ride",
+          ride: {
+            provider: selected.provider,
+            productName: selected.productName,
+            pickup: pickup.name,
+            drop: drop.name,
+            pickupLat: pickup.lat,
+            pickupLng: pickup.lng,
+            dropLat: drop.lat,
+            dropLng: drop.lng,
+          },
+        },
+      });
+      router.push(`/rides/group/${cart.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not start a shared ride");
+      setBusy(false);
+    }
+  }
 
   async function confirmRide() {
     if (!selected || !pickup || !drop || !route) return;
@@ -467,7 +499,7 @@ function RidesInner() {
                     : "bg-beige/50 text-cocoa hover:text-ink",
                 )}
               >
-                Now
+                {t("rides.now")}
               </button>
               <input
                 type="datetime-local"
@@ -502,13 +534,23 @@ function RidesInner() {
             className="h-[59px] w-full rounded-[25px] text-[15px]"
           >
             {busy
-              ? "Booking…"
+              ? t("rides.booking")
               : selected
-                ? `${scheduledAt ? "Schedule" : "Confirm"} ${selected.displayName} · ${rupees(selected.effectivePaise)}`
+                ? `${scheduledAt ? t("rides.schedule") : t("rides.confirm")} ${selected.displayName} · ${rupees(selected.effectivePaise)}`
                 : pickup && drop
-                  ? "Choose a ride"
-                  : "Select Drop"}
+                  ? t("rides.chooseRide")
+                  : t("rides.selectDrop")}
           </Button>
+          {/* Fare-splitting: autos/cabs only, and a scheduled group is booked now */}
+          {selected && !scheduledAt && selected.vehicle !== "bike" && (
+            <button
+              onClick={splitWithFriends}
+              disabled={busy}
+              className="mt-2 w-full text-center text-[13px] font-semibold text-accent hover:underline disabled:opacity-50"
+            >
+              {t("rides.splitFare")}
+            </button>
+          )}
         </div>
       </div>
     </div>

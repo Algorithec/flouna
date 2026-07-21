@@ -10,10 +10,12 @@ import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
 import { CategoryTile } from "@/components/ui/CategoryTile";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 import type { ProductQuote } from "@/components/chat/types";
+import { useI18n } from "@/components/i18n/I18nContext";
 
 type Feed = { categories: string[]; picks: ProductQuote[] };
 
 export default function ShopLandingPage() {
+  const { t } = useI18n();
   const [feed, setFeed] = useState<Feed | null>(null);
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
@@ -49,7 +51,7 @@ export default function ShopLandingPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="What do you want to buy?"
+            placeholder={t("shop.searchPh")}
             maxLength={120}
             className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-cocoa/50"
           />
@@ -88,7 +90,7 @@ export default function ShopLandingPage() {
             AI Recommends ✦
           </p>
           <h2 className="mt-1 text-[17px] font-bold text-ink">
-            {showSearch ? "Results" : "Trending picks"}
+            {showSearch ? t("shop.results") : t("shop.trending")}
           </h2>
           <Stagger className="mt-3 flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
             {showSearch && results.length === 0 && (

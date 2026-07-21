@@ -150,6 +150,10 @@ superRouter.post("/refunds/:paymentId/approve", async (req, res, next) => {
   try {
     const result = await approveRefund(req.params.paymentId!);
     if (!result.ok) {
+      if (result.reason === "gateway_failed") {
+        // The gateway declined or errored — nothing settled, ops sees why.
+        return res.status(502).json({ error: result.message });
+      }
       return res
         .status(result.reason === "not_found" ? 404 : 409)
         .json({ error: result.reason === "not_found" ? "Not found" : "No longer awaiting review" });

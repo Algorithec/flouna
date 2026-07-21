@@ -33,8 +33,8 @@ export default function PriceAlertsPage() {
   return (
     <ConsolePage accept={["admin", "super_admin"]}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">Price alerts</h1>
-        <p className="mt-1 text-[13px] text-slate-400">
+        <h1 className="text-xl font-semibold text-(--c-ink)">Price alerts</h1>
+        <p className="mt-1 text-[13px] text-(--c-muted)">
           AI-tracked price-drop watches set by real users.
         </p>
       </div>
@@ -51,13 +51,13 @@ export default function PriceAlertsPage() {
         ) : (
           <Table head={["Item", "Domain", "Target", "Last seen", "Status"]}>
             {recent.map((a) => (
-              <tr key={a.id} className="hover:bg-slate-900/40">
-                <td className="px-4 py-2.5 font-medium text-slate-100">{a.itemName}</td>
+              <tr key={a.id} className="hover:bg-[#f7f1e6]">
+                <td className="px-4 py-2.5 font-medium text-(--c-ink)">{a.itemName}</td>
                 <td className="px-4 py-2.5">
                   <Badge tone={a.domain === "food" ? "amber" : "blue"}>{a.domain}</Badge>
                 </td>
-                <td className="px-4 py-2.5 text-emerald-400">{rupees(a.targetPaise)}</td>
-                <td className="px-4 py-2.5 text-slate-300">{rupees(a.lastSeenPaise)}</td>
+                <td className="px-4 py-2.5 text-[#1a7a4a]">{rupees(a.targetPaise)}</td>
+                <td className="px-4 py-2.5 text-(--c-ink)">{rupees(a.lastSeenPaise)}</td>
                 <td className="px-4 py-2.5">
                   {a.triggeredAt ? (
                     <Badge tone="green">Triggered</Badge>

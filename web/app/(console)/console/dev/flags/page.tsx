@@ -52,7 +52,7 @@ export default function DevFlagsPage() {
 
   if (state.status !== "ok") {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-slate-500">
+      <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
         <Loader2 className="animate-spin" />
       </div>
     );
@@ -66,7 +66,7 @@ export default function DevFlagsPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-600">
+        <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>
       ) : (
@@ -74,18 +74,18 @@ export default function DevFlagsPage() {
           {flags.map((flag) => (
             <div
               key={flag.key}
-              className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900/40 p-4"
+              className="flex items-center gap-4 rounded-xl border border-(--c-border) bg-white p-4"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-mono text-[13px] text-slate-100">{flag.key}</p>
-                <p className="mt-0.5 text-[12px] text-slate-500">{flag.description}</p>
+                <p className="font-mono text-[13px] text-(--c-ink)">{flag.key}</p>
+                <p className="mt-0.5 text-[12px] text-(--c-muted)">{flag.description}</p>
               </div>
               <button
                 onClick={() => toggle(flag)}
                 disabled={saving === flag.key}
                 aria-pressed={flag.enabled}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                  flag.enabled ? "bg-emerald-600" : "bg-slate-700"
+                  flag.enabled ? "bg-(--c-maroon)" : "bg-[#d9cdba]"
                 } disabled:opacity-60`}
               >
                 <span

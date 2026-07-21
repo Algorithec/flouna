@@ -33,7 +33,7 @@ export default function DevAuditPage() {
 
   if (state.status !== "ok") {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-slate-500">
+      <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
         <Loader2 className="animate-spin" />
       </div>
     );
@@ -47,17 +47,17 @@ export default function DevAuditPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-600">
+        <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>
       ) : rows.length === 0 ? (
-        <p className="py-16 text-center text-[14px] text-slate-500">
+        <p className="py-16 text-center text-[14px] text-(--c-muted)">
           No privileged actions recorded yet.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-800">
+        <div className="overflow-hidden rounded-xl border border-(--c-border)">
           <table className="w-full text-left text-[13px]">
-            <thead className="bg-slate-900/60 text-[12px] uppercase tracking-wide text-slate-500">
+            <thead className="bg-white text-[12px] uppercase tracking-wide text-(--c-muted)">
               <tr>
                 <th className="px-4 py-2.5 font-medium">When</th>
                 <th className="px-4 py-2.5 font-medium">Actor</th>
@@ -65,17 +65,17 @@ export default function DevAuditPage() {
                 <th className="px-4 py-2.5 font-medium">Summary</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
+            <tbody className="divide-y divide-(--c-line)">
               {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-900/40">
-                  <td className="whitespace-nowrap px-4 py-2.5 text-slate-400">
+                <tr key={r.id} className="hover:bg-[#f7f1e6]">
+                  <td className="whitespace-nowrap px-4 py-2.5 text-(--c-muted)">
                     {new Date(r.createdAt).toLocaleString("en-IN")}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className="text-emerald-400">{r.actorRole}</span>
+                    <span className="text-[#1a7a4a]">{r.actorRole}</span>
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-slate-300">{r.action}</td>
-                  <td className="px-4 py-2.5 text-slate-300">{r.summary}</td>
+                  <td className="px-4 py-2.5 font-mono text-(--c-ink)">{r.action}</td>
+                  <td className="px-4 py-2.5 text-(--c-ink)">{r.summary}</td>
                 </tr>
               ))}
             </tbody>
