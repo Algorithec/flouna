@@ -397,10 +397,21 @@ usersRouter.get("/suggestions", async (req, res, next) => {
 
 const addressBody = z.object({
   label: z.string().trim().min(1).max(30),
-  line1: z.string().trim().min(3).max(160),
+  line1: z.string().trim().min(1).max(160), // flat / house no.
+  line2: z.string().trim().max(160).optional(), // building / street
+  landmark: z.string().trim().max(120).optional(),
+  contactName: z.string().trim().max(80).optional(),
+  contactPhone: z
+    .string()
+    .trim()
+    .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number")
+    .optional(),
   city: z.string().trim().min(2).max(60),
   state: z.string().trim().min(2).max(60),
   pincode: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6-digit PIN code"),
+  // Captured by "Use current location" — powers delivery maps later.
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
   isDefault: z.boolean().default(false),
 });
 
@@ -433,6 +444,43 @@ usersRouter.post("/addresses", validateBody(addressBody), async (req, res, next)
     next(err);
   }
 });
+
+// Update an existing address (the "Edit Address" screen). Same validation as
+// create; ownership enforced by the compound where.
+usersRouter.patch(
+  "/addresses/:id",
+  validateBody(addressBody),
+  async (req, res, next) => {
+    try {
+      const body = req.body as z.infer<typeof addressBody>;
+      if (body.isDefault) {
+        await prisma.address.updateMany({
+          where: { userId: req.userId! },
+          data: { isDefault: false },
+        });
+      }
+      // Full-replace semantics: the edit form always sends the complete
+      // address, so absent optional fields clear rather than linger.
+      const updated = await prisma.address.updateMany({
+        where: { id: req.params.id, userId: req.userId! },
+        data: {
+          ...body,
+          line2: body.line2 ?? null,
+          landmark: body.landmark ?? null,
+          contactName: body.contactName ?? null,
+          contactPhone: body.contactPhone ?? null,
+          lat: body.lat ?? null,
+          lng: body.lng ?? null,
+        },
+      });
+      if (updated.count === 0) throw new ApiError(404, "Address not found");
+      const address = await prisma.address.findUnique({ where: { id: req.params.id } });
+      res.json({ address });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 usersRouter.delete("/addresses/:id", async (req, res, next) => {
   try {

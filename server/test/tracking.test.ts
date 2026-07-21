@@ -223,3 +223,23 @@ describe("ride tracking endpoint", () => {
     await b.post(`/api/orders/${orderId}/cancel`).send({}).expect(404);
   });
 });
+
+describe("cancellation feedback", () => {
+  it("stores the cancel reason on the order", async () => {
+    const { agent } = await authedAgent();
+    const created = await agent
+      .post("/api/orders")
+      .send({ domain: "food", dishId: "dum-biryani", platform: "ondc" })
+      .expect(201);
+    const orderId = created.body.order.id as string;
+    await agent.post("/api/payments/checkout").send({ orderId }).expect(200);
+    await agent.post("/api/payments/simulate").send({ orderId, method: "upi" }).expect(200);
+
+    const res = await agent
+      .post(`/api/orders/${orderId}/cancel`)
+      .send({ reason: "Changed my plans" })
+      .expect(200);
+    expect(res.body.order.status).toBe("cancelled");
+    expect(res.body.order.details.cancelReason).toBe("Changed my plans");
+  });
+});

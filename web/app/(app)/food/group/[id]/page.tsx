@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { GroupCart } from "@/components/food/GroupCartTypes";
+import { useI18n } from "@/components/i18n/I18nContext";
 import type { FoodQuote } from "@/components/chat/types";
 
 type Share = {
@@ -36,6 +37,7 @@ export default function GroupCartPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { t } = useI18n();
   const router = useRouter();
   const [cart, setCart] = useState<GroupCart | null>(null);
   const [error, setError] = useState("");
@@ -159,18 +161,18 @@ export default function GroupCartPage({
         onClick={() => router.push("/food")}
         className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
-        <ChevronLeft size={16} /> Food
+        <ChevronLeft size={16} /> {t("nav.food")}
       </button>
 
       <h1 className="mt-3 flex items-center gap-2 text-[20px] font-bold text-ink">
-        <Users size={20} className="text-accent" /> Group order
+        <Users size={20} className="text-accent" /> {t("grp.groupOrder")}
       </h1>
 
       {/* Join code */}
       <Card className="mt-4 bg-accent-soft/50">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[12px] text-cocoa">Share this code to invite friends</p>
+            <p className="text-[12px] text-cocoa">{t("grp.shareCode")}</p>
             <p className="mt-0.5 font-mono text-[26px] font-bold tracking-[0.3em] text-ink">
               {cart.code}
             </p>
@@ -260,7 +262,7 @@ export default function GroupCartPage({
       {/* Split summary */}
       {cart.members.length > 0 && (
         <Card className="mt-5">
-          <p className="text-[14px] font-bold text-ink">Split equally</p>
+          <p className="text-[14px] font-bold text-ink">{t("grp.splitEqually")}</p>
           <div className="mt-2 flex flex-col gap-1.5">
             {cart.members.map((m) => (
               <div key={m.userId} className="flex items-center justify-between text-[13px]">
@@ -273,7 +275,7 @@ export default function GroupCartPage({
           </div>
           <div className="my-2 h-px bg-line" />
           <div className="flex items-center justify-between text-[13px]">
-            <span className="text-cocoa">Total</span>
+            <span className="text-cocoa">{t("grp.total")}</span>
             <span className="font-bold text-ink">{rupees(cart.totalPaise)}</span>
           </div>
           <div className="flex items-center justify-between text-[14px]">

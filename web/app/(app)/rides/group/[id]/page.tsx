@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { GroupCart, GroupShare } from "@/components/food/GroupCartTypes";
+import { useI18n } from "@/components/i18n/I18nContext";
 
 const REFRESH_MS = 5000;
 
@@ -20,6 +21,7 @@ export default function GroupRidePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { t } = useI18n();
   const router = useRouter();
   const [cart, setCart] = useState<GroupCart | null>(null);
   const [error, setError] = useState("");
@@ -102,11 +104,11 @@ export default function GroupRidePage({
         onClick={() => router.push("/rides")}
         className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
-        <ChevronLeft size={16} /> Rides
+        <ChevronLeft size={16} /> {t("nav.rides")}
       </button>
 
       <h1 className="mt-3 flex items-center gap-2 text-[20px] font-bold text-ink">
-        <Users size={20} className="text-accent" /> Shared ride
+        <Users size={20} className="text-accent" /> {t("grp.sharedRide")}
       </h1>
 
       {/* Trip summary */}
@@ -123,11 +125,11 @@ export default function GroupRidePage({
           </p>
           <div className="mt-3 flex items-end justify-between">
             <div>
-              <p className="text-[12px] text-cocoa">Fare (est.)</p>
+              <p className="text-[12px] text-cocoa">{t("grp.fareEst")}</p>
               <p className="text-[18px] font-bold text-ink">{rupees(cart.totalPaise)}</p>
             </div>
             <div className="text-right">
-              <p className="text-[12px] text-cocoa">Your share</p>
+              <p className="text-[12px] text-cocoa">{t("grp.yourShare")}</p>
               <p className="text-[18px] font-bold text-accent">
                 {rupees(cart.equalSplitPaise)}
               </p>
@@ -140,7 +142,7 @@ export default function GroupRidePage({
       {!booked && (
         <Card className="mt-4">
           <p className="text-[13px] font-bold text-ink">
-            Invite friends — fare splits equally
+            {t("grp.invite")}
           </p>
           <div className="mt-2 flex items-center gap-2">
             <span className="flex-1 rounded-card bg-beige/60 px-4 py-2.5 text-center font-mono text-[22px] font-bold tracking-[6px] text-ink">
@@ -164,14 +166,14 @@ export default function GroupRidePage({
           <p className="mt-2 text-[12px] text-cocoa">
             {seatsLeft > 0
               ? `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left · friends join from Rides → Join a shared ride`
-            : "The ride is full — book when you're ready."}
+            : t("grp.rideFull")}
           </p>
         </Card>
       )}
 
       {/* Riders */}
       <h2 className="mt-6 text-[14px] font-bold text-ink">
-        Riders ({cart.members.length}
+        {t("grp.riders")} ({cart.members.length}
         {cart.ride ? `/${cart.ride.seats}` : ""})
       </h2>
       <Card className="mt-2 p-0">
@@ -198,11 +200,11 @@ export default function GroupRidePage({
       {/* Booked: shares view (host gets links right after checkout; members see status) */}
       {(booked || shares) && (
         <Card className="mt-5 border-success/40 bg-success/5">
-          <p className="text-[14px] font-bold text-ink">Ride booked 🎉</p>
+          <p className="text-[14px] font-bold text-ink">{t("grp.rideBooked")}</p>
           {shares ? (
             <>
               <p className="mt-1 text-[12px] text-cocoa">
-                You paid the full fare. Share these links so everyone settles their part:
+                {t("grp.collectIntro")}
               </p>
               <div className="mt-2 flex flex-col gap-1.5">
                 {shares
@@ -217,7 +219,7 @@ export default function GroupRidePage({
                           href={s.upiLink}
                           className="text-[12px] font-semibold text-accent hover:underline"
                         >
-                          Collect via UPI
+                          {t("grp.collectUpi")}
                         </a>
                       )}
                     </div>
@@ -226,7 +228,7 @@ export default function GroupRidePage({
             </>
           ) : (
             <p className="mt-1 text-[12px] text-cocoa">
-              Your share is {rupees(cart.equalSplitPaise)} — the host collects it via UPI.
+              Your share is {rupees(cart.equalSplitPaise)} — {t("grp.memberShareNote")}
             </p>
           )}
           {(orderId ?? cart.orderId) && cart.isHost && (
@@ -234,7 +236,7 @@ export default function GroupRidePage({
               onClick={() => router.push(`/pay/${orderId ?? cart.orderId}`)}
               className="mt-3 w-full"
             >
-              {shares ? "Pay the fare now" : "Go to payment"}
+              {shares ? t("grp.payFare") : t("grp.goToPayment")}
             </Button>
           )}
         </Card>
@@ -255,14 +257,14 @@ export default function GroupRidePage({
               : `Book ${cart.ride?.displayName ?? "ride"} · ${rupees(cart.totalPaise)}`}
           </Button>
           <p className="mt-2 text-center text-[11px] text-cocoa/70">
-            You pay in-app now; friends repay their share via UPI.
+            {t("grp.hostPaysNote")}
           </p>
         </div>
       )}
 
       {!booked && !cart.isHost && (
         <p className="mt-5 text-center text-[13px] text-cocoa">
-          Waiting for the host to book — your share updates as riders join.
+          {t("grp.waitingHost")}
         </p>
       )}
     </div>

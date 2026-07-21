@@ -20,6 +20,7 @@ type OrderSummary = {
   provider: string;
   title: string;
   amount: number;
+  savedPaise?: number;
   createdAt: string;
 };
 
@@ -93,6 +94,38 @@ export default function HistoryPage() {
 
       {error && <p className="mt-6 text-[13px] text-danger">{error}</p>}
 
+      {/* Activity snapshot — Figma "Booking History": at-a-glance stats for
+          the current tab. "Total saved" replaces the design's avg-rating tile
+          (savings is the number Radiues is about). */}
+      {orders && orders.length > 0 && (
+        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <StatTile
+            label="Total bookings"
+            value={String(orders.length)}
+            accent="border-l-accent"
+          />
+          <StatTile
+            label="Completed"
+            value={String(orders.filter((o) => o.status === "completed").length)}
+            accent="border-l-success"
+          />
+          <StatTile
+            label="Total spend"
+            value={rupees(
+              orders
+                .filter((o) => !["pending_payment", "cancelled"].includes(o.status))
+                .reduce((s, o) => s + o.amount, 0),
+            )}
+            accent="border-l-[#8b5cf6]"
+          />
+          <StatTile
+            label="Total saved"
+            value={rupees(orders.reduce((s, o) => s + (o.savedPaise ?? 0), 0))}
+            accent="border-l-[#e8a020]"
+          />
+        </div>
+      )}
+
       <Stagger className="mt-5 flex flex-col gap-2.5">
         {orders === null && !error &&
           Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
@@ -147,6 +180,31 @@ export default function HistoryPage() {
           </StaggerItem>
         ))}
       </Stagger>
+    </div>
+  );
+}
+
+// Figma "Activity Snapshot" tile: white card with a coloured left rail.
+function StatTile({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-card border border-line border-l-4 bg-card px-3.5 py-3 shadow-soft",
+        accent,
+      )}
+    >
+      <p className="text-[17px] font-bold text-ink">{value}</p>
+      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-cocoa">
+        {label}
+      </p>
     </div>
   );
 }

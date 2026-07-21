@@ -43,6 +43,8 @@ type OrderDetail = {
     dropLng?: number;
     comparedOptions?: number;
     comparedPlatforms?: number;
+    items?: { name: string; qty: number; pricePaise: number }[];
+    instructions?: string;
   };
   trackingEvents: TrackingEvent[];
   payment: { status: string; method: string | null } | null;
@@ -219,6 +221,13 @@ export default function OrderDetailPage({
         <div className="mt-3 flex flex-col gap-1.5 text-[13px]">
           {order.domain === "food" ? (
             <>
+              {order.details.items?.map((i, idx) => (
+                <Row
+                  key={idx}
+                  label={`${i.name} × ${i.qty}`}
+                  value={rupees(i.pricePaise * i.qty)}
+                />
+              ))}
               <Row label={t("bill.itemTotal")} value={rupees(order.details.basePaise ?? order.amount)} />
               {order.details.deliveryFeePaise !== undefined && (
                 <Row label={t("bill.deliveryFee")} value={rupees(order.details.deliveryFeePaise)} />

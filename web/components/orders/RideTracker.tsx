@@ -13,6 +13,7 @@ import {
   Share2,
   X,
   LifeBuoy,
+  MessageCircle,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -74,7 +75,9 @@ export function RideTracker({
   const [t, setT] = useState<Tracking | null>(null);
   const [copied, setCopied] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelSheet, setCancelSheet] = useState(false);
+  const [cancelReason, setCancelReason] = useState<string | null>(null);
+  const [justCancelled, setJustCancelled] = useState(false);
   const [cancelError, setCancelError] = useState("");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -148,22 +151,36 @@ export function RideTracker({
         cancellingCta: tr("track.cancelling"),
       };
 
-  async function cancelOrder() {
+  async function cancelOrder(reason?: string) {
     setCancelling(true);
     setCancelError("");
     try {
-      await api(`/api/orders/${orderId}/cancel`, { method: "POST", json: {} });
+      await api(`/api/orders/${orderId}/cancel`, {
+        method: "POST",
+        json: reason ? { reason } : {},
+      });
       const d = await api<{ tracking: Tracking }>(`/api/orders/${orderId}/track`);
       setT(d.tracking);
-      setConfirmCancel(false);
+      setCancelSheet(false);
+      setJustCancelled(true); // fresh cancel → celebration panel
     } catch (e) {
       // Food past pickup (or any refusal): surface the server's reason.
       setCancelError(e instanceof Error ? e.message : "Couldn't cancel — try again.");
-      setConfirmCancel(false);
+      setCancelSheet(false);
     } finally {
       setCancelling(false);
     }
   }
+
+  // "Help us improve" reasons (Figma bottom sheet). Sent as the free-text
+  // cancel reason; ops reads it on the order.
+  const CANCEL_REASONS = [
+    "Changed my plans",
+    "Booked by mistake",
+    "Found a better option",
+    "Taking too long",
+    "Other reason",
+  ];
 
   async function shareTrip() {
     const url = `${window.location.origin}/orders/${orderId}`;
@@ -205,8 +222,102 @@ export function RideTracker({
           ? L.searchingSub
           : t?.statusMessage ?? "…";
 
+  // Fresh cancel this session → the Figma "Booking Cancelled!" celebration.
+  if (justCancelled) {
+    return (
+      <FadeIn y={10}>
+        <Card className="flex flex-col items-center px-6 py-10 text-center">
+          <span className="relative flex size-20 items-center justify-center rounded-full bg-success">
+            <Check size={40} className="text-white" strokeWidth={3} />
+            <span className="absolute -left-2 top-1 size-2 rounded-full bg-accent" />
+            <span className="absolute -right-1 top-4 size-1.5 rounded-full bg-[#8b5cf6]" />
+            <span className="absolute -bottom-1 left-3 size-1.5 rounded-full bg-[#2e6db4]" />
+            <span className="absolute -right-2 bottom-3 size-2 rounded-full bg-[#e8a020]" />
+          </span>
+          <p className="mt-5 text-[18px] font-bold text-ink">
+            {isFood ? "Order cancelled" : "Booking cancelled"}
+          </p>
+          <p className="mt-1 text-[13px] text-cocoa">
+            {isFood
+              ? "Your order has been cancelled successfully."
+              : "Your booking has been cancelled successfully."}
+          </p>
+          <p className="mt-4 flex items-center gap-2 rounded-card border border-line bg-beige/30 px-3.5 py-2.5 text-[12px] text-cocoa">
+            <ShieldCheck size={14} className="shrink-0 text-success" />
+            Refund (if applicable) will be processed within 3–5 business hours.
+          </p>
+          <Link
+            href="/history"
+            className="mt-6 w-full rounded-pill bg-success py-3 text-center text-[14px] font-semibold text-white transition-colors hover:bg-[#15803d]"
+          >
+            Done
+          </Link>
+        </Card>
+      </FadeIn>
+    );
+  }
+
   return (
     <FadeIn y={10}>
+      {/* "Help us improve" cancel sheet (Figma bottom sheet) */}
+      {cancelSheet && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 lg:items-center"
+          onClick={() => !cancelling && setCancelSheet(false)}
+        >
+          <div
+            role="dialog"
+            aria-label="Help us improve"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-card lg:rounded-3xl"
+          >
+            <span className="mx-auto block h-1 w-10 rounded-full bg-line" />
+            <p className="mt-4 text-center text-[17px] font-bold text-ink">
+              Help us improve
+            </p>
+            <p className="mt-0.5 text-center text-[13px] text-cocoa">
+              Why are you cancelling this {isFood ? "order" : "booking"}?
+            </p>
+            <div className="mt-4 flex flex-col divide-y divide-line/70">
+              {CANCEL_REASONS.map((r) => (
+                <label key={r} className="flex cursor-pointer items-center gap-3 py-3">
+                  <span
+                    className={
+                      cancelReason === r
+                        ? "flex size-5 items-center justify-center rounded-full border-[6px] border-accent"
+                        : "size-5 rounded-full border-2 border-line"
+                    }
+                  />
+                  <input
+                    type="radio"
+                    name="cancel-reason"
+                    className="sr-only"
+                    checked={cancelReason === r}
+                    onChange={() => setCancelReason(r)}
+                  />
+                  <span className="text-[14px] text-ink">{r}</span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setCancelSheet(false)}
+                disabled={cancelling}
+                className="flex-1 rounded-pill border border-line bg-card py-3 text-[13px] font-semibold text-ink"
+              >
+                {L.keepCta}
+              </button>
+              <button
+                onClick={() => cancelOrder(cancelReason ?? undefined)}
+                disabled={cancelling}
+                className="flex-1 rounded-pill bg-danger py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#c0392b] disabled:opacity-60"
+              >
+                {cancelling ? L.cancellingCta : L.confirmCancelCta}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <Card className="overflow-hidden p-0">
         {/* Status header */}
         <div className="flex items-center justify-between gap-3 px-4 py-3">
@@ -237,6 +348,19 @@ export function RideTracker({
           />
         </div>
 
+        {/* Ride confirmed banner (Figma) — pre-trip reassurance for rides */}
+        {!isFood && !done && !cancelled && t && ["searching", "arriving", "arrived"].includes(t.state) && (
+          <div className="mx-4 mt-3 flex items-start gap-2.5 rounded-card border border-success/40 bg-success/5 px-3.5 py-2.5">
+            <ShieldCheck size={15} className="mt-0.5 shrink-0 text-success" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold text-success">Your ride is confirmed</p>
+              <p className="text-[11.5px] text-cocoa">
+                Track it live here — we&apos;ll notify you at every step.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Searching shimmer or partner card */}
         {searching ? (
           <div className="px-4 py-4">
@@ -249,11 +373,11 @@ export function RideTracker({
             </div>
             {canCancel && (
               <button
-                onClick={() => (confirmCancel ? cancelOrder() : setConfirmCancel(true))}
+                onClick={() => setCancelSheet(true)}
                 disabled={cancelling}
                 className="mt-3 w-full rounded-pill border border-danger/40 bg-card py-2.5 text-[12px] font-semibold text-danger transition-colors hover:bg-danger/5 disabled:opacity-60"
               >
-                {cancelling ? L.cancellingCta : confirmCancel ? L.confirmCancelCta : L.cancelCta}
+                {cancelling ? L.cancellingCta : L.cancelCta}
               </button>
             )}
           </div>
@@ -324,9 +448,19 @@ export function RideTracker({
                     href="tel:"
                     onClick={(e) => e.preventDefault()}
                     title={t.driver.phoneMasked}
+                    aria-label="Call"
                     className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ink text-white transition-transform hover:scale-105"
                   >
                     <Phone size={17} />
+                  </a>
+                  <a
+                    href="sms:"
+                    onClick={(e) => e.preventDefault()}
+                    title={t.driver.phoneMasked}
+                    aria-label="Message"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-card text-ink transition-transform hover:scale-105"
+                  >
+                    <MessageCircle size={17} />
                   </a>
                 </div>
               )}
@@ -361,32 +495,15 @@ export function RideTracker({
                     </button>
                   )
                 )}
-                {canCancel &&
-                  (confirmCancel ? (
-                    <div className="flex flex-1 items-center gap-2">
-                      <button
-                        onClick={cancelOrder}
-                        disabled={cancelling}
-                        className="flex-1 rounded-pill bg-danger py-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#c0392b] disabled:opacity-60"
-                      >
-                        {cancelling ? L.cancellingCta : L.confirmCancelCta}
-                      </button>
-                      <button
-                        onClick={() => setConfirmCancel(false)}
-                        disabled={cancelling}
-                        className="rounded-pill border border-line bg-card px-3 py-2.5 text-[12px] font-semibold text-cocoa"
-                      >
-                        {L.keepCta}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmCancel(true)}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-pill border border-danger/40 bg-card py-2.5 text-[12px] font-semibold text-danger transition-colors hover:bg-danger/5"
-                    >
-                      <X size={14} /> {L.cancelCta}
-                    </button>
-                  ))}
+                {canCancel && (
+                  <button
+                    onClick={() => setCancelSheet(true)}
+                    disabled={cancelling}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-pill border border-danger/40 bg-card py-2.5 text-[12px] font-semibold text-danger transition-colors hover:bg-danger/5 disabled:opacity-60"
+                  >
+                    <X size={14} /> {cancelling ? L.cancellingCta : L.cancelCta}
+                  </button>
+                )}
               </div>
             </div>
           )

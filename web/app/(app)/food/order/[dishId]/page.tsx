@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 import { useBudget } from "@/components/food/BudgetBar";
 import { DishArt } from "@/components/food/DishArt";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { useCart } from "@/lib/cart";
 import { cn } from "@/lib/cn";
 import type { FoodQuote } from "@/components/chat/types";
 
@@ -39,6 +40,7 @@ export default function FoodOrderPage({
   >(undefined);
   const budget = useBudget();
   const { t } = useI18n();
+  const cart = useCart();
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertTarget, setAlertTarget] = useState("");
   const [alertDone, setAlertDone] = useState(false);
@@ -229,6 +231,23 @@ export default function FoodOrderPage({
 
       <Button onClick={placeOrder} disabled={busy} className="mt-5 w-full">
         {busy ? t("foodOrder.placing") : `${t("foodOrder.pay")} ${rupees(selected.effectivePaise)}`}
+      </Button>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          cart.add({
+            dishId: selected.dishId,
+            platform: selected.platform,
+            name: selected.name,
+            restaurant: selected.restaurant,
+            pricePaise: selected.effectivePaise,
+          });
+          router.push("/cart");
+        }}
+        disabled={busy}
+        className="mt-2.5 w-full"
+      >
+        Add to cart
       </Button>
       <p className="mt-3 flex items-center justify-center gap-1 text-[11px] text-cocoa/70">
         <ShieldCheck size={12} /> {t("foodOrder.inApp")}

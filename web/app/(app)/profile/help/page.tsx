@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { ChevronDown, Mail, LifeBuoy, CheckCircle2, Send } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api";
 import { SubPage } from "@/components/profile/SubPage";
@@ -39,7 +40,7 @@ type Ticket = {
   updatedAt: string;
 };
 
-type OrderSummary = { id: string; title: string; createdAt: string };
+type OrderSummary = { id: string; title: string; status?: string; createdAt: string };
 
 const STATUS_BADGE: Record<Ticket["status"], { label: TranslationKey; cls: string }> = {
   open: { label: "pp.help.stOpen", cls: "bg-accent-soft text-accent" },
@@ -131,8 +132,89 @@ function HelpInner() {
     }
   }
 
+  // Latest live order for the "current order help" card (Figma).
+  const liveOrder = orders.find((o) =>
+    ["confirmed", "in_progress"].includes((o as { status?: string }).status ?? ""),
+  ) as (OrderSummary & { status?: string }) | undefined;
+
+  // One-tap intents: pre-fill the ticket form and link the live order.
+  function prefill(cat: string, subj: string, linkOrder = true) {
+    setCategory(cat);
+    setSubject(subj);
+    if (linkOrder && liveOrder) setOrderId(liveOrder.id);
+  }
+
   return (
     <SubPage title={tr("pp.help.title")}>
+      {/* Current order help — Figma: live order + one-tap intents */}
+      {liveOrder && (
+        <Card className="mb-4">
+          <div className="flex items-center justify-between">
+            <p className="text-[14px] font-bold text-ink">Current order help</p>
+            <span className="flex items-center gap-1 rounded-pill bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent">
+              <span className="size-1.5 animate-pulse rounded-full bg-accent" /> LIVE
+            </span>
+          </div>
+          <div className="mt-2.5 flex items-center gap-3 rounded-card bg-beige/40 px-3 py-2.5">
+            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
+              {liveOrder.title}
+            </p>
+            <Link
+              href={`/orders/${liveOrder.id}`}
+              className="shrink-0 rounded-pill bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-[#d4570f]"
+            >
+              Track
+            </Link>
+          </div>
+          <div className="mt-2 flex flex-col divide-y divide-line/70">
+            <Link
+              href={`/orders/${liveOrder.id}`}
+              className="py-2.5 text-[13px] text-ink hover:text-accent"
+            >
+              I want to cancel my order
+              <span className="block text-[11px] text-cocoa">
+                Cancel from the order screen before pickup
+              </span>
+            </Link>
+            <button
+              onClick={() => prefill("order", "Order is taking too long")}
+              className="py-2.5 text-left text-[13px] text-ink hover:text-accent"
+            >
+              Order is taking too long
+              <span className="block text-[11px] text-cocoa">
+                Raise it below — we chase the delivery partner
+              </span>
+            </button>
+            <button
+              onClick={() => prefill("order", "Wrong delivery address")}
+              className="py-2.5 text-left text-[13px] text-ink hover:text-accent"
+            >
+              Wrong delivery address
+              <span className="block text-[11px] text-cocoa">
+                Tell us before pickup and we update it
+              </span>
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* Quick actions — Figma grid */}
+      <div className="mb-4 grid grid-cols-4 gap-2">
+        <QuickAction
+          label="Refund status"
+          onClick={() => prefill("refund", "Where is my refund?", false)}
+        />
+        <QuickAction
+          label="Payment issue"
+          onClick={() => prefill("payment", "Payment problem", false)}
+        />
+        <QuickAction label="Rate order" href="/history" />
+        <QuickAction
+          label="Missing item"
+          onClick={() => prefill("order", "Item missing from my order")}
+        />
+      </div>
+
       {/* Raise a ticket */}
       <Card>
         <h2 className="flex items-center gap-1.5 text-[14px] font-bold text-ink">
@@ -325,5 +407,35 @@ function HelpInner() {
         <Mail size={16} className="text-accent" /> Contact support
       </a>
     </SubPage>
+  );
+}
+
+// Small quick-action tile (Figma "Quick Actions" grid).
+function QuickAction({
+  label,
+  onClick,
+  href,
+}: {
+  label: string;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const cls =
+    "flex flex-col items-center gap-1.5 rounded-card border border-line bg-card px-2 py-3 text-center text-[11px] font-semibold text-ink transition-colors hover:bg-beige/40";
+  const icon = (
+    <span className="flex size-8 items-center justify-center rounded-full bg-accent-soft">
+      <LifeBuoy size={15} className="text-accent" />
+    </span>
+  );
+  return href ? (
+    <Link href={href} className={cls}>
+      {icon}
+      {label}
+    </Link>
+  ) : (
+    <button onClick={onClick} className={cls}>
+      {icon}
+      {label}
+    </button>
   );
 }

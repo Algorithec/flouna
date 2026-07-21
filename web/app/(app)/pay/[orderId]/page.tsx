@@ -10,6 +10,8 @@ import {
   Wallet,
   ChevronRight,
   ChevronDown,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
@@ -31,9 +33,16 @@ type Status = {
     convenienceFeePaise?: number;
     farePaise?: number;
     offers?: { label: string; discountPaise: number }[];
+    items?: { name: string; qty: number; pricePaise: number }[];
+    etaMinutes?: number;
+    pickup?: string;
+    drop?: string;
+    displayName?: string;
   };
   payment: { status: string; method: string | null } | null;
 };
+
+type AddressSummary = { label: string; line1: string; city: string; isDefault: boolean };
 
 type Stage = "select" | "processing" | "done";
 type Method = "upi" | "cash" | "card";
@@ -59,6 +68,14 @@ export default function PayPage({
   const [method, setMethod] = useState<Method>("upi");
   const [showSummary, setShowSummary] = useState(true);
   const [error, setError] = useState("");
+  const [address, setAddress] = useState<AddressSummary | null>(null);
+
+  // Delivery address for the confirmation card (food orders).
+  useEffect(() => {
+    api<{ addresses: AddressSummary[] }>("/api/users/addresses")
+      .then((d) => setAddress(d.addresses.find((a) => a.isDefault) ?? d.addresses[0] ?? null))
+      .catch(() => setAddress(null));
+  }, []);
 
   useEffect(() => {
     // Verify-then-load: if the buyer is returning from the Cashfree checkout,
@@ -241,15 +258,98 @@ export default function PayPage({
       )}
 
       {stage === "done" && (
-        <FadeIn className="mt-10 flex flex-col items-center text-center">
+        <FadeIn className="mt-8 flex flex-col items-center">
+          {/* Success header — Figma "Order Confirmation" */}
           <span className="flex size-16 items-center justify-center rounded-full bg-success/10">
             <CheckCircle2 size={40} className="text-success" />
           </span>
-          <p className="mt-4 text-[18px] font-bold text-ink">{t("pay.success")}</p>
-          <p className="mt-1 text-[13px] text-cocoa">
+          <p className="mt-4 text-center text-[18px] font-bold text-ink">
+            {t("pay.success")}
+          </p>
+          <p className="mt-1 text-center text-[13px] text-cocoa">
             {isFood ? t("pay.successFood") : t("pay.successRide")}
           </p>
-          <div className="mt-8 flex w-full flex-col gap-3">
+          <span className="mt-3 rounded-pill border border-success/40 bg-success/5 px-3 py-1 font-mono text-[11px] font-semibold text-success">
+            Order ID: #{orderId.slice(-8).toUpperCase()}
+          </span>
+
+          {/* ETA banner */}
+          <div className="mt-5 flex w-full items-center gap-3 rounded-card bg-accent px-4 py-3 text-white">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15">
+              <Clock size={17} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] text-white/80">
+                {isFood ? "Estimated delivery time" : "Estimated pickup"}
+              </p>
+              <p className="text-[15px] font-bold">
+                {isFood
+                  ? `${d.etaMinutes ?? 30}–${(d.etaMinutes ?? 30) + 15} minutes`
+                  : `${d.etaMinutes ?? 6} min away`}
+              </p>
+            </div>
+            <span className="flex items-center gap-1 rounded-pill bg-white/15 px-2 py-0.5 text-[10px] font-bold">
+              <span className="size-1.5 animate-pulse rounded-full bg-white" /> LIVE
+            </span>
+          </div>
+
+          {/* Delivery address (food) / trip (ride) */}
+          {isFood && address && (
+            <Card className="mt-3 w-full py-3">
+              <div className="flex items-center gap-2.5">
+                <MapPin size={15} className="shrink-0 text-accent" />
+                <p className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                  <span className="font-semibold">{address.label}</span> — {address.line1},{" "}
+                  {address.city}
+                </p>
+                <Link
+                  href="/profile/addresses"
+                  className="shrink-0 text-[12px] font-semibold text-accent hover:underline"
+                >
+                  {t("foodOrder.change")}
+                </Link>
+              </div>
+            </Card>
+          )}
+          {!isFood && (d.pickup || d.drop) && (
+            <Card className="mt-3 w-full py-3">
+              <p className="flex items-center gap-2 text-[13px] text-ink">
+                <MapPin size={14} className="shrink-0 text-accent" />
+                <span className="truncate">
+                  {d.pickup} → {d.drop}
+                </span>
+              </p>
+            </Card>
+          )}
+
+          {/* Order summary — itemised for cart orders */}
+          <Card className="mt-3 w-full">
+            <p className="text-[13px] font-bold text-ink">{t("pay.summary")}</p>
+            <div className="mt-2 flex flex-col gap-1.5 text-[13px]">
+              {d.items && d.items.length > 0 ? (
+                d.items.map((i, idx) => (
+                  <div key={idx} className="flex justify-between gap-3">
+                    <span className="min-w-0 truncate text-cocoa">
+                      {i.name} × {i.qty}
+                    </span>
+                    <span className="shrink-0 text-ink">{rupees(i.pricePaise * i.qty)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex justify-between gap-3">
+                  <span className="min-w-0 truncate text-cocoa">{status.title}</span>
+                  <span className="shrink-0 text-ink">{rupees(status.amount)}</span>
+                </div>
+              )}
+              <div className="my-1 h-px bg-line" />
+              <div className="flex justify-between font-bold text-ink">
+                <span>{t("bill.totalPaid")}</span>
+                <span>{rupees(status.amount)}</span>
+              </div>
+            </div>
+          </Card>
+
+          <div className="mt-6 flex w-full flex-col gap-3">
             <Button onClick={() => router.push(`/orders/${orderId}`)} className="w-full">
               {isFood ? t("pay.trackOrder") : t("pay.trackRide")}
             </Button>

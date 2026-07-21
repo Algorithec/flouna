@@ -17,6 +17,8 @@ import {
   Pizza,
   Salad,
   Grid2x2,
+  Plus,
+  Check,
   type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -25,6 +27,7 @@ import { Card } from "@/components/ui/Card";
 import { AdviceBanner, type Advice } from "@/components/ui/AdviceBanner";
 import { BudgetBar, useBudget } from "@/components/food/BudgetBar";
 import { DishArt } from "@/components/food/DishArt";
+import { useCart } from "@/lib/cart";
 import { FadeIn, ScrollReveal, Stagger, StaggerItem } from "@/components/ui/motion";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 import { useI18n } from "@/components/i18n/I18nContext";
@@ -61,6 +64,7 @@ export default function FoodLandingPage() {
   const [showSuggestions, setShowSuggestions] = useState(true);
   const budget = useBudget();
   const { t } = useI18n();
+  const { count: cartCount } = useCart();
 
   useEffect(() => {
     api<Feed>("/api/food/feed")
@@ -111,11 +115,16 @@ export default function FoodLandingPage() {
             <Bell size={20} />
           </button>
           <Link
-            href="/history"
-            aria-label="Orders"
+            href="/cart"
+            aria-label="Cart"
             className="relative flex size-10 shrink-0 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
           >
             <ShoppingCart size={20} />
+            {cartCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex size-4.5 min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
           </Link>
         </div>
       </FadeIn>
@@ -270,6 +279,19 @@ export default function FoodLandingPage() {
 // Dish card — Figma layout: tag pill, name, clock · rating, price + Order now,
 // with a dish-art tile standing in until real photography lands.
 function DishRow({ q }: { q: FoodQuote }) {
+  const { add } = useCart();
+  const [added, setAdded] = useState(false);
+  function addToCart() {
+    add({
+      dishId: q.dishId,
+      platform: q.platform,
+      name: q.name,
+      restaurant: q.restaurant,
+      pricePaise: q.effectivePaise,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1200);
+  }
   return (
     <Card className="transition-all hover:-translate-y-0.5 hover:shadow-card">
       <div className="flex items-center gap-3">
@@ -286,8 +308,20 @@ function DishRow({ q }: { q: FoodQuote }) {
             </span>
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2">
           <p className="text-[16px] font-bold text-ink">{rupees(q.effectivePaise)}</p>
+          <button
+            onClick={addToCart}
+            aria-label={`Add ${q.name} to cart`}
+            className={cn(
+              "flex size-8 items-center justify-center rounded-full border transition-colors",
+              added
+                ? "border-success bg-success/10 text-success"
+                : "border-accent/60 text-accent hover:bg-accent-soft",
+            )}
+          >
+            {added ? <Check size={15} /> : <Plus size={15} />}
+          </button>
           <Link
             href={`/food/order/${q.dishId}?platform=${q.platform}`}
             className="rounded-pill bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#d4570f]"

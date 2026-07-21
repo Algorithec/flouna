@@ -28,6 +28,7 @@ type OrderDetail = {
     name?: string;
     productName?: string;
     displayName?: string;
+    items?: { name: string; qty: number; pricePaise: number }[];
   };
   payment: { status: string; method: string | null } | null;
 };
@@ -106,7 +107,14 @@ export default function InvoicePage({
   const lines: { label: string; value: number }[] = [];
   if (order.domain === "food") {
     const base = order.details.basePaise;
-    if (base != null) lines.push({ label: order.details.name ?? order.title, value: base });
+    if (order.details.items && order.details.items.length > 0) {
+      // Cart / group orders: one printed line per item.
+      for (const i of order.details.items) {
+        lines.push({ label: `${i.name} × ${i.qty}`, value: i.pricePaise * i.qty });
+      }
+    } else if (base != null) {
+      lines.push({ label: order.details.name ?? order.title, value: base });
+    }
     if (order.details.deliveryFeePaise)
       lines.push({ label: "Delivery fee", value: order.details.deliveryFeePaise });
     if (order.details.convenienceFeePaise)

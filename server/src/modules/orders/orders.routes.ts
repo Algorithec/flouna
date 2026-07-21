@@ -46,6 +46,23 @@ const createFoodOrder = z.object({
   platform: z.enum(["ondc", "swiggy", "zomato"]),
 });
 
+// Multi-item cart checkout: one order with line items. Every price is
+// recomputed from the catalog per line; the client only sends ids + qty.
+const createFoodCartOrder = z.object({
+  domain: z.literal("food"),
+  items: z
+    .array(
+      z.object({
+        dishId: z.string().max(60),
+        platform: z.enum(["ondc", "swiggy", "zomato"]),
+        qty: z.number().int().min(1).max(20),
+      }),
+    )
+    .min(1)
+    .max(30),
+  instructions: z.string().trim().max(300).optional(),
+});
+
 // The client sends pickup/drop COORDINATES, not a distance. The server
 // recomputes distance+time itself so the fare can't be gamed by faking a
 // short trip. Labels (pickup/drop strings) are display-only.
@@ -68,12 +85,126 @@ const createRideOrder = z.object({
 // a tampered client cannot set its own amount.
 ordersRouter.post(
   "/",
-  validateBody(z.discriminatedUnion("domain", [createFoodOrder, createRideOrder])),
+  // Cart variant first: both food shapes share domain, so plain union with
+  // the more specific (items[]) schema ahead.
+  validateBody(z.union([createFoodCartOrder, createFoodOrder, createRideOrder])),
   async (req, res, next) => {
     try {
       const body = req.body as
+        | z.infer<typeof createFoodCartOrder>
         | z.infer<typeof createFoodOrder>
         | z.infer<typeof createRideOrder>;
+
+      // ---------- multi-item cart ----------
+      if (body.domain === "food" && "items" in body) {
+        type Line = {
+          dishId: string;
+          platform: string;
+          name: string;
+          restaurant: string;
+          qty: number;
+          pricePaise: number; // unit base price
+          offer: { label: string; discountPaise: number } | null;
+        };
+        const lines: Line[] = [];
+        let itemsTotal = 0;
+        let discount = 0;
+        let deliveryFeePaise = 0;
+        let savedPaise = 0;
+        const offers: { label: string; discountPaise: number }[] = [];
+
+        for (const item of body.items) {
+          const quotes = quotesForDish(item.dishId);
+          const quote = quotes.find((q) => q.platform === item.platform);
+          if (!quote) {
+            throw new ApiError(404, `An item in your cart is no longer available`);
+          }
+          itemsTotal += quote.basePaise * item.qty;
+          // One delivery per order — charge the highest fee among the lines,
+          // never a per-line stack.
+          deliveryFeePaise = Math.max(deliveryFeePaise, quote.deliveryFeePaise);
+          const lineOffer = quote.offers[0] ?? null;
+          if (lineOffer) {
+            discount += lineOffer.discountPaise;
+            offers.push(lineOffer);
+          }
+          const cheapestOther = Math.min(
+            ...quotes
+              .filter((q) => q.platform !== item.platform)
+              .map((q) => q.effectivePaise),
+          );
+          if (Number.isFinite(cheapestOther)) {
+            savedPaise += Math.max(0, cheapestOther - quote.effectivePaise);
+          }
+          lines.push({
+            dishId: item.dishId,
+            platform: item.platform,
+            name: quote.name,
+            restaurant: quote.restaurant,
+            qty: item.qty,
+            pricePaise: quote.basePaise,
+            offer: lineOffer,
+          });
+        }
+
+        const defaultAddress = await prisma.address.findFirst({
+          where: { userId: req.userId!, isDefault: true },
+        });
+        const me = await prisma.user.findUniqueOrThrow({
+          where: { id: req.userId! },
+          select: { plusActive: true, plusUntil: true },
+        });
+        const convenienceFeePaise = !isPlusActive(me) ? CONVENIENCE_FEE_PAISE : 0;
+        const amount = Math.max(
+          0,
+          itemsTotal + deliveryFeePaise + convenienceFeePaise - discount,
+        );
+
+        const first = lines[0]!;
+        const { restaurantLat, restaurantLng, deliveryLat, deliveryLng } =
+          simulateDeliveryCoords(first.dishId);
+
+        const order = await prisma.order.create({
+          data: {
+            userId: req.userId!,
+            domain: "food",
+            status: "pending_payment",
+            provider: first.platform,
+            fulfillment: "in_app",
+            title:
+              lines.length > 1
+                ? `${first.name} + ${lines.length - 1} more — ${first.restaurant}`
+                : `${first.name} — ${first.restaurant}`,
+            details: JSON.stringify({
+              items: lines.map((l) => ({
+                dishId: l.dishId,
+                name: l.name,
+                qty: l.qty,
+                pricePaise: l.pricePaise,
+              })),
+              name: first.name,
+              restaurant: first.restaurant,
+              basePaise: itemsTotal,
+              deliveryFeePaise,
+              convenienceFeePaise,
+              offers,
+              instructions: body.instructions || undefined,
+              pickupLat: restaurantLat,
+              pickupLng: restaurantLng,
+              dropLat: deliveryLat,
+              dropLng: deliveryLng,
+              vehicle: "bike",
+              comparedOptions: lines.length * 3,
+              comparedPlatforms: 3,
+            }),
+            amount,
+            savedPaise,
+            addressId: defaultAddress?.id ?? null,
+          },
+        });
+        void emitOrderDiscovery(order);
+        return res.status(201).json({ order });
+      }
 
       if (body.domain === "food") {
         const allQuotes = quotesForDish(body.dishId);
@@ -237,6 +368,7 @@ ordersRouter.get("/", async (req, res, next) => {
         provider: true,
         title: true,
         amount: true,
+        savedPaise: true,
         createdAt: true,
       },
     });
@@ -430,9 +562,15 @@ ordersRouter.post(
         providerRef: `SIM-${order.id.slice(0, 8).toUpperCase()}`,
       });
 
+      // Keep the cancellation reason ("Help us improve" sheet) on the order —
+      // ops reads it in the console, and it feeds churn analysis later.
+      const { reason } = req.body as { reason?: string };
+      const details = JSON.parse(order.details) as Record<string, unknown>;
+      if (reason) details.cancelReason = reason;
+
       const updated = await prisma.order.update({
         where: { id: order.id },
-        data: { status: "cancelled" },
+        data: { status: "cancelled", details: JSON.stringify(details) },
       });
 
       void sendPushToUser(order.userId, {

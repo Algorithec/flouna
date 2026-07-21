@@ -207,7 +207,12 @@ model Address {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   label     String // "Home" | "Work" | custom
-  line1     String
+  line1     String // flat / house no.
+  line2     String? // building / street name
+  landmark  String?
+  // Who receives the delivery at this address — may differ from the account.
+  contactName  String?
+  contactPhone String?
   city      String
   state     String
   pincode   String

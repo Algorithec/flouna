@@ -8,8 +8,10 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { GroupCart } from "@/components/food/GroupCartTypes";
+import { useI18n } from "@/components/i18n/I18nContext";
 
 export default function GroupStartPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -55,34 +57,33 @@ export default function GroupStartPage() {
         onClick={() => router.push("/food")}
         className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
-        <ChevronLeft size={16} /> Food
+        <ChevronLeft size={16} /> {t("nav.food")}
       </button>
 
       <h1 className="mt-3 flex items-center gap-2 text-[20px] font-bold text-ink">
-        <Users size={20} className="text-accent" /> Group order
+        <Users size={20} className="text-accent" /> {t("grp.groupOrder")}
       </h1>
       <p className="mt-1 text-[13px] text-cocoa">
-        Order together with friends — everyone adds their items, the bill splits
-        equally.
+        {t("grp.groupOrderSub")}
       </p>
 
       {/* Start new */}
       <Card className="mt-5">
-        <p className="text-[14px] font-bold text-ink">Start a new group order</p>
+        <p className="text-[14px] font-bold text-ink">{t("grp.startNew")}</p>
         <p className="mt-1 text-[12px] text-cocoa">
-          Everyone orders inside Radiues — one shared cart, one payment, split equally.
+          {t("grp.startNewSub")}
         </p>
         <Button onClick={create} disabled={busy} className="mt-4 w-full">
-          Create &amp; get a code
+          {t("grp.createCode")}
         </Button>
       </Card>
 
       {/* Join existing */}
       <Card className="mt-4">
-        <p className="text-[14px] font-bold text-ink">Join with a code</p>
+        <p className="text-[14px] font-bold text-ink">{t("grp.joinWithCode")}</p>
         <div className="mt-3 flex items-end gap-2">
           <Input
-            label="6-character code"
+            label={t("grp.codeLabel")}
             placeholder="ABC123"
             value={code}
             onChange={(e) =>
@@ -95,7 +96,7 @@ export default function GroupStartPage() {
             onClick={join}
             disabled={busy || code.length !== 6}
           >
-            Join
+            {t("grp.join")}
           </Button>
         </div>
       </Card>

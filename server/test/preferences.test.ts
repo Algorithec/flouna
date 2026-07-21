@@ -58,3 +58,68 @@ describe("user preferences", () => {
     await request(app).get("/api/users/preferences").expect(401);
   });
 });
+
+describe("addresses (edit screen)", () => {
+  it("creates with receiver contact + landmark and edits via PATCH", async () => {
+    const { agent } = await authedAgent();
+    const created = await agent
+      .post("/api/users/addresses")
+      .send({
+        label: "Home",
+        line1: "Flat 402",
+        line2: "Sunrise Apartments, MG Road",
+        landmark: "Near metro",
+        contactName: "Ravi Kumar",
+        contactPhone: "9876543210",
+        city: "Hyderabad",
+        state: "Telangana",
+        pincode: "500081",
+        lat: 17.44,
+        lng: 78.35,
+        isDefault: true,
+      })
+      .expect(201);
+    const id = created.body.address.id as string;
+    expect(created.body.address.contactName).toBe("Ravi Kumar");
+
+    const updated = await agent
+      .patch(`/api/users/addresses/${id}`)
+      .send({
+        label: "Work",
+        line1: "Flat 402",
+        line2: "RMZ Infinity",
+        city: "Hyderabad",
+        state: "Telangana",
+        pincode: "500032",
+      })
+      .expect(200);
+    expect(updated.body.address.label).toBe("Work");
+    expect(updated.body.address.line2).toBe("RMZ Infinity");
+    expect(updated.body.address.landmark).toBeNull(); // full replace semantics
+  });
+
+  it("rejects a bad receiver phone and editing someone else's address", async () => {
+    const { agent } = await authedAgent();
+    await agent
+      .post("/api/users/addresses")
+      .send({
+        label: "Home",
+        line1: "1",
+        city: "Hyd",
+        state: "TG",
+        pincode: "500001",
+        contactPhone: "12345",
+      })
+      .expect(400);
+
+    const owner = await authedAgent();
+    const created = await owner.agent
+      .post("/api/users/addresses")
+      .send({ label: "Home", line1: "1A", city: "Hyd", state: "TG", pincode: "500001" })
+      .expect(201);
+    await agent
+      .patch(`/api/users/addresses/${created.body.address.id}`)
+      .send({ label: "Hacked", line1: "x", city: "Hyd", state: "TG", pincode: "500001" })
+      .expect(404);
+  });
+});
