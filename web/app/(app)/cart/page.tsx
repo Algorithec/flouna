@@ -25,6 +25,7 @@ import { Card } from "@/components/ui/Card";
 import { StateScreen, StateGlyph } from "@/components/ui/StateScreen";
 import { Button } from "@/components/ui/Button";
 import { DishArt } from "@/components/food/DishArt";
+import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { useToast } from "@/components/ui/Toast";
 import { FadeIn, MOTION } from "@/components/ui/motion";
@@ -43,6 +44,7 @@ export default function CartPage() {
   const router = useRouter();
   const { lines, setQty, remove, clear } = useCart();
   const { t } = useI18n();
+  const back = useBackTo("/food");
   const { toast } = useToast();
   const [instructions, setInstructions] = useState("");
   const [busy, setBusy] = useState(false);
@@ -120,7 +122,8 @@ export default function CartPage() {
     <FadeIn duration={MOTION.fast} className="mx-auto w-full max-w-xl px-4 py-6 pb-28 lg:max-w-5xl lg:px-6 lg:pb-10">
       <div className="flex items-center justify-between">
         <button
-          onClick={() => router.push("/food")}
+          type="button"
+          onClick={back}
           className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
         >
           <ChevronLeft size={16} /> {t("nav.food")}

@@ -9,11 +9,13 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { GroupCart } from "@/components/food/GroupCartTypes";
+import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
 
 export default function GroupStartPage() {
   const { t } = useI18n();
   const router = useRouter();
+  const back = useBackTo("/food");
   const search = useSearchParams();
   // Arriving from a shared link (?code=ABC123) — pre-fill so joining is one
   // tap, not a re-type of a code the sender already gave them.
@@ -60,7 +62,8 @@ export default function GroupStartPage() {
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-6 lg:max-w-3xl lg:px-6 lg:py-10">
       <button
-        onClick={() => router.push("/food")}
+        type="button"
+        onClick={back}
         className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
         <ChevronLeft size={16} /> {t("nav.food")}

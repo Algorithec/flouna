@@ -3,9 +3,9 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Star, Truck, BadgePercent, ChevronLeft, ShieldCheck } from "lucide-react";
-import Link from "next/link";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
+import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { sellerName } from "@/lib/sellerName";
 import { Card } from "@/components/ui/Card";
@@ -22,6 +22,7 @@ export default function ProductPage({
   const { productId } = use(params);
   const router = useRouter();
   const { t } = useI18n();
+  const back = useBackTo("/shop");
   const [quotes, setQuotes] = useState<ProductQuote[]>([]);
   const [platform, setPlatform] = useState("");
   const [error, setError] = useState("");
@@ -96,12 +97,13 @@ export default function ProductPage({
 
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-6 lg:px-6">
-      <Link
-        href="/shop"
+      <button
+        type="button"
+        onClick={back}
         className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
         <ChevronLeft size={16} /> Shop
-      </Link>
+      </button>
 
       <h1 className="mt-3 text-[20px] font-bold text-ink">{selected.name}</h1>
       <p className="text-[13px] text-cocoa">{selected.brand}</p>

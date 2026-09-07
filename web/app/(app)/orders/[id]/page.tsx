@@ -14,6 +14,7 @@ import { DecisionReceipt } from "@/components/orders/DecisionReceipt";
 import { RideTracker } from "@/components/orders/RideTracker";
 import { LoadingView, ErrorView } from "@/components/ui/StatusView";
 import { cn } from "@/lib/cn";
+import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
 
 type TrackingEvent = {
@@ -74,6 +75,10 @@ export default function OrderDetailPage({
     etaMinutes: null,
   });
   const { t } = useI18n();
+  // History is where this screen lives, but it is rarely where the customer
+  // came from: after paying they arrive from checkout, and pushing History on
+  // top of that made the back control add an entry instead of removing one.
+  const back = useBackTo("/history");
 
   useEffect(() => {
     const load = () =>
@@ -135,12 +140,13 @@ export default function OrderDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-6 lg:px-6">
-      <Link
-        href="/history"
+      <button
+        type="button"
+        onClick={back}
         className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
         <ChevronLeft size={16} /> {t("nav.history")}
-      </Link>
+      </button>
 
       <h1 className="mt-3 text-[19px] font-bold text-ink">{order.title}</h1>
       <p className="mt-0.5 text-[12px] text-cocoa">
