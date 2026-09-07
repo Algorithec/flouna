@@ -96,7 +96,7 @@ export function AppShell({
           >
             <button
               onClick={() => setSidebarOpen(true)}
-              className="-ml-1 rounded-full p-2 text-ink transition-colors hover:bg-beige"
+              className="tap-target -ml-1 rounded-full p-2 text-ink transition-colors hover:bg-beige"
               aria-label="Open menu"
             >
               <Menu size={24} />
@@ -112,7 +112,7 @@ export function AppShell({
               <Link
                 href="/profile"
                 aria-label="Your profile"
-                className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[14px] font-bold text-accent"
+                className="tap-target flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[14px] font-bold text-accent"
               >
                 {user.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -169,7 +169,7 @@ function IncognitoToggle() {
           : "Start a temporary chat that is not saved"
       }
       className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
+        "tap-target flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
         temporary
           ? "bg-accent text-white"
           : "bg-card text-cocoa shadow-soft hover:bg-beige/60",

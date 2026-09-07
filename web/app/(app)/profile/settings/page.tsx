@@ -148,8 +148,8 @@ export default function SettingsPage() {
               onClick={() => setLang(l.code)}
               className={
                 l.code === lang
-                  ? "rounded-pill border border-accent bg-accent-soft px-3.5 py-2 text-[13px] font-semibold text-accent"
-                  : "rounded-pill border border-line bg-card px-3.5 py-2 text-[13px] text-cocoa hover:bg-beige/40"
+                  ? "tap-target rounded-pill border border-accent bg-accent-soft px-3.5 py-2 text-[13px] font-semibold text-accent"
+                  : "tap-target rounded-pill border border-line bg-card px-3.5 py-2 text-[13px] text-cocoa hover:bg-beige/40"
               }
             >
               {l.label}
@@ -211,7 +211,7 @@ export default function SettingsPage() {
             aria-label="Dark mode"
             onClick={toggle}
             className={cn(
-              "h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors",
+              "tap-target h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors",
               theme === "dark" ? "bg-accent" : "bg-line",
             )}
           >
@@ -250,7 +250,7 @@ export default function SettingsPage() {
             }
             onClick={togglePush}
             className={cn(
-              "h-6 w-11 rounded-full p-0.5 transition-colors disabled:opacity-50",
+              "tap-target h-6 w-11 rounded-full p-0.5 transition-colors disabled:opacity-50",
               pushState === "subscribed" ? "bg-accent" : "bg-line",
             )}
           >
@@ -286,7 +286,7 @@ export default function SettingsPage() {
               aria-label={s.label}
               onClick={() => togglePref(s.key)}
               className={cn(
-                "h-6 w-11 rounded-full p-0.5 transition-colors",
+                "tap-target h-6 w-11 rounded-full p-0.5 transition-colors",
                 prefs[s.key] ? "bg-accent" : "bg-line",
               )}
             >

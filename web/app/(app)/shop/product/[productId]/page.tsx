@@ -100,7 +100,7 @@ export default function ProductPage({
       <button
         type="button"
         onClick={back}
-        className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
+        className="tap-target flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
         <ChevronLeft size={16} /> Shop
       </button>

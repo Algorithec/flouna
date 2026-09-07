@@ -143,7 +143,7 @@ export default function OrderDetailPage({
       <button
         type="button"
         onClick={back}
-        className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
+        className="tap-target flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
         <ChevronLeft size={16} /> {t("nav.history")}
       </button>
