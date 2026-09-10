@@ -77,9 +77,76 @@ function normHigherBetter(value: number, min: number, max: number): number {
 export type Scorable = {
   pricePaise: number;
   rating: number; // 0..5
+  /**
+   * How many ratings that average is built from.
+   *
+   * Optional because not every source knows it. Where it is known, the ranker
+   * stops treating a 4.9 from two people as the equal of a 4.6 from four
+   * thousand: see `shrinkRatings`.
+   */
+  ratingCount?: number;
   etaMinutes: number;
   name?: string; // optional, for taste/habit matching
 };
+
+// How many ratings an option needs before its own average is trusted over the
+// typical option in the same result set. Matches CONFIDENCE_AT in the ratings
+// service, which does the same job for the number that gets displayed.
+const RATING_CONFIDENCE_AT = 10;
+// Roughly the spread of star ratings on a 0..5 scale. Used only to size the
+// uncertainty penalty below, so it wants to be about right, not exact.
+const RATING_SPREAD = 0.8;
+
+/**
+ * Confidence-adjusted quality, so a thin average cannot outrank an established
+ * one.
+ *
+ * The displayed rating already shrinks toward the catalogue baseline, but the
+ * count was dropped at the ranking boundary, so two options both showing 4.6
+ * ranked identically whether that came from eleven ratings or four thousand.
+ * Ranking is exactly where it matters: it decides who gets steered where.
+ *
+ * Two things are needed, and the first alone is not enough:
+ *
+ * 1. Shrink toward a prior. The prior is the mean *per rating*, not per
+ *    option. A plain average of the options lets a 4.9 from two people drag
+ *    the prior up and then shrink toward the number it just inflated, which
+ *    leaves it winning anyway.
+ *
+ * 2. Rank on the bottom of the plausible range rather than the middle of it.
+ *    Two ratings averaging 4.9 could really be anything; four thousand
+ *    averaging 4.6 could not. Subtracting an uncertainty that falls away as
+ *    evidence accumulates is what makes "we are confident this is good" beat
+ *    "this might be excellent", while still letting a genuinely better option
+ *    win once enough people agree.
+ *
+ * All or nothing: if any option in the set has no count, none are adjusted.
+ * Penalising only the options whose counts we happen to know would hand an
+ * advantage to the ones we know least about, which is the opposite of the
+ * intent.
+ */
+function shrinkRatings<T extends Scorable>(items: T[]): number[] {
+  const counts: number[] = [];
+  for (const item of items) {
+    if (item.ratingCount === undefined || item.ratingCount < 0) {
+      return items.map((i) => i.rating);
+    }
+    counts.push(item.ratingCount);
+  }
+
+  const totalRatings = counts.reduce((sum, c) => sum + c, 0);
+  const prior =
+    totalRatings > 0
+      ? items.reduce((sum, i, idx) => sum + i.rating * counts[idx]!, 0) / totalRatings
+      : items.reduce((sum, i) => sum + i.rating, 0) / items.length;
+
+  return items.map((item, idx) => {
+    const n = counts[idx]!;
+    const evidence = n + RATING_CONFIDENCE_AT;
+    const posterior = (n * item.rating + RATING_CONFIDENCE_AT * prior) / evidence;
+    return posterior - RATING_SPREAD / Math.sqrt(evidence);
+  });
+}
 
 // Personalization signals derived from the user's DecisionProfile. These only
 // adjust WEIGHTS and add a small taste BONUS — they never touch prices, so the
@@ -133,7 +200,8 @@ export function scoreOptions<T extends Scorable>(
   const w = appliedWeights(priority, personal);
 
   const prices = items.map((i) => i.pricePaise);
-  const ratings = items.map((i) => i.rating);
+  // Confidence-adjusted, so a thin average cannot outrank an established one.
+  const ratings = shrinkRatings(items);
   const etas = items.map((i) => i.etaMinutes);
   const pMin = Math.min(...prices),
     pMax = Math.max(...prices);
@@ -143,9 +211,9 @@ export function scoreOptions<T extends Scorable>(
     eMax = Math.max(...etas);
 
   return items
-    .map((item) => {
+    .map((item, idx) => {
       const priceScore = normLowerBetter(item.pricePaise, pMin, pMax);
-      const ratingScore = normHigherBetter(item.rating, rMin, rMax);
+      const ratingScore = normHigherBetter(ratings[idx]!, rMin, rMax);
       const speedScore = normLowerBetter(item.etaMinutes, eMin, eMax);
       let score =
         priceScore * w.price + ratingScore * w.rating + speedScore * w.speed;

@@ -55,19 +55,25 @@ export async function withCommunityRatings<
   if (ratings.size === 0) return items;
   return items.map((item) => {
     const community = ratings.get(keyOf(item));
-    if (!community) return item;
+    // No community ratings for this option: say so with a zero rather than
+    // leaving the count absent. The ranker treats an absent count as "this
+    // source cannot tell us" and switches confidence weighting off for the
+    // whole set, so a silent gap here would quietly disable it.
+    if (!community) return { ...item, ratingCount: 0 };
     if ("rating" in item && typeof item.rating === "number") {
       return {
         ...item,
         rating: blendRating(item.rating, community),
+        ratingCount: community.count,
       };
     }
     if ("driverRating" in item && typeof item.driverRating === "number") {
       return {
         ...item,
         driverRating: blendRating(item.driverRating, community),
+        ratingCount: community.count,
       };
     }
-    return item;
+    return { ...item, ratingCount: community.count };
   });
 }
