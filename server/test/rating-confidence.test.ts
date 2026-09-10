@@ -1,85 +1,126 @@
 import { describe, expect, it } from "vitest";
 import { scoreOptions } from "../src/modules/advisor/scoring.js";
+import { qualityOf } from "../src/modules/ratings/blend.js";
 
 // A rating is a claim, and a claim is only as good as the number of people
-// making it. The displayed rating already accounts for that, but the count was
-// dropped before ranking, so the engine treated a 4.9 from two people as the
-// equal of a 4.6 from four thousand. Ranking is where it matters most: it
-// decides who gets steered where.
+// making it. The ratings service already shrinks the displayed number toward
+// the catalogue baseline by how many people rated, but the count was dropped
+// before ranking, so a 4.9 from two people and a 4.6 from four thousand were
+// treated as equals by the one step that decides who gets steered where.
+//
+// These go through `qualityOf`, which is how a rating actually reaches the
+// scorer. Feeding raw community averages straight in would be testing a
+// pipeline we do not have.
+
+/** A catalogue baseline typical of the dishes we carry. */
+const BASELINE = 4.3;
 
 describe("confidence-weighted quality", () => {
   it("an established rating beats a thinly-rated higher one", () => {
     const items = [
-      { pricePaise: 20000, rating: 4.9, ratingCount: 2, etaMinutes: 30, name: "New Place" },
-      { pricePaise: 20000, rating: 4.6, ratingCount: 4000, etaMinutes: 30, name: "Established" },
+      {
+        pricePaise: 20000,
+        etaMinutes: 30,
+        name: "New Place",
+        ...qualityOf(BASELINE, { average: 4.9, count: 2 }),
+      },
+      {
+        pricePaise: 20000,
+        etaMinutes: 30,
+        name: "Established",
+        ...qualityOf(BASELINE, { average: 4.6, count: 4000 }),
+      },
     ];
     const ranked = scoreOptions(items, "rating");
     expect(ranked[0]!.item.name).toBe("Established");
   });
 
-  it("the same pair ranks the other way when the count is unknown", () => {
-    // Documents the previous behaviour, and that it is what still happens
-    // wherever a source cannot tell us how many ratings it has.
-    const items = [
-      { pricePaise: 20000, rating: 4.9, etaMinutes: 30, name: "New Place" },
-      { pricePaise: 20000, rating: 4.6, etaMinutes: 30, name: "Established" },
-    ];
-    const ranked = scoreOptions(items, "rating");
-    expect(ranked[0]!.item.name).toBe("New Place");
-  });
-
   it("a genuinely better option still wins once enough people agree", () => {
     // Confidence weighting must not become a moat for incumbents.
     const items = [
-      { pricePaise: 20000, rating: 4.9, ratingCount: 900, etaMinutes: 30, name: "Better" },
-      { pricePaise: 20000, rating: 4.6, ratingCount: 4000, etaMinutes: 30, name: "Established" },
+      {
+        pricePaise: 20000,
+        etaMinutes: 30,
+        name: "Better",
+        ...qualityOf(BASELINE, { average: 4.9, count: 900 }),
+      },
+      {
+        pricePaise: 20000,
+        etaMinutes: 30,
+        name: "Established",
+        ...qualityOf(BASELINE, { average: 4.6, count: 4000 }),
+      },
     ];
     const ranked = scoreOptions(items, "rating");
     expect(ranked[0]!.item.name).toBe("Better");
   });
 
-  it("is all or nothing across a set", () => {
-    // Adjusting only the options whose counts we know would advantage the ones
-    // we know least about, which is backwards.
-    const mixed = [
-      { pricePaise: 20000, rating: 4.9, ratingCount: 2, etaMinutes: 30, name: "Thin" },
-      { pricePaise: 20000, rating: 4.6, etaMinutes: 30, name: "Unknown count" },
+  it("a handful of complaints cannot sink an established option", () => {
+    const items = [
+      {
+        pricePaise: 20000,
+        etaMinutes: 30,
+        name: "Two angry reviews",
+        ...qualityOf(4.8, { average: 1, count: 2 }),
+      },
+      {
+        pricePaise: 20000,
+        etaMinutes: 30,
+        name: "Steady",
+        ...qualityOf(4.4, { average: 4.4, count: 900 }),
+      },
     ];
-    const ranked = scoreOptions(mixed, "rating");
-    expect(ranked[0]!.item.name).toBe("Thin");
+    const ranked = scoreOptions(items, "rating");
+    expect(ranked[0]!.item.name).toBe("Steady");
   });
 
-  it("treats an unrated newcomer as unknown, not as bad", () => {
-    // Nobody has rated it yet, which is not the same as having been rated
-    // badly. It should not win, and it should not be buried beneath an option
-    // that plenty of people agree is poor.
+  it("the count is what separates two identical averages", () => {
     const items = [
-      { pricePaise: 20000, rating: 0, ratingCount: 0, etaMinutes: 30, name: "Brand new" },
-      { pricePaise: 20000, rating: 4.6, ratingCount: 4000, etaMinutes: 30, name: "Established" },
-      { pricePaise: 20000, rating: 2.1, ratingCount: 800, etaMinutes: 30, name: "Known to be bad" },
+      { pricePaise: 20000, etaMinutes: 30, name: "Thin", rating: 4.6, ratingCount: 11 },
+      { pricePaise: 20000, etaMinutes: 30, name: "Deep", rating: 4.6, ratingCount: 4000 },
     ];
-    const names = scoreOptions(items, "rating").map((r) => r.item.name);
-    expect(names[0]).toBe("Established");
-    expect(names.indexOf("Brand new")).toBeLessThan(names.indexOf("Known to be bad"));
+    const ranked = scoreOptions(items, "rating");
+    expect(ranked[0]!.item.name).toBe("Deep");
   });
 
-  it("falls back to the catalogue when nobody has rated anything", () => {
-    // Every count zero is no evidence at all. Weighting by it would shrink
-    // every option to the same number, ratings would stop separating them, and
-    // "top-rated" would return whatever happened to be first.
+  it("ranks unchanged when no source knows its counts", () => {
+    // Documents the behaviour wherever a provider cannot tell us, which is
+    // also exactly how this behaved before.
     const items = [
-      { pricePaise: 20000, rating: 4.1, ratingCount: 0, etaMinutes: 30, name: "Lower" },
-      { pricePaise: 20000, rating: 4.8, ratingCount: 0, etaMinutes: 30, name: "Higher" },
+      { pricePaise: 20000, rating: 4.9, etaMinutes: 30, name: "Higher" },
+      { pricePaise: 20000, rating: 4.6, etaMinutes: 30, name: "Lower" },
+    ];
+    expect(scoreOptions(items, "rating")[0]!.item.name).toBe("Higher");
+  });
+
+  it("still separates options when nobody has rated any of them", () => {
+    // Every count zero is no evidence, so the penalty is identical across the
+    // set and the catalogue baselines decide it, which is what we display.
+    const items = [
+      { pricePaise: 20000, etaMinutes: 30, name: "Lower", ...qualityOf(4.1, undefined) },
+      { pricePaise: 20000, etaMinutes: 30, name: "Higher", ...qualityOf(4.8, undefined) },
     ];
     const ranked = scoreOptions(items, "rating");
     expect(ranked[0]!.item.name).toBe("Higher");
     expect(ranked[0]!.score).toBeGreaterThan(ranked[1]!.score);
   });
 
+  it("one heavily rated option does not drag the whole set onto itself", () => {
+    // An earlier version shrank toward the set's own mean. With a single rated
+    // option that prior became that option, everything collapsed onto it, and
+    // the most-rated won whether it was good or bad.
+    const items = [
+      { pricePaise: 20000, etaMinutes: 30, name: "Rated badly", ...qualityOf(4.5, { average: 1.2, count: 500 }) },
+      { pricePaise: 20000, etaMinutes: 30, name: "Unrated but fine", ...qualityOf(4.6, undefined) },
+    ];
+    const ranked = scoreOptions(items, "rating");
+    expect(ranked[0]!.item.name).toBe("Unrated but fine");
+  });
+
   it("does not disturb a price-led decision", () => {
     const items = [
-      { pricePaise: 10000, rating: 4.0, ratingCount: 5, etaMinutes: 30 },
-      { pricePaise: 30000, rating: 4.9, ratingCount: 5000, etaMinutes: 30 },
+      { pricePaise: 10000, etaMinutes: 30, ...qualityOf(4.0, { average: 4.0, count: 5 }) },
+      { pricePaise: 30000, etaMinutes: 30, ...qualityOf(4.9, { average: 4.9, count: 5000 }) },
     ];
     const ranked = scoreOptions(items, "price");
     expect(ranked[0]!.item.pricePaise).toBe(10000);

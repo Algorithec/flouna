@@ -1,13 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
+import { blendRating, type CommunityRating } from "./blend.js";
+
+export { blendRating, qualityOf, type CommunityRating } from "./blend.js";
 
 // Community ratings. A rating only means something once a few people have left
 // one, so a dish's shown rating is a blend of the catalog baseline and real
 // user stars, weighted by how many ratings exist. That way one angry 1-star
 // can't tank a dish, but a genuinely bad item drifts down over time.
-
-const CONFIDENCE_AT = 10; // ratings needed before user opinion fully outweighs the baseline
-
-export type CommunityRating = { average: number; count: number };
 
 export async function communityRatings(
   domain: "food" | "ride",
@@ -28,18 +27,6 @@ export async function communityRatings(
     });
   }
   return map;
-}
-
-// Bayesian-ish blend: with few ratings we mostly trust the baseline, with many
-// we mostly trust the crowd. Rounded to 1dp, which is how ratings are shown.
-export function blendRating(
-  baseline: number,
-  community: CommunityRating | undefined,
-): number {
-  if (!community || community.count === 0) return baseline;
-  const w = Math.min(1, community.count / CONFIDENCE_AT);
-  const blended = baseline * (1 - w) + community.average * w;
-  return Math.round(blended * 10) / 10;
 }
 
 // Applies community ratings to anything carrying { rating } or { driverRating } plus an id field.

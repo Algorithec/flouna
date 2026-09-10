@@ -82,50 +82,48 @@ export type Scorable = {
    *
    * Optional because not every source knows it. Where it is known, the ranker
    * stops treating a 4.9 from two people as the equal of a 4.6 from four
-   * thousand: see `shrinkRatings`.
+   * thousand: see `discountByUncertainty`.
    */
   ratingCount?: number;
   etaMinutes: number;
   name?: string; // optional, for taste/habit matching
 };
 
-// How many ratings an option needs before its own average is trusted over the
-// typical option in the same result set. Matches CONFIDENCE_AT in the ratings
-// service, which does the same job for the number that gets displayed.
+// Ratings an option needs before its own average carries most of the weight.
+// Matches CONFIDENCE_AT in the ratings service, which shrinks the number that
+// gets displayed toward the catalogue baseline by the same measure.
 const RATING_CONFIDENCE_AT = 10;
-// Roughly the spread of star ratings on a 0..5 scale. Used only to size the
-// uncertainty penalty below, so it wants to be about right, not exact.
+// Roughly the spread of star ratings on a 0..5 scale. Sizes the uncertainty
+// below, so it wants to be about right rather than exact.
 const RATING_SPREAD = 0.8;
 
 /**
- * Confidence-adjusted quality, so a thin average cannot outrank an established
- * one.
+ * Discounts a rating by how little is known about it.
  *
- * The displayed rating already shrinks toward the catalogue baseline, but the
- * count was dropped at the ranking boundary, so two options both showing 4.6
- * ranked identically whether that came from eleven ratings or four thousand.
- * Ranking is exactly where it matters: it decides who gets steered where.
+ * The shrinking has already happened by the time a rating reaches here: the
+ * ratings service blends community stars toward the catalogue baseline in
+ * proportion to how many people rated, which is a proper prior and a stable
+ * one. What was missing at the ranking boundary is the count, so two options
+ * both showing 4.6 ranked identically whether that came from eleven people or
+ * four thousand. Ranking is where it matters most, because it decides who gets
+ * steered where.
  *
- * Two things are needed, and the first alone is not enough:
+ * So the only thing to add here is uncertainty. Two ratings averaging 4.9
+ * could really be anything; four thousand averaging 4.6 could not. Subtracting
+ * an error that falls away as evidence accumulates is what makes "we are
+ * confident this is good" beat "this might be excellent", while still letting
+ * a genuinely better option win once enough people agree.
  *
- * 1. Shrink toward a prior. The prior is the mean *per rating*, not per
- *    option. A plain average of the options lets a 4.9 from two people drag
- *    the prior up and then shrink toward the number it just inflated, which
- *    leaves it winning anyway.
+ * An earlier version shrank a second time toward the set's own mean. That was
+ * wrong in a way worth recording: with one heavily rated option in the set,
+ * the prior became that option, everything collapsed onto it, and whichever
+ * had the most ratings won regardless of whether they were good or bad.
  *
- * 2. Rank on the bottom of the plausible range rather than the middle of it.
- *    Two ratings averaging 4.9 could really be anything; four thousand
- *    averaging 4.6 could not. Subtracting an uncertainty that falls away as
- *    evidence accumulates is what makes "we are confident this is good" beat
- *    "this might be excellent", while still letting a genuinely better option
- *    win once enough people agree.
- *
- * All or nothing: if any option in the set has no count, none are adjusted.
- * Penalising only the options whose counts we happen to know would hand an
- * advantage to the ones we know least about, which is the opposite of the
- * intent.
+ * All or nothing: if any option has no count, none are adjusted. Penalising
+ * only the options whose counts we know would advantage the ones we know least
+ * about, which is the opposite of the intent.
  */
-function shrinkRatings<T extends Scorable>(items: T[]): number[] {
+function discountByUncertainty<T extends Scorable>(items: T[]): number[] {
   const counts: number[] = [];
   for (const item of items) {
     if (item.ratingCount === undefined || item.ratingCount < 0) {
@@ -134,21 +132,9 @@ function shrinkRatings<T extends Scorable>(items: T[]): number[] {
     counts.push(item.ratingCount);
   }
 
-  const totalRatings = counts.reduce((sum, c) => sum + c, 0);
-  // Nobody has rated anything here. With no evidence to weight by, every option
-  // would shrink to the same prior, ratings would stop separating them at all,
-  // and "top-rated" would return whatever happened to be first. The catalogue
-  // baseline is the better answer, and it is what we already show.
-  if (totalRatings === 0) return items.map((i) => i.rating);
-
-  const prior =
-    items.reduce((sum, i, idx) => sum + i.rating * counts[idx]!, 0) / totalRatings;
-
   return items.map((item, idx) => {
-    const n = counts[idx]!;
-    const evidence = n + RATING_CONFIDENCE_AT;
-    const posterior = (n * item.rating + RATING_CONFIDENCE_AT * prior) / evidence;
-    return posterior - RATING_SPREAD / Math.sqrt(evidence);
+    const evidence = counts[idx]! + RATING_CONFIDENCE_AT;
+    return item.rating - RATING_SPREAD / Math.sqrt(evidence);
   });
 }
 
@@ -205,7 +191,7 @@ export function scoreOptions<T extends Scorable>(
 
   const prices = items.map((i) => i.pricePaise);
   // Confidence-adjusted, so a thin average cannot outrank an established one.
-  const ratings = shrinkRatings(items);
+  const ratings = discountByUncertainty(items);
   const etas = items.map((i) => i.etaMinutes);
   const pMin = Math.min(...prices),
     pMax = Math.max(...prices);
