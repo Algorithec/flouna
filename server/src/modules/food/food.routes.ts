@@ -76,15 +76,17 @@ foodRouter.get("/recommend", (req, res, next) => {
       budgetPaise: parsed.budget ? parsed.budget * 100 : null,
       dietary: parsed.dietary,
     });
-    if (rec) {
-      recordDecision({
-        userId: req.userId,
-        domain: "food",
-        query: parsed.q,
-        trace: rec.trace,
-      });
-    }
-    res.json({ recommendation: rec });
+    // Handed to the client so that, if this recommendation becomes an order,
+    // the order can be paired back to the ranking that produced it.
+    const decisionId = rec
+      ? recordDecision({
+          userId: req.userId,
+          domain: "food",
+          query: parsed.q,
+          trace: rec.trace,
+        })
+      : null;
+    res.json({ recommendation: rec, decisionId });
   } catch (err) {
     next(err);
   }
