@@ -135,10 +135,14 @@ function shrinkRatings<T extends Scorable>(items: T[]): number[] {
   }
 
   const totalRatings = counts.reduce((sum, c) => sum + c, 0);
+  // Nobody has rated anything here. With no evidence to weight by, every option
+  // would shrink to the same prior, ratings would stop separating them at all,
+  // and "top-rated" would return whatever happened to be first. The catalogue
+  // baseline is the better answer, and it is what we already show.
+  if (totalRatings === 0) return items.map((i) => i.rating);
+
   const prior =
-    totalRatings > 0
-      ? items.reduce((sum, i, idx) => sum + i.rating * counts[idx]!, 0) / totalRatings
-      : items.reduce((sum, i) => sum + i.rating, 0) / items.length;
+    items.reduce((sum, i, idx) => sum + i.rating * counts[idx]!, 0) / totalRatings;
 
   return items.map((item, idx) => {
     const n = counts[idx]!;

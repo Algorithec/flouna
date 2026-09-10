@@ -63,6 +63,19 @@ describe("confidence-weighted quality", () => {
     expect(names.indexOf("Brand new")).toBeLessThan(names.indexOf("Known to be bad"));
   });
 
+  it("falls back to the catalogue when nobody has rated anything", () => {
+    // Every count zero is no evidence at all. Weighting by it would shrink
+    // every option to the same number, ratings would stop separating them, and
+    // "top-rated" would return whatever happened to be first.
+    const items = [
+      { pricePaise: 20000, rating: 4.1, ratingCount: 0, etaMinutes: 30, name: "Lower" },
+      { pricePaise: 20000, rating: 4.8, ratingCount: 0, etaMinutes: 30, name: "Higher" },
+    ];
+    const ranked = scoreOptions(items, "rating");
+    expect(ranked[0]!.item.name).toBe("Higher");
+    expect(ranked[0]!.score).toBeGreaterThan(ranked[1]!.score);
+  });
+
   it("does not disturb a price-led decision", () => {
     const items = [
       { pricePaise: 10000, rating: 4.0, ratingCount: 5, etaMinutes: 30 },
