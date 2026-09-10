@@ -42,7 +42,6 @@ const SHOP_WORDS = new RegExp(
   "i",
 );
 
-
 /**
  * Levenshtein distance, capped so a long comparison stops early.
  *
@@ -62,9 +61,10 @@ function editDistance(a: string, b: string, max: number): number {
       row.push(v);
       if (v < best) best = v;
     }
+    // Every way of reaching this row already costs more than the caller cares
+    // about, so no continuation can come back under the cap.
     if (best > max) return max + 1;
     prev = row;
-    void row;
   }
   return prev[b.length]!;
 }
