@@ -1,5 +1,6 @@
 // Simulated ride-provider quotes (Uber/Ola/Rapido/ONDC). Same adapter shape
 // real provider/ONDC-mobility integrations will implement later.
+import { qualityOf, type CommunityRating } from "../ratings/blend.js";
 import {
   scoreOptions,
   appliedWeights,
@@ -189,7 +190,19 @@ export function quoteRides(opts: QuoteRidesOpts): RideQuote[] {
 
 // Same quoting, but also reporting how the ordering was reached. Kept as the
 // single implementation so a logged explanation cannot drift from behaviour.
-export function quoteRidesTraced(opts: QuoteRidesOpts): {
+export function quoteRidesTraced(
+  opts: QuoteRidesOpts & {
+    /**
+     * What riders have actually said about each provider.
+     *
+     * Ranking used the catalogue driver rating while the screen showed a
+     * community-blended one, so the order and the numbers beside it came from
+     * different sources. Optional, so a caller without a database can still
+     * rank.
+     */
+    community?: Map<string, CommunityRating>;
+  },
+): {
   quotes: RideQuote[];
   trace: DecisionTrace | null;
 } {
@@ -238,7 +251,10 @@ export function quoteRidesTraced(opts: QuoteRidesOpts): {
   const ranked = scoreOptions(
     quotes.map((q) => ({
       pricePaise: q.effectivePaise,
-      rating: q.driverRating,
+      // Rank on what riders said, with the weight of evidence behind it.
+      ...(opts.community
+        ? qualityOf(q.driverRating, opts.community.get(q.provider))
+        : { rating: q.driverRating }),
       etaMinutes: q.pickupEtaMinutes,
       quote: q,
     })),

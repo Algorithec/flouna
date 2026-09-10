@@ -29,6 +29,31 @@ export async function communityRatings(
   return map;
 }
 
+/**
+ * Every rated item in a domain.
+ *
+ * Ranking needs these before it knows which options it is going to rank, so
+ * asking for a specific set of keys is circular. Fetching the lot is not the
+ * extravagance it sounds like: a row exists only where somebody actually left
+ * a rating, so this is bounded by what customers have rated rather than by the
+ * size of the catalogue.
+ */
+export async function allCommunityRatings(
+  domain: "food" | "ride",
+): Promise<Map<string, CommunityRating>> {
+  const rows = await prisma.orderRating.groupBy({
+    by: ["itemKey"],
+    where: { domain },
+    _avg: { stars: true },
+    _count: { stars: true },
+  });
+  const map = new Map<string, CommunityRating>();
+  for (const r of rows) {
+    map.set(r.itemKey, { average: r._avg.stars ?? 0, count: r._count.stars });
+  }
+  return map;
+}
+
 // Applies community ratings to anything carrying { rating } or { driverRating } plus an id field.
 export async function withCommunityRatings<
   T extends Record<string, any>,
