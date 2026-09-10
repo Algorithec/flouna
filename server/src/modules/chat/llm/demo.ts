@@ -1,14 +1,51 @@
 import type { Intent, LlmProvider } from "./types.js";
 
-// Keyless fallback so the whole product runs without any LLM account.
-// Simple keyword rules — replaced in production by Anthropic/DeepSeek.
-const FOOD_WORDS =
-  /\b(biryani|pizza|burger|dosa|pasta|noodles|thali|paneer|chicken|veg|tiffin|breakfast|lunch|dinner|snack|dessert|cake|ice ?cream|samosa|idli|paratha|roll|shawarma|momos|food|eat|hungry|spicy|sweet|healthy|cheesy|meal|craving)\b/i;
+// Keyless intent extraction, and the floor the whole product stands on.
+//
+// This is not only a development convenience. It is what serves every request
+// whenever no provider key is configured, a key expires, or the hosted model is
+// unreachable, so its accuracy is the accuracy Flouna degrades to rather than a
+// number nobody looks at. scripts/eval-intent.mjs measures it against the same
+// labelled set the hosted models are measured against.
+//
+// Rules rather than a model because the cost is zero, the latency is zero, the
+// behaviour is inspectable, and a rule cannot be talked out of its instructions
+// by the message it is reading.
+
+// Plural and possessive endings on dish and product names. Written once here
+// because "order 2 dosas" and "cotton t shirts" were both classified
+// out_of_scope purely for being plural.
+const S = "(?:e?s)?";
+
+const CUISINES = "chinese|indian|italian|mexican|thai|continental|mughlai|punjabi|south indian|north indian";
+const DISHES = `biryani|pizza|burger|dosa|pasta|noodle|thali|paneer|samosa|idli|vada|paratha|roll|shawarma|momo|cake|ice ?cream|curry|fried rice|rice|sandwich|wrap|salad|soup|kebab|tikka|naan|chaat|pav bhaji|pulao|korma`;
+// Words that describe a craving rather than name a dish. The hosted prompt
+// requires these be kept as the item ("something spicy" -> "spicy"), and the
+// rules now agree instead of flattening them to "popular dishes".
+const MOODS = "spicy|sweet|healthy|light|cheesy|savoury|savory|tangy|creamy|comfort";
+
+const FOOD_WORDS = new RegExp(
+  `\\b(?:(?:${DISHES})${S}|${CUISINES}|${MOODS}|chicken|mutton|fish|egg|prawn|veg|tiffin|breakfast|lunch|dinner|brunch|snack${S}|dessert${S}|food|eat|hungry|meal${S}|craving|dhaba|restaurant)\\b`,
+  "i",
+);
+
+// Transport asked for, as opposed to a place that happens to be mentioned.
+//
+// "office" used to live in this list, so "buy a office chair for 8000" matched
+// rides before shop ever got a look and the customer was offered a taxi. A
+// place name is not a request to travel; a vehicle or a travel verb is.
 const RIDE_WORDS =
-  /\b(ride|cab|taxi|auto|bike|uber|ola|rapido|drop|pickup|pick me|airport|station|office|go to|take me)\b/i;
-const SHOP_WORDS =
-  /\b(laptop|phone|mobile|earbuds|headphones|tws|shoes|sneakers|tshirt|t-shirt|shirt|clothing|watch|smartwatch|air ?fryer|appliance|gaming|buy|shopping|electronics|fashion|gadget)\b/i;
-const GREETING_WORDS = /^(hi|hii+|hello|hey|good (morning|afternoon|evening)|thanks|thank you|namaste)\b/i;
+  /\b(ride|cab|taxi|auto|rickshaw|bike|uber|ola|rapido|transport|commute|pick me|pickup|drop me|take me|get me to|go to|travel to|reach)\b/i;
+
+const SHOP_WORDS = new RegExp(
+  `\\b(laptop${S}|smartphone${S}|phone${S}|mobile${S}|tablet${S}|earbud${S}|headphone${S}|tws|shoe${S}|sneaker${S}|t[ -]?shirt${S}|shirt${S}|jean${S}|dress${S}|clothing|watch${S}|smartwatch${S}|air ?fryer${S}|washing machine${S}|refrigerator${S}|fridge${S}|microwave${S}|television${S}|tv|chair${S}|table${S}|sofa${S}|furniture|mattress${S}|appliance${S}|gaming|buy|purchase|shopping|order online|electronics|fashion|gadget${S})\\b`,
+  "i",
+);
+
+const GREETING_WORDS =
+  // No bare "help": it is how "help me with my physics homework" opens, and a
+  // refusal misread as a greeting is still a wrong answer.
+  /^(hi|hii+|hello|hey|good (morning|afternoon|evening)|thanks|thank you|namaste|what can you do|who are you|how do you work)\b/i;
 
 const OUT_OF_SCOPE_REPLY =
   "I can help you order food, book rides, or shop. What would you like?";
@@ -16,23 +53,56 @@ const OUT_OF_SCOPE_REPLY =
 function parseBudget(message: string): number | null {
   // Handles ₹300, Rs 1,29,900, under 70000, etc. (rupees → paise).
   const m = message.match(
-    /(?:under|below|less than|within|max|upto|up to|budget)?\s*(?:₹|rs\.?|inr)?\s*([\d,]{2,8})/i,
+    /(?:under|below|less than|within|max|upto|up to|budget|for)?\s*(?:₹|rs\.?|inr)?\s*([\d,]{2,8})/i,
   );
   const n = m?.[1] ? Number(m[1].replace(/,/g, "")) : null;
   return n && n >= 10 ? n * 100 : null;
 }
 
+// What the user cares about most, inferred from their words.
+function extractPriority(
+  message: string,
+): "price" | "rating" | "speed" | "balanced" {
+  if (/\b(top[- ]?rated|best|highest[- ]?rated|good reviews?|quality|popular)\b/i.test(message))
+    return "rating";
+  if (
+    /\b(fast(est)?|quick(ly|est)?|asap|hurry|soon|urgent(ly)?|immediately|right away|in a rush)\b/i.test(
+      message,
+    )
+  )
+    return "speed";
+  if (/\b(cheap(est)?|budget|low(est)?[- ]?price|affordable|save money)\b/i.test(message))
+    return "price";
+  return "balanced";
+}
+
 function extractShop(message: string) {
   const itemMatch = message.match(
-    /\b(gaming laptop|laptop|phone|mobile|earbuds|headphones|shoes|sneakers|t-?shirt|smartwatch|watch|air ?fryer)\b/i,
+    new RegExp(
+      `\\b(gaming laptop|laptop|smartphone|phone|mobile|tablet|earbud${S}|headphone${S}|shoe${S}|sneaker${S}|t[ -]?shirt${S}|shirt${S}|jean${S}|smartwatch|watch|air ?fryer|washing machine|refrigerator|fridge|microwave|television|tv|office chair|chair|table|sofa|mattress)\\b`,
+      "i",
+    ),
   );
-  const category = /\b(laptop|phone|earbuds|headphones|watch|smartwatch|electronics|gaming)\b/i.test(message)
+  // Each family carries the plural too. Without it "running shoes" and "cotton
+  // t shirts" matched the product but reported no category at all, so the
+  // search fell back to every category at once.
+  const inCategory = (alternatives: string) =>
+    new RegExp(`\\b(?:${alternatives})\\b`, "i").test(message);
+  const category = inCategory(
+    `laptop${S}|smartphone${S}|phone${S}|mobile${S}|tablet${S}|earbud${S}|headphone${S}|watch${S}|smartwatch${S}|television${S}|tv|electronics|gaming`,
+  )
     ? ("electronics" as const)
-    : /\b(shoes|sneakers|t-?shirt|shirt|clothing|fashion)\b/i.test(message)
+    : inCategory(
+          `shoe${S}|sneaker${S}|t[ -]?shirt${S}|shirt${S}|jean${S}|dress${S}|clothing|fashion`,
+        )
       ? ("fashion" as const)
-      : /\b(air ?fryer|appliance|kitchen)\b/i.test(message)
+      : inCategory(
+            `air ?fryer${S}|washing machine${S}|refrigerator${S}|fridge${S}|microwave${S}|appliance${S}`,
+          )
         ? ("appliances" as const)
-        : ("any" as const);
+        : inCategory(`chair${S}|table${S}|sofa${S}|furniture|mattress${S}|home`)
+          ? ("home" as const)
+          : ("any" as const);
   return {
     item: itemMatch?.[0]?.toLowerCase() ?? "products",
     budgetPaise: parseBudget(message),
@@ -41,37 +111,32 @@ function extractShop(message: string) {
   };
 }
 
-// What the user cares about most, inferred from their words.
-function extractPriority(
-  message: string,
-): "price" | "rating" | "speed" | "balanced" {
-  if (/\b(top[- ]?rated|best|highest[- ]?rated|good reviews?|quality)\b/i.test(message))
-    return "rating";
-  if (/\b(fast(est)?|quick(est)?|asap|hurry|soon|in a rush)\b/i.test(message))
-    return "speed";
-  if (/\b(cheap(est)?|budget|low(est)?[- ]?price|affordable|save money)\b/i.test(message))
-    return "price";
-  return "balanced";
-}
-
 function extractFood(message: string) {
-  const itemMatch = message.match(
-    /\b(biryani|pizza|burger|dosa|pasta|noodles|thali|paneer|samosa|idli|paratha|roll|shawarma|momos|cake|ice ?cream)\b/i,
-  );
-  const dietary = /\bveg(etarian)?\b/i.test(message)
-    ? ("veg" as const)
-    : /\b(non[- ]?veg|chicken|mutton|fish|egg)\b/i.test(message)
-      ? ("nonveg" as const)
+  // Dishes first, then cuisines, then the mood words, so "spicy biryani"
+  // reports the dish and "something spicy" still reports something.
+  const itemMatch =
+    message.match(new RegExp(`\\b(${DISHES})${S}\\b`, "i")) ??
+    message.match(new RegExp(`\\b(${CUISINES})\\b`, "i")) ??
+    message.match(new RegExp(`\\b(${MOODS})\\b`, "i"));
+  // Meat names are the reliable signal. Vegetarian dishes have to be named
+  // too: "paneer butter masala" was reported as "any", which then offered a
+  // vegetarian customer whatever ranked highest.
+  const dietary = /\b(non[- ]?veg|chicken|mutton|fish|egg|prawn|meat|beef|pork|keema)\b/i.test(
+    message,
+  )
+    ? ("nonveg" as const)
+    : /\b(veg(etarian)?|paneer|dal|aloo|gobi|mushroom|jain)\b/i.test(message)
+      ? ("veg" as const)
       : ("any" as const);
   return {
-    item: itemMatch?.[0]?.toLowerCase() ?? "popular dishes",
+    item: itemMatch?.[1]?.toLowerCase() ?? "popular dishes",
     budgetPaise: parseBudget(message),
     dietary,
     priority: extractPriority(message),
   };
 }
 
-// "at 10pm", "at 10:30 pm", "at 22:00", "tonight at 10" → 24h "HH:mm".
+// "at 10pm", "at 10:30 pm", "at 22:00", "tonight at 9" → 24h "HH:mm".
 // No match (or an unparseable time) → null, meaning "ride now".
 function extractScheduleAt(message: string): string | null {
   const m = message.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
@@ -86,26 +151,51 @@ function extractScheduleAt(message: string): string | null {
     if (meridiem === "am" && hours === 12) hours = 0;
   } else {
     if (hours > 23) return null;
-    // Bare "at 10" defaults to evening (the common booking phrasing);
-    // explicit 24h times like "at 22:00" pass through unchanged.
-    if (hours >= 1 && hours <= 7 && m[2] === undefined) hours += 12;
+    // A bare hour has to be read against the rest of the sentence. "tonight at
+    // 9" was being booked for 09:00, twelve hours from what the rider asked
+    // for, because only 1 to 7 were assumed to mean the evening.
+    const evening = /\b(tonight|this evening|evening|night)\b/i.test(message);
+    const morning = /\b(morning|breakfast|dawn)\b/i.test(message);
+    const bareHour = m[2] === undefined;
+    if (bareHour && !morning && hours >= 1 && hours <= (evening ? 11 : 7)) {
+      hours += 12;
+    }
   }
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
+/** Strips a trailing time phrase so it cannot end up inside a place name. */
+function withoutTime(place: string): string {
+  return place.replace(/\s+(at\s+\d.*|tonight|this evening|tomorrow|now)\s*$/i, "").trim();
+}
+
 function extractRide(message: string) {
-  const dropMatch = message.match(/(?:to|towards|till)\s+([a-z0-9 ,.'-]{3,60})/i);
-  // Keep a trailing time phrase out of the destination ("airport at 10pm").
-  const drop = dropMatch?.[1]?.replace(/\s+at\s+\d.*$/i, "").trim();
-  const vehicle = /bike/i.test(message)
+  const dropMatch = message.match(
+    /(?:\bto|towards|till|drop (?:me )?(?:at|to))\s+([a-z0-9 ,.'-]{3,60})/i,
+  );
+  // "auto from Ameerpet to Kukatpally" names both ends. The pickup was simply
+  // never read, so every such ride started from wherever the device was.
+  const pickupMatch = message.match(
+    /(?:\bfrom|pick (?:me )?up (?:from|at))\s+([a-z0-9 ,.'-]{3,60}?)(?=\s+(?:to|and|towards|till)\b|$)/i,
+  );
+  let drop = dropMatch?.[1] ? withoutTime(dropMatch[1]) : "";
+  // Hinglish word order puts the destination last with no preposition at all
+  // ("cab book karo Hitech City"), which the "to" pattern cannot see.
+  if (!drop) {
+    const trailing = message.match(
+      /\b(?:karo|kar do|chahiye|chaiye|bhej|book)\s+([a-z0-9 ,.'-]{3,60})$/i,
+    );
+    if (trailing?.[1]) drop = withoutTime(trailing[1]);
+  }
+  const vehicle = /\bbike\b/i.test(message)
     ? ("bike" as const)
-    : /auto/i.test(message)
+    : /\b(auto|rickshaw)\b/i.test(message)
       ? ("auto" as const)
-      : /cab|taxi|car/i.test(message)
+      : /\b(cab|taxi|car)\b/i.test(message)
         ? ("cab" as const)
         : ("any" as const);
   return {
-    pickup: null,
+    pickup: pickupMatch?.[1] ? withoutTime(pickupMatch[1]) : null,
     drop: drop || "your destination",
     vehicle,
     priority: extractPriority(message),
@@ -124,8 +214,12 @@ export class DemoProvider implements LlmProvider {
       };
     }
 
+    const wantsRide = RIDE_WORDS.test(message);
+    const wantsFood = FOOD_WORDS.test(message);
+    const wantsShop = SHOP_WORDS.test(message);
+
     // Both in one message → combo ("order biryani and book a cab home").
-    if (RIDE_WORDS.test(message) && FOOD_WORDS.test(message)) {
+    if (wantsRide && wantsFood) {
       return {
         domain: "combo",
         reply: "On it, sorting out both your food and your ride.",
@@ -134,7 +228,18 @@ export class DemoProvider implements LlmProvider {
       };
     }
 
-    if (RIDE_WORDS.test(message) && !FOOD_WORDS.test(message)) {
+    // Shop is tested before ride and food because its nouns are the specific
+    // ones. A shopping list can mention a place or a material without being a
+    // request to travel or to eat.
+    if (wantsShop && !wantsRide) {
+      return {
+        domain: "shop",
+        reply: "On it, comparing prices across stores for you.",
+        shop: extractShop(message),
+      };
+    }
+
+    if (wantsRide) {
       return {
         domain: "ride",
         reply: "On it, comparing ride options for you.",
@@ -142,7 +247,7 @@ export class DemoProvider implements LlmProvider {
       };
     }
 
-    if (FOOD_WORDS.test(message)) {
+    if (wantsFood) {
       return {
         domain: "food",
         reply: "Got it, finding the best deal for you.",
@@ -150,7 +255,7 @@ export class DemoProvider implements LlmProvider {
       };
     }
 
-    if (SHOP_WORDS.test(message)) {
+    if (wantsShop) {
       return {
         domain: "shop",
         reply: "On it, comparing prices across stores for you.",
