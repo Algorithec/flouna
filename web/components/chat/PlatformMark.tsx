@@ -71,13 +71,22 @@ export function PlatformMark({
  * Overlapped slightly so a long list stays compact on a phone, and capped so
  * it can never push the answer off the screen: past the cap it counts the rest
  * rather than wrapping to a second line.
+ *
+ * `copy` picks the sentence that follows the marks:
+ *  - "compared"        → "Compared across Swiggy, Zomato and 3 more" (default,
+ *                          unchanged — names what was searched)
+ *  - "checked-count"    → "Checked 5+ providers for you" (the mock's wording;
+ *                          use where the exact list of names matters less than
+ *                          the scale of the comparison)
  */
 export function SearchedPlatforms({
   platforms,
   max = 6,
+  copy = "compared",
 }: {
   platforms: string[];
   max?: number;
+  copy?: "compared" | "checked-count";
 }) {
   // Deduplicated in place so the order follows the ranking rather than an
   // alphabet: the first mark is the platform that won.
@@ -91,6 +100,16 @@ export function SearchedPlatforms({
   const shown = seen.slice(0, max);
   const rest = seen.length - shown.length;
 
+  const label =
+    copy === "checked-count"
+      ? // "Checked 5+" only when we actually looked at more than we're
+        // showing — never rounds a real count of 3 up to "3+" just to
+        // match the mock's phrasing.
+        rest > 0
+        ? `Checked ${seen.length}+ providers for you`
+        : `Checked ${seen.length} provider${seen.length === 1 ? "" : "s"} for you`
+      : `Compared across ${seen.map(platformLabel).join(", ")}${rest > 0 ? ` and ${rest} more` : ""}`;
+
   return (
     <div className="flex items-center gap-2">
       <span className="flex items-center -space-x-1.5">
@@ -102,8 +121,7 @@ export function SearchedPlatforms({
         {/* Says what the row is, so it reads as evidence rather than
             decoration. The names are here for screen readers too, since the
             marks themselves are hidden from them. */}
-        Compared across {seen.map(platformLabel).join(", ")}
-        {rest > 0 ? ` and ${rest} more` : ""}
+        {label}
       </span>
     </div>
   );
