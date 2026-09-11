@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { authedAgent } from "./helpers.js";
+import { randomUUID } from "node:crypto";
 import { prisma } from "../src/lib/prisma.js";
 
 // The decision log used to answer "what did Flouna recommend" and stop there.
@@ -119,5 +120,57 @@ describe("decision to outcome pairing", () => {
     );
     expect(log?.selectedKey).toBeNull();
     expect(log?.selectedAt).toBeNull();
+  });
+});
+
+// The pairing survives the write race between the two halves.
+//
+// recordDecision deliberately does not wait for its own insert, so an order
+// placed immediately can have the update reach the database first. Measured
+// before the retry existed: 65 of 200 pairings were lost, silently, because
+// both writes are intentionally quiet. A third of the training data this
+// module exists to collect, gone on exactly the fastest orders.
+describe("pairing under a write race", () => {
+  it("keeps the pairing when the update outruns the insert", async () => {
+    const { recordSelection } = await import(
+      "../src/modules/advisor/decisionLog.service.js"
+    );
+    const ids: string[] = [];
+    const inserts: Promise<unknown>[] = [];
+
+    for (let i = 0; i < 25; i++) {
+      const id = randomUUID();
+      ids.push(id);
+      // Fired, not awaited: exactly what recordDecision does.
+      inserts.push(
+        prisma.decisionLog
+          .create({
+            data: {
+              id,
+              domain: "food",
+              query: "race",
+              priority: "balanced",
+              weights: "{}",
+              candidateCount: 1,
+              excludedCount: 0,
+              results: "[]",
+              chosenKey: "a",
+            },
+          })
+          .catch(() => null),
+      );
+      recordSelection({ decisionId: id, selectedKey: "chosen", orderId: `order-${i}` });
+    }
+    await Promise.all(inserts);
+
+    const paired = await waitForRow(async () => {
+      const n = await prisma.decisionLog.count({
+        where: { id: { in: ids }, selectedKey: { not: null } },
+      });
+      return n === ids.length ? n : null;
+    }, 6000);
+
+    expect(paired).toBe(ids.length);
+    await prisma.decisionLog.deleteMany({ where: { id: { in: ids } } });
   });
 });
