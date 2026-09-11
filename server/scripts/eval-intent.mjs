@@ -17,7 +17,7 @@
 // Exits non-zero when domain accuracy or injection resistance falls below the
 // floors below, so a model swap cannot quietly regress.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -55,6 +55,35 @@ const cases = readFileSync(FIXTURE, "utf8")
   .split("\n")
   .filter((l) => l.trim())
   .map((l) => JSON.parse(l));
+
+// The harness scores whatever sits in dist, not what is checked out. Changing
+// branch and running it without rebuilding silently measures the previous
+// branch's engine: a run that should have read 93.6% came back as 83.0% that
+// way, which is a wrong number reported with total confidence. A wrong number
+// here is worse than no number, because this is the evidence the keyless
+// engine is argued from. Refuse instead.
+function newestMtime(dir) {
+  let newest = 0;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = resolve(dir, entry.name);
+    newest = Math.max(newest, entry.isDirectory() ? newestMtime(full) : statSync(full).mtimeMs);
+  }
+  return newest;
+}
+
+const SRC_DIR = resolve(HERE, "../src");
+const DIST_DIR = resolve(HERE, "../dist");
+if (!existsSync(DIST_DIR)) {
+  console.error("No dist/ to measure. Run `npm run build` first.");
+  process.exit(2);
+}
+if (newestMtime(SRC_DIR) > newestMtime(DIST_DIR)) {
+  console.error(
+    "dist/ is older than src/, so this would score code you are not looking at.",
+  );
+  console.error("Run `npm run build` first.");
+  process.exit(2);
+}
 
 const { llm } = await import("../dist/modules/chat/llm/index.js");
 
