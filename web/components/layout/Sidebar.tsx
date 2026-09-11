@@ -138,7 +138,7 @@ export function Sidebar({
           <Link
             href="/home"
             aria-label="Flouna home"
-            className="flex min-w-0 items-center gap-2.5"
+            className="tap-target flex min-w-0 items-center gap-2.5"
           >
             <FlounaLogo size={30} className="shrink-0 text-cocoa/70" />
             <span
@@ -159,7 +159,7 @@ export function Sidebar({
           </button>
           <button
             onClick={onClose}
-            className="rounded-full p-1.5 text-cocoa hover:bg-beige lg:hidden"
+            className="tap-target rounded-full p-1.5 text-cocoa hover:bg-beige lg:hidden"
             aria-label="Close menu"
           >
             <X size={20} />
@@ -266,7 +266,7 @@ export function Sidebar({
                     key={s.id}
                     href={`/home?chat=${s.id}`}
                     onClick={onClose}
-                    className="flex items-center gap-2 truncate rounded-[12px] px-3 py-2 text-[14px] text-ink/80 transition-colors hover:bg-beige/50"
+                    className="tap-target flex items-center gap-2 truncate rounded-[12px] px-3 py-2 text-[14px] text-ink/80 transition-colors hover:bg-beige/50"
                   >
                     <MessageSquare size={14} className="shrink-0 text-muted" />
                     <span className="truncate">{s.title ?? "New chat"}</span>
@@ -275,7 +275,7 @@ export function Sidebar({
                 {recent.length > 5 && !showAll && (
                   <button
                     onClick={() => setShowAll(true)}
-                    className="px-3 py-2 text-left text-[13px] font-semibold text-accent hover:underline"
+                    className="tap-target px-3 py-2 text-left text-[13px] font-semibold text-accent hover:underline"
                   >
                     Show all
                   </button>

@@ -1,10 +1,10 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import Link from "next/link";
 import { ChevronLeft, Printer, CheckCircle2 } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api";
 import { rupees } from "@/lib/money";
+import { useBackTo } from "@/lib/navHistory";
 import { LoadingView, ErrorView } from "@/components/ui/StatusView";
 
 type OrderDetail = {
@@ -55,6 +55,7 @@ export default function InvoicePage({
   const { id } = use(params);
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<{ notFound: boolean; message: string } | null>(null);
+  const back = useBackTo(`/orders/${id}`);
 
   useEffect(() => {
     let ignore = false;
@@ -144,12 +145,13 @@ export default function InvoicePage({
     <div className="mx-auto w-full max-w-2xl px-4 py-6 lg:px-6">
       {/* Screen-only controls (hidden when printing) */}
       <div className="mb-4 flex items-center justify-between print:hidden">
-        <Link
-          href={`/orders/${order.id}`}
-          className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
+        <button
+          type="button"
+          onClick={back}
+          className="tap-target flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
         >
           <ChevronLeft size={16} /> Order
-        </Link>
+        </button>
         <button
           onClick={() => window.print()}
           className="flex items-center gap-2 rounded-full bg-cocoa px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-ink"

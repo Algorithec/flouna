@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { useBackTo } from "@/lib/navHistory";
 
 // Shell for the account sub-screens (notifications, rewards, help, addresses,
 // settings, Plus, about).
@@ -21,21 +21,23 @@ export function SubPage({
   title: string;
   children: React.ReactNode;
 }) {
-  const router = useRouter();
+  const back = useBackTo("/profile");
   return (
     <div className="min-h-dvh bg-acct-bg">
       <div className="mx-auto w-full max-w-xl px-4 pb-10 lg:max-w-[780px] lg:px-6">
         <div className="flex items-center gap-3 py-5">
-          {/* router.back(), not a hardcoded Link to /profile: a Link always
-              pushes a new history entry, so arriving here from anywhere
-              other than /profile (e.g. a notification, a direct link) and
-              then tapping back from /profile itself made router.back() pop
-              right back to this page — a two-screen ping-pong that never
-              actually returns to where the visit started. */}
+          {/* Pops, never pushes: a hardcoded Link to /profile always adds a
+              history entry, so arriving here from anywhere other than
+              /profile (a notification, a direct link) and then tapping back
+              from /profile itself popped straight back to this page, a
+              two-screen ping-pong that never returns to where the visit
+              started. useBackTo also covers the case that plain back() does
+              not, a tab opened directly on this URL with nothing to pop. */}
           <button
-            onClick={() => router.back()}
+            type="button"
+            onClick={back}
             aria-label="Back to profile"
-            className="rounded-full p-2 text-acct-ink transition-colors hover:bg-black/5"
+            className="tap-target rounded-full p-2 text-acct-ink transition-colors hover:bg-black/5"
           >
             <ArrowLeft size={20} />
           </button>
