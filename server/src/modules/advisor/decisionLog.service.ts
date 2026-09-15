@@ -87,6 +87,15 @@ const PAIRING_RETRY_DELAYS_MS = [
 ];
 
 /**
+ * How a pairing attempt ended.
+ *
+ * Returned rather than the function staying void, so a caller that needs to
+ * know, a test above all, can await it. The order route still does not wait:
+ * the order must never be held up by its own logging.
+ */
+export type PairingOutcome = "paired" | "not_owned" | "gave_up";
+
+/**
  * Prisma codes for faults that pass on their own.
  *
  * P2025 is the one this retry was written for: the decision's insert has not
@@ -129,19 +138,49 @@ export function recordSelection(input: {
   /** In the same key space as the trace: "dishId@platform", or a ride's product name. */
   selectedKey: string;
   orderId: string;
-}): void {
-  void (async () => {
+  /**
+   * The customer placing the order. A decision is paired only with an order
+   * from the customer it was made for.
+   *
+   * Without this, any valid decision id could be quoted on an unrelated order,
+   * by mistake or on purpose, and its choice would be recorded as that
+   * customer's. This record is training data, so a wrong pairing is not a
+   * harmless log line: it teaches the ranker something nobody chose.
+   */
+  userId: string;
+}): Promise<PairingOutcome> {
+  return (async (): Promise<PairingOutcome> => {
+    // Prisma drops a filter whose value is undefined, so without this a
+    // missing user would match on the id alone: the exact hole the user check
+    // exists to close.
+    if (!input.userId) return "not_owned";
     for (let attempt = 0; ; attempt++) {
       try {
-        await prisma.decisionLog.update({
-          where: { id: input.decisionId },
+        const { count } = await prisma.decisionLog.updateMany({
+          where: { id: input.decisionId, userId: input.userId },
           data: {
             selectedKey: input.selectedKey,
             selectedAt: new Date(),
             orderId: input.orderId,
           },
         });
-        return;
+        if (count === 1) return "paired";
+
+        // Nothing matched. Either the decision's insert has not landed yet,
+        // which is worth waiting for, or the row is there and belongs to
+        // someone else, which no amount of waiting fixes. One read tells them
+        // apart, and only on this path.
+        const exists = await prisma.decisionLog.findUnique({
+          where: { id: input.decisionId },
+          select: { userId: true },
+        });
+        if (exists) {
+          console.warn(
+            `[decision] refused to pair decision ${input.decisionId} with order ${input.orderId}: it belongs to a different customer`,
+          );
+          return "not_owned";
+        }
+        throw Object.assign(new Error("decision not written yet"), { code: "P2025" });
       } catch (err) {
         const delay = PAIRING_RETRY_DELAYS_MS[attempt];
         if (isTransient(err) && delay !== undefined) {
@@ -162,7 +201,7 @@ export function recordSelection(input: {
         console.warn(
           `[decision] could not pair decision ${input.decisionId} with order ${input.orderId} (${code}): ${text.replace(/\s+/g, " ").trim()}`,
         );
-        return;
+        return "gave_up";
       }
     }
   })();

@@ -437,11 +437,12 @@ ordersRouter.post(
         // developer transaction viewer. Fire-and-forget — never blocks the order.
         void emitOrderDiscovery(order);
         if (body.decisionId) {
-          recordSelection({
+          void recordSelection({
             decisionId: body.decisionId,
             // The trace's key space for food: which dish, on which listing.
             selectedKey: `${body.dishId}@${body.platform}`,
             orderId: order.id,
+            userId: req.userId!,
           });
         }
         return res.status(201).json({ order });
@@ -598,10 +599,11 @@ ordersRouter.post(
       void emitOrderDiscovery(order);
       if (body.decisionId) {
         // Rides are keyed by product name in the trace.
-        recordSelection({
+        void recordSelection({
           decisionId: body.decisionId,
           selectedKey: body.productName,
           orderId: order.id,
+          userId: req.userId!,
         });
       }
       res.status(201).json({ order });

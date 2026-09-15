@@ -123,55 +123,99 @@ describe("decision to outcome pairing", () => {
   });
 });
 
-// The pairing survives the write race between the two halves.
+// The race, forced rather than hoped for.
 //
-// recordDecision deliberately does not wait for its own insert, so an order
-// placed immediately can have the update reach the database first. Measured
-// before the retry existed: 65 of 200 pairings were lost, silently, because
-// both writes are intentionally quiet. A third of the training data this
-// module exists to collect, gone on exactly the fastest orders.
-describe("pairing under a write race", () => {
-  it("keeps the pairing when the update outruns the insert", async () => {
-    const { recordSelection } = await import(
-      "../src/modules/advisor/decisionLog.service.js"
-    );
-    const ids: string[] = [];
-    const inserts: Promise<unknown>[] = [];
+// The earlier version fired inserts and selections together and checked they
+// all paired. As review pointed out, the database could simply finish every
+// insert first, so the test passed without the retry ever running. This one
+// fixes the order: the selection goes first, an attempt is shown to find no
+// row, and only then is the decision written. It can only pass if the retry
+// carries the pairing across that gap.
+const USER = "user-pairing-test";
+const writeDecision = (id: string, userId: string | null = USER) =>
+  prisma.decisionLog.create({
+    data: {
+      id,
+      userId,
+      domain: "food",
+      query: "race",
+      priority: "balanced",
+      weights: "{}",
+      candidateCount: 1,
+      excludedCount: 0,
+      results: "[]",
+      chosenKey: "a",
+    },
+  });
 
-    for (let i = 0; i < 25; i++) {
-      const id = randomUUID();
-      ids.push(id);
-      // Fired, not awaited: exactly what recordDecision does.
-      inserts.push(
-        prisma.decisionLog
-          .create({
-            data: {
-              id,
-              domain: "food",
-              query: "race",
-              priority: "balanced",
-              weights: "{}",
-              candidateCount: 1,
-              excludedCount: 0,
-              results: "[]",
-              chosenKey: "a",
-            },
-          })
-          .catch(() => null),
-      );
-      recordSelection({ decisionId: id, selectedKey: "chosen", orderId: `order-${i}` });
-    }
-    await Promise.all(inserts);
+describe("pairing across the write race", () => {
+  it("pairs when the selection arrives before the decision is written", async () => {
+    const { recordSelection } = await import("../src/modules/advisor/decisionLog.service.js");
+    const id = randomUUID();
 
-    const paired = await waitForRow(async () => {
-      const n = await prisma.decisionLog.count({
-        where: { id: { in: ids }, selectedKey: { not: null } },
-      });
-      return n === ids.length ? n : null;
-    }, 6000);
+    const outcome = recordSelection({ decisionId: id, selectedKey: "chosen", orderId: "o-race", userId: USER });
 
-    expect(paired).toBe(ids.length);
-    await prisma.decisionLog.deleteMany({ where: { id: { in: ids } } });
+    // Its first attempt has run and found nothing: the row does not exist.
+    await new Promise((r) => setTimeout(r, 60));
+    expect(await prisma.decisionLog.findUnique({ where: { id } })).toBeNull();
+
+    await writeDecision(id);
+
+    expect(await outcome).toBe("paired");
+    const row = await prisma.decisionLog.findUnique({ where: { id } });
+    expect(row?.selectedKey).toBe("chosen");
+    expect(row?.orderId).toBe("o-race");
+    await prisma.decisionLog.deleteMany({ where: { id } });
+  });
+});
+
+// A decision pairs only with an order from the customer it was made for.
+//
+// Raised in review. Without the check any valid decision id could be quoted on
+// an unrelated order and recorded as that customer's choice, and this record
+// is training data.
+describe("pairing belongs to one customer", () => {
+  it("pairs a customer's own decision", async () => {
+    const { recordSelection } = await import("../src/modules/advisor/decisionLog.service.js");
+    const id = randomUUID();
+    await writeDecision(id);
+    expect(await recordSelection({ decisionId: id, selectedKey: "k", orderId: "o1", userId: USER })).toBe("paired");
+    await prisma.decisionLog.deleteMany({ where: { id } });
+  });
+
+  it("refuses another customer's decision, at once and without changing it", async () => {
+    const { recordSelection } = await import("../src/modules/advisor/decisionLog.service.js");
+    const { vi } = await import("vitest");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const id = randomUUID();
+    await writeDecision(id, "someone-else");
+
+    const started = Date.now();
+    expect(await recordSelection({ decisionId: id, selectedKey: "k", orderId: "o2", userId: USER })).toBe("not_owned");
+    // Refused on the first look, not after the whole retry window.
+    expect(Date.now() - started).toBeLessThan(1000);
+    const row = await prisma.decisionLog.findUnique({ where: { id } });
+    expect(row?.selectedKey).toBeNull();
+    expect(row?.orderId).toBeNull();
+    warn.mockRestore();
+    await prisma.decisionLog.deleteMany({ where: { id } });
+  });
+
+  it("refuses when no customer is given, rather than matching on the id alone", async () => {
+    // Prisma drops a filter set to undefined, so a missing user must not reach
+    // the query at all.
+    const { recordSelection } = await import("../src/modules/advisor/decisionLog.service.js");
+    const id = randomUUID();
+    await writeDecision(id);
+    const outcome = await recordSelection({
+      decisionId: id,
+      selectedKey: "k",
+      orderId: "o3",
+      userId: undefined as unknown as string,
+    });
+    expect(outcome).toBe("not_owned");
+    expect((await prisma.decisionLog.findUnique({ where: { id } }))?.selectedKey).toBeNull();
+    await prisma.decisionLog.deleteMany({ where: { id } });
   });
 });
 
