@@ -17,6 +17,11 @@ import {
   type DecisionTrace,
   type Exclusion,
 } from "../advisor/scoring.js";
+import {
+  applyHardConstraints,
+  type HardConstraints,
+  type NearestMiss,
+} from "../advisor/constraints.js";
 
 export type FoodQuote = {
   dishId: string;
@@ -136,8 +141,19 @@ const FILLER_WORDS = new Set([
 
 export type SearchOpts = {
   query: string;
+  /**
+   * A soft ceiling: preferred, and waived rather than leave nothing to show.
+   *
+   * This is the Budget Guardian's remaining weekly allowance, which is advice
+   * about spending. A price the customer actually stated goes in
+   * `constraints` instead, where it is enforced. Routing a stated price here
+   * would quietly break it; routing the weekly allowance there would refuse
+   * every search for someone near the end of their week.
+   */
   budgetPaise?: number | null;
   dietary?: "veg" | "nonveg" | "any";
+  /** Limits the customer stated, enforced before ranking and never waived. */
+  constraints?: HardConstraints | null;
 };
 
 export function searchFood(opts: SearchOpts): FoodQuote[] {
@@ -156,6 +172,11 @@ export function searchFoodTraced(opts: SearchOpts): {
    * it, "sushi" is answered with a dosa and nothing admits the swap.
    */
   substituted: boolean;
+  /**
+   * Present only when a stated limit removed every option: the nearest miss,
+   * so the customer can be told what exists without it being recommended.
+   */
+  unmet: NearestMiss<FoodQuote> | null;
 } {
   const exclusions: Exclusion[] = [];
   let substituted = false;
@@ -204,7 +225,19 @@ export function searchFoodTraced(opts: SearchOpts): {
   }
 
   let quotes = matched.flatMap(toQuotes);
-  if (opts.budgetPaise) {
+
+  // What the customer ruled out comes out first, and stays out. Applied
+  // before the soft budget so that allowance only ever chooses among options
+  // that are valid: it may be waived, a stated limit may not.
+  const hard = applyHardConstraints(
+    quotes,
+    (q) => ({ pricePaise: q.effectivePaise, etaMinutes: q.etaMinutes }),
+    opts.constraints,
+  );
+  for (const r of hard.rejected) note(r.rule, r.count);
+  quotes = hard.kept;
+
+  if (opts.budgetPaise && quotes.length > 0) {
     const within = quotes.filter((q) => q.effectivePaise <= opts.budgetPaise!);
     // The budget is deliberately non-binding: if nothing fits, it is discarded
     // rather than returning an empty screen. Both outcomes are recorded, since
@@ -220,6 +253,7 @@ export function searchFoodTraced(opts: SearchOpts): {
     quotes: quotes.sort((a, b) => a.effectivePaise - b.effectivePaise),
     exclusions,
     substituted,
+    unmet: hard.nearestMiss,
   };
 }
 

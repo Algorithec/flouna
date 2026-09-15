@@ -7,6 +7,11 @@ import {
   type Priority,
   type DecisionTrace,
 } from "../advisor/scoring.js";
+import {
+  applyHardConstraints,
+  type HardConstraints,
+  type NearestMiss,
+} from "../advisor/constraints.js";
 
 // Great-circle distance between two coordinates.
 export function haversineKm(
@@ -201,10 +206,25 @@ export function quoteRidesTraced(
      * rank.
      */
     community?: Map<string, CommunityRating>;
+    /**
+     * Limits the customer stated: a maximum fare, a longest acceptable wait
+     * for pickup, a latest arrival. Enforced before ranking and never waived.
+     *
+     * Only on this recommending path, deliberately. `quoteRides` also serves
+     * the order route, which recomputes the fare server-side at booking, and a
+     * limit applied there could stop a valid booking finding its own quote.
+     */
+    constraints?: HardConstraints | null;
   },
 ): {
   quotes: RideQuote[];
   trace: DecisionTrace | null;
+  /**
+   * Present only when the stated limits removed every option. Carries the
+   * closest miss so the rider can be told what is available, which is not
+   * the same as recommending it.
+   */
+  unmet?: NearestMiss<RideQuote> | null;
 } {
   const wanted = opts.vehicle && opts.vehicle !== "any" ? opts.vehicle : null;
 
@@ -239,36 +259,59 @@ export function quoteRidesTraced(
       }),
   );
 
-  // Badge the genuine best price and fastest before reordering.
-  const cheapest = [...quotes].sort((a, b) => a.effectivePaise - b.effectivePaise)[0];
-  const fastestQ = [...quotes].sort((a, b) => a.pickupEtaMinutes - b.pickupEtaMinutes)[0];
+  // The stated limits go first, before anything is badged or ranked. An option
+  // a rider has ruled out must not be labelled the best price, and must not
+  // take part in the ranking where a strong rating could carry it back in.
+  const hard = applyHardConstraints(
+    quotes,
+    (q) => ({
+      pricePaise: q.effectivePaise,
+      pickupMinutes: q.pickupEtaMinutes,
+      etaMinutes: journeyMinutes(q),
+    }),
+    opts.constraints,
+  );
+  const valid = hard.kept;
+
+  // Badge the genuine best price and fastest before reordering, among the
+  // options still valid. Fastest means the whole journey: a ride that arrives
+  // first but takes longest is not the fast one.
+  const cheapest = [...valid].sort((a, b) => a.effectivePaise - b.effectivePaise)[0];
+  const fastestQ = [...valid].sort((a, b) => journeyMinutes(a) - journeyMinutes(b))[0];
   if (cheapest) cheapest.badge = "BEST PRICE";
   if (fastestQ && !fastestQ.badge) fastestQ.badge = "FASTEST";
 
-  // Order by the user's priority (driver rating, fare, or pickup ETA weighted);
-  // defaults to balanced. The best-scoring quote is presented first.
+  // Order by the user's priority; defaults to balanced. The best-scoring quote
+  // is presented first.
   const priority = opts.priority ?? "balanced";
   const ranked = scoreOptions(
-    quotes.map((q) => ({
+    valid.map((q) => ({
       pricePaise: q.effectivePaise,
       // Rank on what riders said, with the weight of evidence behind it.
       ...(opts.community
         ? qualityOf(q.driverRating, opts.community.get(q.provider))
         : { rating: q.driverRating }),
-      etaMinutes: q.pickupEtaMinutes,
+      etaMinutes: journeyMinutes(q),
       quote: q,
     })),
     priority,
   );
   const ordered = ranked.map((r) => r.item.quote);
 
-  // Vehicle filtering is the only rule that removes a ride option before
-  // scoring; everything configured for that type is quoted.
+  // Two things remove a ride before scoring: the vehicle type asked for, and
+  // any limit the rider stated. Counted separately, because "we have no
+  // autos" and "no auto is under ₹150" are different answers.
   const totalProducts = providers.reduce((n, p) => n + p.products.length, 0);
-  const excludedCount = totalProducts - quotes.length;
+  const vehicleExcluded = totalProducts - quotes.length;
+  const exclusions = [
+    ...(vehicleExcluded > 0 ? [{ rule: "vehicle_type", count: vehicleExcluded }] : []),
+    ...hard.rejected,
+  ];
+  const excludedCount = exclusions.reduce((s, e) => s + e.count, 0);
 
   return {
     quotes: ordered,
+    unmet: hard.nearestMiss,
     trace:
       ordered.length === 0
         ? null
@@ -279,15 +322,31 @@ export function quoteRidesTraced(
             personalized: false,
             candidateCount: quotes.length,
             excludedCount,
-            exclusions: excludedCount > 0 ? [{ rule: "vehicle_type", count: excludedCount }] : [],
+            exclusions,
             scores: ranked.map((r) => ({
               key: r.item.quote.productName,
               pricePaise: r.item.quote.effectivePaise,
               rating: r.item.quote.driverRating,
-              etaMinutes: r.item.quote.pickupEtaMinutes,
+              // The journey the ranking used. The price of time is read out of
+              // these rows, and a rider paying more to shorten the whole trip
+              // would be misread if only the wait were recorded.
+              etaMinutes: journeyMinutes(r.item.quote),
               score: r.score,
             })),
             chosenKey: ordered[0]!.productName,
           },
   };
+}
+
+/**
+ * Door to destination: the wait for pickup plus the trip itself.
+ *
+ * Ranking on pickup alone would call a cab that arrives in two minutes and
+ * takes fifty the fast option over one that arrives in four and takes
+ * twenty-five. In the simulated catalogue every provider shares one route, so
+ * the trip is a constant and the ordering happens not to change; it changes
+ * the moment real providers quote their own trip times.
+ */
+export function journeyMinutes(q: Pick<RideQuote, "pickupEtaMinutes" | "rideMinutes">): number {
+  return q.pickupEtaMinutes + q.rideMinutes;
 }
