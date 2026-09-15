@@ -76,8 +76,21 @@ function editDistance(a: string, b: string, max: number): number {
  * bigger share of it than one wrong letter in nine.
  */
 function typoTolerance(word: string): number {
-  if (word.length >= 7) return 2;
-  if (word.length >= 4) return 1;
+  // One edit at most, at any length. Two edits to a seven letter word rewrite
+  // nearly a third of it, which is how "italics" became "italian". Every real
+  // misspelling in the labelled sets, biriyani and shawrma among them, is one
+  // edit from the dish.
+  // Nothing shorter than six letters is repaired.
+  //
+  // Short words collide with ordinary English far too often. Measured against
+  // fifteen everyday sentences, repair turned fourteen into food orders: "I
+  // need to hurry" became curry, "make it quick" cake, "is the price right"
+  // rice, "the meaning of karma" korma. A misspelled dish left unrepaired gets
+  // "what would you like?"; an ordinary sentence repaired into a dish starts a
+  // search nobody asked for. The second is the worse failure, so short words
+  // are left alone, and repair keeps doing what it is for: the long dish names
+  // people genuinely mistype, such as biriyani and shawarma.
+  if (word.length >= 6) return 1;
   return 0;
 }
 
@@ -102,12 +115,24 @@ function repairTypos(message: string): string {
     if (KNOWN_WORDS.includes(lower)) return word;
     const tolerance = typoTolerance(lower);
     if (tolerance === 0) return word;
+    // Only a single, uniquely closest word is a repair. When two known words
+    // are equally close, the first in the list used to win, which is an
+    // arbitrary choice presented as a correction. Raised in review. A tie
+    // means the misspelling does not say which was meant, so it is left as
+    // typed.
     let best: { word: string; distance: number } | null = null;
+    let tied = false;
     for (const known of KNOWN_WORDS) {
       const d = editDistance(lower, known, tolerance);
-      if (d <= tolerance && (!best || d < best.distance)) best = { word: known, distance: d };
+      if (d > tolerance) continue;
+      if (!best || d < best.distance) {
+        best = { word: known, distance: d };
+        tied = false;
+      } else if (d === best.distance && known !== best.word) {
+        tied = true;
+      }
     }
-    return best ? best.word : word;
+    return best && !tied ? best.word : word;
   });
 }
 
