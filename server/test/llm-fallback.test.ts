@@ -131,3 +131,41 @@ describe("standing down a failing provider", () => {
     }
   });
 });
+
+// When every provider is standing down.
+//
+// Clearing all stand-downs before throwing, as this once did, meant a request
+// arriving just before they expired got an error and the next one called every
+// provider still believed to be down. Raised in review.
+describe("every provider standing down", () => {
+  it("throws without calling anyone and keeps the stand-downs in place", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T10:00:00Z"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const a = broken("a");
+    const b = broken("b");
+    const chain = new FallbackProvider([a, b]);
+
+    // Three failures each stands both down.
+    for (let i = 0; i < 3; i++) await expect(chain.extractIntent("hi")).rejects.toThrow();
+    expect(a.extractIntent).toHaveBeenCalledTimes(3);
+    expect(b.extractIntent).toHaveBeenCalledTimes(3);
+
+    // Standing down: two more requests call nobody, and the second is not
+    // treated as a fresh start.
+    await expect(chain.extractIntent("hi")).rejects.toThrow(/standing down/);
+    await expect(chain.extractIntent("hi")).rejects.toThrow(/standing down/);
+    expect(a.extractIntent).toHaveBeenCalledTimes(3);
+    expect(b.extractIntent).toHaveBeenCalledTimes(3);
+
+    // Once the stand-down has run its course, they are tried again.
+    vi.setSystemTime(new Date("2026-09-15T10:00:31Z"));
+    await expect(chain.extractIntent("hi")).rejects.toThrow();
+    expect(a.extractIntent).toHaveBeenCalledTimes(4);
+
+    err.mockRestore();
+    warn.mockRestore();
+    vi.useRealTimers();
+  });
+});

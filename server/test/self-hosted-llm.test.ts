@@ -153,3 +153,36 @@ describe("self-hosted model provider", () => {
     await expect(provider.extractIntent("hi")).rejects.toThrow(/abort|timeout/i);
   });
 });
+
+// A self-hosted failure moves the chain on.
+//
+// Asked for in review. The tests above prove the provider throws; this proves
+// the chain responds to those throws by serving from the next provider, for
+// each way a self-hosted model actually fails.
+describe("self-hosted failures inside the fallback chain", () => {
+  const backup = (): import("../src/modules/chat/llm/types.js").LlmProvider => ({
+    name: "backup",
+    extractIntent: vi.fn(async () => ({ domain: "greeting" as const, reply: "from backup" })),
+  });
+
+  it.each([
+    ["times out", () => fetchMock.mockRejectedValue(Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" }))],
+    ["returns an HTTP error", () => fetchMock.mockResolvedValue({ ok: false, status: 503, json: async () => ({}), text: async () => "overloaded" } as unknown as Response)],
+    ["returns output that breaks the schema", () => fetchMock.mockResolvedValue(reply({ domain: "not-a-domain", reply: 42 }))],
+  ])("serves from the next provider when the model %s", async (_, arrange) => {
+    arrange();
+    const selfHosted = await loadProvider();
+    const { FallbackProvider } = await import("../src/modules/chat/llm/fallback.js");
+    const next = backup();
+    const chain = new FallbackProvider([selfHosted, next]);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { intent, served } = await chain.extractIntentTraced("hi");
+
+    expect(intent.reply).toBe("from backup");
+    expect(served).toEqual({ provider: "backup", depth: 1 });
+    expect(fetchMock).toHaveBeenCalled();
+    expect(next.extractIntent).toHaveBeenCalledTimes(1);
+    err.mockRestore();
+  });
+});

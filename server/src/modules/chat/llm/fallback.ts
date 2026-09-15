@@ -113,11 +113,17 @@ export class FallbackProvider implements LlmProvider {
       }
     }
 
-    // Everything was standing down, so nothing was actually attempted. Clear
-    // the stand-downs and let the next request try again rather than refusing
-    // on the strength of failures that may be minutes old.
+    // Everything was standing down, so nothing was attempted. Throw, and leave
+    // the stand-downs exactly as they are: each ends on its own schedule and
+    // that provider is tried again then.
+    //
+    // This used to clear every record before throwing. Review pointed out what
+    // that did: a request landing a moment before the stand-downs expired got
+    // an error, and the next one then called every provider still believed to
+    // be down, which is the storm a circuit breaker exists to prevent. Throwing
+    // here is not a customer-facing failure either, since the caller degrades
+    // to the rule engine.
     if (skippedAll) {
-      this.health.clear();
       throw new Error("every provider is standing down after repeated failures");
     }
 
