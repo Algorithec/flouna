@@ -15,8 +15,9 @@ import { prisma } from "../../lib/prisma.js";
 // worth at most that. Every decision narrows a range, and the range is a real
 // number about one person rather than a bucket.
 //
-// It is computed from choices the customer made in this product, and resets
-// with their history. Nothing here observes anything they did not do.
+// It is computed from the most recent orders the customer placed in this
+// product, a rolling window described at DECISION_WINDOW below. Nothing here
+// observes anything they did not do.
 
 /** One option as it was shown, in the key space the decision log records. */
 export type ShownOption = {
@@ -31,31 +32,61 @@ export type PricedDecision = {
 };
 
 export type TimeValue = {
-  /** Paise this person will spend to save a minute. */
-  paisePerMinute: number;
-  /** The band their own choices actually pin down. */
+  /**
+   * Paise this person will spend to save a minute, or null when their choices
+   * contradict each other on price and time and no single figure is honest.
+   */
+  paisePerMinute: number | null;
+  /**
+   * The band their own choices pin down. When `contradictory` is true these are
+   * reported as observed, lower above upper, rather than forced into agreement.
+   */
   lowerPaisePerMinute: number;
   /** Null when nothing they turned down puts a ceiling on it. */
   upperPaisePerMinute: number | null;
   /** Choices that constrained the answer at all. */
   informative: number;
   /**
-   * Choices that contradict the rest on price and time alone. Not an error:
-   * somebody who pays more for a slower option is telling us something real,
-   * just not about time. Counted rather than hidden, because a profile built
-   * mostly from contradictions should not be trusted.
+   * Choices that price and time alone cannot explain, such as paying more for
+   * a slower option. Named for exactly that: it is not a measure of how
+   * consistent a person is in general, only of how far price and time account
+   * for what they chose. Someone choosing on quality scores high here and is
+   * behaving perfectly sensibly.
    */
-  inconsistent: number;
+  inconsistentOnPriceTime: number;
+  /**
+   * True when the floor their choices set is above the ceiling. Their decisions
+   * cannot all be about time, so there is no figure to give.
+   */
+  contradictory: boolean;
   confident: boolean;
 };
 
-// Below this, the estimate exists but must not steer anything. Two or three
-// trade-offs are a coincidence; this is roughly where a range stops moving
-// every time a new order arrives.
+// Below this many informative choices, the estimate exists but must not steer
+// anything.
+//
+// Six is a starting heuristic, not a statistically derived number, and should
+// not be read as one. Two or three trade-offs are easily coincidence, and
+// nothing yet exists to set it from: there has been no paired order data to
+// measure how quickly a real customer's band settles. Once there is, it should
+// be chosen from that data.
 const CONFIDENT_AT = 6;
-// A range wider than this is barely a claim. Kept generous, because a real
-// person's price of time genuinely is a range and not a point.
-const MAX_CONFIDENT_SPREAD_PAISE = 1500; // ₹15 a minute
+// A band wider than this is not a usable claim. Tightened from ₹15 a minute
+// after review: a customer whose time is worth anywhere between ₹2 and ₹17 a
+// minute has told us too little to rank on. Like the count above, a heuristic
+// to be replaced by a value measured from real outcomes.
+const MAX_CONFIDENT_SPREAD_PAISE = 500; // ₹5 a minute
+
+/**
+ * How many of a customer's most recent paired orders the estimate reads.
+ *
+ * A rolling window, so older choices age out: once there are 100 newer
+ * orders, the 101st no longer counts. Deliberate, since what a minute is worth
+ * to someone changes over time, and it bounds the cost of the read. Named here
+ * so nobody later has to discover it by wondering why an old decision stopped
+ * affecting the result.
+ */
+export const DECISION_WINDOW = 100;
 
 /**
  * Reads the trade-offs out of one decision.
@@ -106,13 +137,13 @@ function constraintsFrom(decision: PricedDecision): {
 export function estimateTimeValue(decisions: PricedDecision[]): TimeValue | null {
   const lowers: number[] = [];
   const uppers: number[] = [];
-  let inconsistent = 0;
+  let inconsistentOnPriceTime = 0;
   let informative = 0;
 
   for (const d of decisions) {
     const c = constraintsFrom(d);
     if (c.lower.length || c.upper.length) informative++;
-    inconsistent += c.inconsistent;
+    inconsistentOnPriceTime += c.inconsistent;
     lowers.push(...c.lower);
     uppers.push(...c.upper);
   }
@@ -120,17 +151,25 @@ export function estimateTimeValue(decisions: PricedDecision[]): TimeValue | null
   if (lowers.length === 0 && uppers.length === 0) return null;
 
   // The tightest band every choice agrees with.
-  let lower = lowers.length ? Math.max(...lowers) : 0;
-  let upper = uppers.length ? Math.min(...uppers) : null;
+  const lower = lowers.length ? Math.max(...lowers) : 0;
+  const upper = uppers.length ? Math.min(...uppers) : null;
 
-  // Crossed bounds mean the choices cannot all be about time. Rather than
-  // report an empty range, fall back to the middle of what was claimed: it is
-  // the least wrong summary, and `inconsistent` says how much to trust it.
+  // Crossed bounds mean the choices cannot all be about time. This used to
+  // take the midpoint, which review rightly called out: a floor of ₹10 and a
+  // ceiling of ₹2 became ₹6 a minute, a figure nothing the customer did
+  // supports. There is no honest single number, so none is given. The observed
+  // bounds are kept as evidence, and the result is never confident, so nothing
+  // ranks on it.
   if (upper !== null && lower > upper) {
-    const mid = (lower + upper) / 2;
-    inconsistent += 1;
-    lower = mid;
-    upper = mid;
+    return {
+      paisePerMinute: null,
+      lowerPaisePerMinute: Math.round(lower),
+      upperPaisePerMinute: Math.round(upper),
+      informative,
+      inconsistentOnPriceTime,
+      contradictory: true,
+      confident: false,
+    };
   }
 
   // With no ceiling, the most they are known to pay is the best estimate we
@@ -143,17 +182,18 @@ export function estimateTimeValue(decisions: PricedDecision[]): TimeValue | null
     lowerPaisePerMinute: Math.round(lower),
     upperPaisePerMinute: upper === null ? null : Math.round(upper),
     informative,
-    inconsistent,
+    inconsistentOnPriceTime,
+    contradictory: false,
     confident:
       informative >= CONFIDENT_AT &&
-      inconsistent < informative / 2 &&
+      inconsistentOnPriceTime < informative / 2 &&
       spread <= MAX_CONFIDENT_SPREAD_PAISE,
   };
 }
 
 /** Rupees per minute, for anywhere this is shown to a person. */
-export function rupeesPerMinute(v: TimeValue): number {
-  return Math.round((v.paisePerMinute / 100) * 10) / 10;
+export function rupeesPerMinute(v: TimeValue): number | null {
+  return v.paisePerMinute === null ? null : Math.round((v.paisePerMinute / 100) * 10) / 10;
 }
 
 /**
@@ -164,10 +204,13 @@ export function rupeesPerMinute(v: TimeValue): number {
  */
 export async function timeValueForUser(
   userId: string,
-  limit = 100,
+  limit = DECISION_WINDOW,
 ): Promise<TimeValue | null> {
   const rows = await prisma.decisionLog.findMany({
-    where: { userId, selectedKey: { not: null } },
+    // On the order, not only the selection. Review pointed out these are not
+    // the same claim: a selected option is not proof an order was placed, and
+    // this reads only choices that became orders.
+    where: { userId, selectedKey: { not: null }, orderId: { not: null } },
     orderBy: { selectedAt: "desc" },
     take: limit,
     select: { results: true, selectedKey: true },
