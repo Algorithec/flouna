@@ -126,3 +126,47 @@ describe("confidence-weighted quality", () => {
     expect(ranked[0]!.item.pricePaise).toBe(10000);
   });
 });
+
+// The two stages, made explicit.
+//
+// Review worked the numbers through the uncertainty discount alone and found
+// a thin 4.9 still beating an established 4.6, which is correct for raw input.
+// The test above passes because a rating reaches the scorer only after the
+// baseline blend. These pin both stages to their values, so the mechanism is
+// on the page rather than left for a reviewer to reconstruct.
+describe("how a thin rating loses", () => {
+  const SPREAD = 0.8;
+  const CONFIDENCE_AT = 10;
+  const discounted = (rating: number, count: number) =>
+    rating - SPREAD / Math.sqrt(count + CONFIDENCE_AT);
+
+  it("stage one, the blend, pulls a thin average most of the way to the baseline", () => {
+    // Two ratings carry a fifth of the weight: 4.3 * 0.8 + 4.9 * 0.2 = 4.42,
+    // displayed to one decimal.
+    expect(qualityOf(BASELINE, { average: 4.9, count: 2 })).toEqual({ rating: 4.4, ratingCount: 2 });
+    // Ten or more replace the baseline entirely.
+    expect(qualityOf(BASELINE, { average: 4.6, count: 4000 })).toEqual({ rating: 4.6, ratingCount: 4000 });
+  });
+
+  it("stage two, the discount, then separates them", () => {
+    expect(discounted(4.4, 2)).toBeCloseTo(4.169, 3);
+    expect(discounted(4.6, 4000)).toBeCloseTo(4.587, 3);
+    expect(discounted(4.4, 2)).toBeLessThan(discounted(4.6, 4000));
+  });
+
+  it("the discount alone is not enough, exactly as review calculated", () => {
+    // Raw, unblended: 4.9 with 2 ratings is 4.669 and still wins. This is why
+    // the blend is not optional, and why a test feeding raw averages to the
+    // scorer would be testing a pipeline the product does not have.
+    expect(discounted(4.9, 2)).toBeCloseTo(4.669, 3);
+    expect(discounted(4.9, 2)).toBeGreaterThan(discounted(4.6, 4000));
+    const raw = scoreOptions(
+      [
+        { pricePaise: 20000, etaMinutes: 30, name: "New Place", rating: 4.9, ratingCount: 2 },
+        { pricePaise: 20000, etaMinutes: 30, name: "Established", rating: 4.6, ratingCount: 4000 },
+      ],
+      "rating",
+    );
+    expect(raw[0]!.item.name).toBe("New Place");
+  });
+});
