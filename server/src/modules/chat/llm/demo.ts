@@ -135,13 +135,93 @@ const GREETING_WORDS =
 const OUT_OF_SCOPE_REPLY =
   "I can help you order food, book rides, or shop. What would you like?";
 
+/** Words after a number that make it a duration, a distance or a count, never a price. */
+const NOT_MONEY = /^\s*(?:mins?|minutes?|hrs?|hours?|secs?|seconds?|days?|kms?|kilomet(?:er|re)s?|people|persons?|pax|pieces?|pcs?|plates?|items?|portions?|servings?|stars?)\b/i;
+
+/**
+ * Reads a stated price, in paise, or null.
+ *
+ * The earlier pattern took the first number of two or more digits and made
+ * every word before it optional, with "within" counted as a budget word. So
+ * "biryani within 35 minutes" was a ₹35 budget, "order 12 samosas" a ₹12
+ * budget, and "biryani within 35 minutes under 300" took the 35 and ignored
+ * the ₹300. None of it showed, because a budget used to be waived when nothing
+ * fitted it, and a ₹35 budget fits nothing.
+ *
+ * A stated price is now enforced, which turns every such misreading into a
+ * search that returns nothing. That settles the rule for anything ambiguous: a
+ * limit missed shows a few extra options, a limit invented shows none, so an
+ * unclear number is not a price. It counts only when marked as money, or
+ * introduced by a word that means a ceiling, and never when a unit of time,
+ * distance or quantity follows it.
+ */
 function parseBudget(message: string): number | null {
-  // Handles ₹300, Rs 1,29,900, under 70000, etc. (rupees → paise).
+  for (const m of message.matchAll(/\d[\d,]*/g)) {
+    const n = Number(m[0].replace(/,/g, ""));
+    if (!Number.isFinite(n) || n < 10) continue;
+
+    const before = message.slice(0, m.index);
+    const after = message.slice(m.index! + m[0].length);
+    if (NOT_MONEY.test(after)) continue;
+
+    const markedBefore = /(?:₹|\brs\.?|\binr)\s*$/i.test(before);
+    const markedAfter = /^\s*(?:rupees?\b|rs\b\.?|inr\b|\/-)/i.test(after);
+    if (markedBefore || markedAfter) return n * 100;
+
+    // Words that only ever introduce a ceiling.
+    if (/\b(?:under|below|less than|max(?:imum)?|up\s?to|budget(?:\s+of)?)\s*$/i.test(before)) {
+      return n * 100;
+    }
+    // Words that introduce a price as often as a count or a time: "chair for
+    // 8000", but also "dinner for 10" or "within 30". Accepted only above the
+    // point where a small number is far more likely to be something else.
+    if (/\b(?:for|within|around|about)\s*$/i.test(before) && n >= 50) {
+      return n * 100;
+    }
+  }
+  return null;
+}
+
+/**
+ * "within 35 minutes", "in 30 mins", "under an hour" → minutes, or null.
+ *
+ * A unit of time is required. Without one, "within 300" is as likely a price,
+ * and reading it as a delivery limit would remove every slow kitchen for no
+ * reason the customer gave.
+ */
+function extractMaxEtaMinutes(message: string): number | null {
+  if (/\b(?:within|in|under|less than)\s+half\s+an?\s+hour\b/i.test(message)) return 30;
+  if (/\b(?:within|in|under|less than)\s+(?:an?|one)\s+hour\b/i.test(message)) return 60;
   const m = message.match(
-    /(?:under|below|less than|within|max|upto|up to|budget|for)?\s*(?:₹|rs\.?|inr)?\s*([\d,]{2,8})/i,
+    /\b(?:within|in|under|less than|no more than|max(?:imum)?)\s+(\d{1,3})\s*(mins?|minutes?|hrs?|hours?)\b/i,
   );
-  const n = m?.[1] ? Number(m[1].replace(/,/g, "")) : null;
-  return n && n >= 10 ? n * 100 : null;
+  if (!m) return null;
+  const n = Number(m[1]);
+  const minutes = /^h/i.test(m[2]!) ? n * 60 : n;
+  return minutes > 0 ? minutes : null;
+}
+
+/**
+ * "don't want to wait more than 5 minutes", "pickup within 5 mins" → 5.
+ *
+ * Only the wait for the vehicle. "get me there in 30 minutes" limits the whole
+ * trip, and reading it as a pickup limit would remove every ride that takes
+ * longer than half an hour to reach the rider, which is not what was asked.
+ * So a pickup or waiting word is required, not merely a number of minutes.
+ */
+function extractMaxPickupMinutes(message: string): number | null {
+  const m =
+    message.match(
+      /\bwait(?:ing)?\s+(?:for\s+)?(?:more than|longer than|over|beyond|past)\s+(\d{1,3})\s*(?:mins?|minutes?)?\b/i,
+    ) ??
+    message.match(
+      // "arrive" is deliberately absent: "arrive in 30 minutes" is as often
+      // the destination as the vehicle, and an ambiguous word must not set a
+      // limit that removes rides.
+      /\b(?:pick\s?up|picked up|pick me up|reach me|get to me)\s+(?:in|within|under)\s+(\d{1,3})\s*(?:mins?|minutes?)\b/i,
+    );
+  const n = m?.[1] ? Number(m[1]) : null;
+  return n && n > 0 ? n : null;
 }
 
 // What the user cares about most, inferred from their words.
@@ -223,6 +303,7 @@ function extractFood(message: string) {
   return {
     item: itemMatch?.[1]?.toLowerCase() ?? "popular dishes",
     budgetPaise: parseBudget(message),
+    maxEtaMinutes: extractMaxEtaMinutes(message),
     dietary,
     priority: extractPriority(message),
   };
@@ -261,6 +342,46 @@ function withoutTime(place: string): string {
   return place.replace(/\s+(at\s+\d.*|tonight|this evening|tomorrow|now)\s*$/i, "").trim();
 }
 
+/**
+ * Cuts a destination at the first limit the rider attached to it.
+ *
+ * The destination pattern reads everything after "to", so "cab to Gachibowli,
+ * pickup within 4 mins" asked the geocoder for "gachibowli, pickup within 4
+ * mins", and "to HITEC City under ₹300" for "HITEC City under". That was
+ * already true, but a stated fare and a pickup limit are now things the engine
+ * understands and a rider is invited to say, so leaving the destination to
+ * swallow them would break the very request they make possible.
+ *
+ * Deliberately not cut at a full stop: "to St. Mary's Church" is a place. The
+ * guide's own example ends its destination with "now", which is cut instead.
+ */
+function withoutConstraints(place: string): string {
+  const cut = place.search(
+    new RegExp(
+      [
+        String.raw`\s+(?:now|asap|immediately)\b`,
+        String.raw`\s+(?:under|below|less than|within|max(?:imum)?|budget|up\s?to)\b`,
+        String.raw`\s*(?:₹|\brs\.?\s*\d|\binr\b)`,
+        String.raw`,?\s*\b(?:pick\s?up|picked up|pick me up|don'?t|do not|need to|want to|wait(?:ing)?|arrive|reach by)\b`,
+      ].join("|"),
+      "i",
+    ),
+  );
+  const kept = cut === -1 ? place : place.slice(0, cut);
+  return (
+    kept
+      // "I need to go to HITEC City" is matched from its first "to", the one
+      // in "need to", which captures "go to HITEC City". Matching the last
+      // "to" instead would turn "take me to Banjara Hills to meet a friend"
+      // into a trip to "meet a friend", so the travel verb is stripped from
+      // the front of what was captured instead. Requires a space after the
+      // verb, so a place such as "Gokul Chat" is left alone.
+      .replace(/^(?:go|going|get|getting|travel|head|move|come|reach)\s+(?:to\s+)?/i, "")
+      .replace(/[\s,.'-]+$/, "")
+      .trim()
+  );
+}
+
 function extractRide(message: string) {
   const dropMatch = message.match(
     /(?:\bto|towards|till|drop (?:me )?(?:at|to))\s+([a-z0-9 ,.'-]{3,60})/i,
@@ -270,14 +391,14 @@ function extractRide(message: string) {
   const pickupMatch = message.match(
     /(?:\bfrom|pick (?:me )?up (?:from|at))\s+([a-z0-9 ,.'-]{3,60}?)(?=\s+(?:to|and|towards|till)\b|$)/i,
   );
-  let drop = dropMatch?.[1] ? withoutTime(dropMatch[1]) : "";
+  let drop = dropMatch?.[1] ? withoutTime(withoutConstraints(dropMatch[1])) : "";
   // Hinglish word order puts the destination last with no preposition at all
   // ("cab book karo Hitech City"), which the "to" pattern cannot see.
   if (!drop) {
     const trailing = message.match(
       /\b(?:karo|kar do|chahiye|chaiye|bhej|book)\s+([a-z0-9 ,.'-]{3,60})$/i,
     );
-    if (trailing?.[1]) drop = withoutTime(trailing[1]);
+    if (trailing?.[1]) drop = withoutTime(withoutConstraints(trailing[1]));
   }
   const vehicle = /\bbike\b/i.test(message)
     ? ("bike" as const)
@@ -290,6 +411,8 @@ function extractRide(message: string) {
     pickup: pickupMatch?.[1] ? withoutTime(pickupMatch[1]) : null,
     drop: drop || "your destination",
     vehicle,
+    budgetPaise: parseBudget(message),
+    maxPickupMinutes: extractMaxPickupMinutes(message),
     priority: extractPriority(message),
     scheduleAt: extractScheduleAt(message),
   };

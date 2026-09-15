@@ -15,6 +15,15 @@ export const intentSchema = z.object({
     .object({
       item: z.string().max(80).describe("The dish or cuisine requested"),
       budgetPaise: z.number().int().positive().nullable(),
+      // "within 35 minutes" → 35. A stated limit, enforced before ranking, so
+      // an option arriving later is removed rather than ranked lower.
+      maxEtaMinutes: z
+        .number()
+        .int()
+        .positive()
+        .nullable()
+        .default(null)
+        .describe("Latest acceptable delivery in minutes if stated, else null"),
       dietary: z.enum(["veg", "nonveg", "any"]).default("any"),
       // What the user cares about most: "rating" for top-rated/best, "price"
       // for cheap/budget, "speed" for fast/quick, else "balanced".
@@ -28,6 +37,24 @@ export const intentSchema = z.object({
       pickup: z.string().max(120).nullable(),
       drop: z.string().max(120).describe("Destination"),
       vehicle: z.enum(["bike", "auto", "cab", "any"]).default("any"),
+      // "under ₹300" → 30000, the same meaning it has for food and shopping, so
+      // the model reads a price the same way whatever is being bought.
+      budgetPaise: z
+        .number()
+        .int()
+        .positive()
+        .nullable()
+        .default(null)
+        .describe("Maximum fare in paise if stated, else null"),
+      // "don't want to wait more than 5 minutes" → 5. How long until pickup,
+      // not the whole journey.
+      maxPickupMinutes: z
+        .number()
+        .int()
+        .positive()
+        .nullable()
+        .default(null)
+        .describe("Longest acceptable wait for pickup in minutes if stated, else null"),
       priority: z
         .enum(["price", "rating", "speed", "balanced"])
         .default("balanced"),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JSON_SCHEMA, SYSTEM_PROMPT } from "../src/modules/chat/llm/prompt.js";
+import { JSON_SCHEMA, JSON_SHAPE, SYSTEM_PROMPT } from "../src/modules/chat/llm/prompt.js";
 import { intentSchema } from "../src/modules/chat/llm/types.js";
 
 // The contract between the model and the recommender.
@@ -63,6 +63,29 @@ describe("the model can return every field the recommender reads", () => {
       ]);
     });
   }
+
+  // The same contract, for the providers asked for JSON in prose rather than
+  // bound to the schema above. The check above never covered them: a field
+  // could be returnable from Claude and silently never requested from
+  // DeepSeek or Gemini, and zod's defaults would hide it exactly as they once
+  // hid "priority".
+  for (const domain of ["food", "ride", "shop"] as const) {
+    it(`${domain}: the prose shape names every field the intent type carries`, () => {
+      const block = JSON_SHAPE.slice(JSON_SHAPE.indexOf(`"${domain}"?:`));
+      const own = block.slice(0, block.indexOf("}") + 1);
+      const missing = zodFields(domain).filter((f) => !own.includes(`"${f}"`));
+      expect(missing, `${domain} fields DeepSeek and Gemini are never asked for`).toEqual([]);
+    });
+  }
+
+  it("the prompt explains how to fill each stated limit", () => {
+    // Returnable is not the same as correct. Without instructions a model
+    // leaves these null, and a pickup limit read from a whole-trip time would
+    // remove rides for a reason the rider never gave.
+    expect(SYSTEM_PROMPT).toMatch(/maxEtaMinutes/);
+    expect(SYSTEM_PROMPT).toMatch(/maxPickupMinutes/);
+    expect(SYSTEM_PROMPT).toMatch(/whole trip/i);
+  });
 
   it("the prompt tells the model how to choose a priority", () => {
     // The schema makes the field returnable; the prompt is what makes it

@@ -70,3 +70,14 @@
 {"id":"edge-006","message":"i want food under ₹1,200","expect":{"domain":"food","food":{"budgetPaise":120000}}}
 {"id":"edge-007","message":"order 2 dosas","expect":{"domain":"food","food":{"item":"dosa"}}}
 {"id":"edge-008","message":"BOOK A CAB TO HITECH CITY","expect":{"domain":"ride","ride":{"drop":"Hitech City"}}}
+{"id":"food-021","message":"chicken biryani within 35 minutes","expect":{"domain":"food","food":{"item":"biryani","budgetPaise":null,"maxEtaMinutes":35}}}
+{"id":"food-022","message":"order 12 samosas","expect":{"domain":"food","food":{"budgetPaise":null}}}
+{"id":"food-023","message":"dinner for 10 people","expect":{"domain":"food","food":{"budgetPaise":null}}}
+{"id":"food-024","message":"biryani within 35 minutes under 300","expect":{"domain":"food","food":{"item":"biryani","budgetPaise":30000,"maxEtaMinutes":35}}}
+{"id":"food-025","message":"pizza delivered in 45 mins","expect":{"domain":"food","food":{"item":"pizza","budgetPaise":null,"maxEtaMinutes":45}}}
+{"id":"food-026","message":"paneer tikka under 250 within half an hour","expect":{"domain":"food","food":{"budgetPaise":25000,"maxEtaMinutes":30}}}
+{"id":"ride-016","message":"cab to hitec city under ₹300, dont want to wait more than 5 minutes","expect":{"domain":"ride","ride":{"drop":"hitec city","vehicle":"cab","budgetPaise":30000,"maxPickupMinutes":5}}}
+{"id":"ride-017","message":"auto to gachibowli, pickup within 4 mins","expect":{"domain":"ride","ride":{"drop":"gachibowli","vehicle":"auto","maxPickupMinutes":4}}}
+{"id":"ride-018","message":"cab to the airport, need to arrive in 30 minutes","expect":{"domain":"ride","ride":{"drop":"the airport","maxPickupMinutes":null}}}
+{"id":"ride-019","message":"bike to madhapur under 150","expect":{"domain":"ride","ride":{"drop":"madhapur","vehicle":"bike","budgetPaise":15000}}}
+{"id":"ride-020","message":"I need to go to HITEC City now. Under ₹300 and I dont want to wait more than 5 minutes","expect":{"domain":"ride","ride":{"drop":"HITEC City","budgetPaise":30000,"maxPickupMinutes":5}}}
