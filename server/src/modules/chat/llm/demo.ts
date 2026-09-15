@@ -338,8 +338,23 @@ function extractScheduleAt(message: string): string | null {
 }
 
 /** Strips a trailing time phrase so it cannot end up inside a place name. */
+/**
+ * Removes the time phrases trailing a destination, all of them.
+ *
+ * One pass removed only the last, so "cab to hitec city tonight at 9" took
+ * away "at 9" and booked a trip to "hitec city tonight". That is the guide's
+ * own first test case: the time resolved correctly to 21:00 while the place
+ * it was going to did not exist. Repeated until nothing more comes off.
+ */
 function withoutTime(place: string): string {
-  return place.replace(/\s+(at\s+\d.*|tonight|this evening|tomorrow|now)\s*$/i, "").trim();
+  let current = place.trim();
+  for (;;) {
+    const next = current
+      .replace(/\s+(at\s+\d.*|tonight|this evening|tomorrow|now)\s*$/i, "")
+      .trim();
+    if (next === current) return current;
+    current = next;
+  }
 }
 
 /**
