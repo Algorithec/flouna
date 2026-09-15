@@ -38,9 +38,94 @@ const RIDE_WORDS =
   /\b(ride|cab|taxi|auto|rickshaw|bike|uber|ola|rapido|transport|commute|pick me|pickup|drop me|take me|get me to|go to|travel to|reach)\b/i;
 
 const SHOP_WORDS = new RegExp(
-  `\\b(laptop${S}|smartphone${S}|phone${S}|mobile${S}|tablet${S}|earbud${S}|headphone${S}|tws|shoe${S}|sneaker${S}|t[ -]?shirt${S}|shirt${S}|jean${S}|dress${S}|clothing|watch${S}|smartwatch${S}|air ?fryer${S}|washing machine${S}|refrigerator${S}|fridge${S}|microwave${S}|television${S}|tv|chair${S}|table${S}|sofa${S}|furniture|mattress${S}|appliance${S}|gaming|buy|purchase|shopping|order online|electronics|fashion|gadget${S})\\b`,
+  `\\b(laptop${S}|smartphone${S}|phone${S}|mobile${S}|tablet${S}|earbud${S}|earphone${S}|headphone${S}|headset${S}|tws|earpod${S}|shoe${S}|sneaker${S}|t[ -]?shirt${S}|shirt${S}|jean${S}|dress${S}|clothing|watch${S}|smartwatch${S}|keyboard${S}|mouse|monitor${S}|charger${S}|powerbank${S}|speaker${S}|air ?fryer${S}|washing machine${S}|refrigerator${S}|fridge${S}|microwave${S}|television${S}|tv|chair${S}|table${S}|sofa${S}|furniture|mattress${S}|appliance${S}|gaming|buy|purchase|shopping|order online|electronics|fashion|gadget${S})\\b`,
   "i",
 );
+
+/**
+ * Levenshtein distance, capped so a long comparison stops early.
+ *
+ * Here to catch typing rather than to be clever: "biriyani" and "piza" were
+ * being routed out of scope for one wrong letter, and a customer who
+ * misspells a dish is still asking for the dish.
+ */
+function editDistance(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const v = Math.min(row[j - 1]! + 1, prev[j]! + 1, prev[j - 1]! + cost);
+      row.push(v);
+      if (v < best) best = v;
+    }
+    // Every way of reaching this row already costs more than the caller cares
+    // about, so no continuation can come back under the cap.
+    if (best > max) return max + 1;
+    prev = row;
+  }
+  return prev[b.length]!;
+}
+
+/**
+ * How far a word may be from a known one before it stops being a typo.
+ *
+ * Scaled by length, because one wrong letter in a four letter word is a much
+ * bigger share of it than one wrong letter in nine.
+ */
+function typoTolerance(word: string): number {
+  if (word.length >= 7) return 2;
+  if (word.length >= 4) return 1;
+  return 0;
+}
+
+/** The vocabulary a misspelling is allowed to be corrected to. */
+const KNOWN_WORDS = `${DISHES}|${CUISINES}`.split("|").filter((w) => !w.includes(" "));
+
+/**
+ * Repairs words that are one or two letters from something we know.
+ *
+ * Applied only to the domain vocabulary, never to place names: a place we do
+ * not hold cannot be corrected toward one we do without inventing a
+ * destination the customer never asked for.
+ */
+function repairTypos(message: string): string {
+  return message.replace(/\b[a-z]{4,}\b/gi, (word) => {
+    // A capital in the middle of a sentence is usually a name, and a place we
+    // do not hold must never be nudged toward a dish we do. "India" is one
+    // letter from "indian", which turned a question about a prime minister
+    // into a curry order.
+    if (/^[A-Z]/.test(word)) return word;
+    const lower = word.toLowerCase();
+    if (KNOWN_WORDS.includes(lower)) return word;
+    const tolerance = typoTolerance(lower);
+    if (tolerance === 0) return word;
+    let best: { word: string; distance: number } | null = null;
+    for (const known of KNOWN_WORDS) {
+      const d = editDistance(lower, known, tolerance);
+      if (d <= tolerance && (!best || d < best.distance)) best = { word: known, distance: d };
+    }
+    return best ? best.word : word;
+  });
+}
+
+/**
+ * Products whose word is more often something else.
+ *
+ * "recommend a movie to watch" was answered with a shopping search for
+ * watches. These count as products only when the message is also about
+ * buying, which is the difference between the two senses.
+ */
+const AMBIGUOUS_PRODUCTS = /\b(watch|mouse|tablet|monitor)\b/i;
+const PURCHASE_INTENT =
+  /\b(buy|buying|purchase|shopping for|looking for|order online|price of|deal on|under\s*(?:₹|rs\.?)?\s*\d)\b/i;
+// A qualifier nobody applies to the other sense of the word. Mice do not come
+// in bluetooth, so "wireless mouse" needs no purchase verb to be a product,
+// while "recommend a movie to watch" still does.
+const PRODUCT_QUALIFIER =
+  /\b(wireless|bluetooth|usb|mechanical|gaming|smart|digital|analog|inch|portable|rechargeable)\b/i;
 
 const GREETING_WORDS =
   // No bare "help": it is how "help me with my physics homework" opens, and a
@@ -63,7 +148,14 @@ function parseBudget(message: string): number | null {
 function extractPriority(
   message: string,
 ): "price" | "rating" | "speed" | "balanced" {
-  if (/\b(top[- ]?rated|best|highest[- ]?rated|good reviews?|quality|popular)\b/i.test(message))
+  // Bare "good" counts. Somebody asking for "a good laptop" or "some good
+  // desserts" is asking about quality, and "good morning" never reaches here
+  // because the greeting rule answers first.
+  if (
+    /\b(top[- ]?rated|best|highest[- ]?rated|good|well[- ]?reviewed|quality|popular)\b/i.test(
+      message,
+    )
+  )
     return "rating";
   if (
     /\b(fast(est)?|quick(ly|est)?|asap|hurry|soon|urgent(ly)?|immediately|right away|in a rush)\b/i.test(
@@ -79,7 +171,7 @@ function extractPriority(
 function extractShop(message: string) {
   const itemMatch = message.match(
     new RegExp(
-      `\\b(gaming laptop|laptop|smartphone|phone|mobile|tablet|earbud${S}|headphone${S}|shoe${S}|sneaker${S}|t[ -]?shirt${S}|shirt${S}|jean${S}|smartwatch|watch|air ?fryer|washing machine|refrigerator|fridge|microwave|television|tv|office chair|chair|table|sofa|mattress)\\b`,
+      `\\b(gaming laptop|laptop|smartphone|phone|mobile|tablet|earbud${S}|earphone${S}|headphone${S}|headset${S}|keyboard${S}|charger${S}|speaker${S}|shoe${S}|sneaker${S}|t[ -]?shirt${S}|shirt${S}|jean${S}|smartwatch|watch|air ?fryer|washing machine|refrigerator|fridge|microwave|television|tv|office chair|chair|table|sofa|mattress)\\b`,
       "i",
     ),
   );
@@ -89,7 +181,7 @@ function extractShop(message: string) {
   const inCategory = (alternatives: string) =>
     new RegExp(`\\b(?:${alternatives})\\b`, "i").test(message);
   const category = inCategory(
-    `laptop${S}|smartphone${S}|phone${S}|mobile${S}|tablet${S}|earbud${S}|headphone${S}|watch${S}|smartwatch${S}|television${S}|tv|electronics|gaming`,
+    `laptop${S}|smartphone${S}|phone${S}|mobile${S}|tablet${S}|earbud${S}|earphone${S}|headphone${S}|headset${S}|earpod${S}|keyboard${S}|mouse|charger${S}|powerbank${S}|speaker${S}|monitor${S}|watch${S}|smartwatch${S}|television${S}|tv|electronics|gaming`,
   )
     ? ("electronics" as const)
     : inCategory(
@@ -206,7 +298,29 @@ function extractRide(message: string) {
 export class DemoProvider implements LlmProvider {
   name = "demo";
 
-  async extractIntent(message: string): Promise<Intent> {
+  async extractIntent(original: string): Promise<Intent> {
+    const first = classify(original);
+    if (first.domain !== "out_of_scope") return first;
+
+    // Only now is typing considered, and only to rescue a message we were
+    // about to refuse.
+    //
+    // Repairing everything up front looked tidier and was much worse: "ride"
+    // is one letter from "rice" and "India" one from "indian", so
+    // "cheapest ride to Madhapur" became a lunch order and a question about a
+    // prime minister became a curry. Correcting a message that already
+    // classified can only ever spoil it, so the repair sits behind the
+    // refusal, where the worst case is that it changes nothing.
+    const repaired = repairTypos(original);
+    if (repaired === original) return first;
+    const second = classify(repaired);
+    return second.domain === "out_of_scope" ? first : second;
+  }
+}
+
+/** The rules themselves, over whatever text they are handed. */
+function classify(message: string): Intent {
+  {
     if (GREETING_WORDS.test(message.trim())) {
       return {
         domain: "greeting",
@@ -216,7 +330,18 @@ export class DemoProvider implements LlmProvider {
 
     const wantsRide = RIDE_WORDS.test(message);
     const wantsFood = FOOD_WORDS.test(message);
-    const wantsShop = SHOP_WORDS.test(message);
+    // A word that is more often a verb counts as a product only when the
+    // message is also about buying. Otherwise "recommend a movie to watch" is
+    // answered with a search for watches.
+    const shopMatch = SHOP_WORDS.test(message);
+    const onlyAmbiguous =
+      shopMatch &&
+      AMBIGUOUS_PRODUCTS.test(message) &&
+      !SHOP_WORDS.test(message.replace(AMBIGUOUS_PRODUCTS, " "));
+    const wantsShop =
+      (shopMatch && !onlyAmbiguous) ||
+      (onlyAmbiguous &&
+        (PURCHASE_INTENT.test(message) || PRODUCT_QUALIFIER.test(message)));
 
     // Both in one message → combo ("order biryani and book a cab home").
     if (wantsRide && wantsFood) {
