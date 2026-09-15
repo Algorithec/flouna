@@ -63,7 +63,7 @@ jobs:
       - name: Intent eval (rule engine)
         run: |
           node scripts/eval-intent.mjs --provider demo
-          node scripts/eval-intent.mjs --provider demo --set holdout
+          node scripts/eval-intent.mjs --provider demo --set holdout --final
         env:
           NODE_ENV: test
           DATABASE_URL: file:./test.db

@@ -49,6 +49,24 @@ if (!FIXTURE) {
   process.exit(2);
 }
 
+// The held-out set is a final check, not a development aid.
+//
+// Raised in review on #52: exposed through the same script as the tuned set,
+// it is one flag away from being iterated against, and a set that has been
+// tuned toward is no longer held out. Two things protect it. It will not run
+// without --final, so reaching for it is a deliberate act. And it reports
+// scores only, never which sentences failed, because seeing the failures is
+// exactly what lets a rule be shaped to them. To investigate a failure, write
+// a similar case into the tuned set; do not read this one.
+const HOLDOUT = setName === "holdout";
+if (HOLDOUT && !args.includes("--final")) {
+  console.error(
+    "The held-out set is for final evaluation only and needs --final.\n" +
+      "Develop and debug rules against the tuned set, which is the default.",
+  );
+  process.exit(2);
+}
+
 if (providerArg) process.env.LLM_PROVIDER = providerArg;
 
 const cases = readFileSync(FIXTURE, "utf8")
@@ -193,7 +211,9 @@ for (const [field, a] of [...perField.entries()].sort()) {
   console.log(`  ${field.padEnd(22)} ${pct.toFixed(0).padStart(3)}%  (${a.ok}/${a.total})${flag}`);
 }
 
-if (failures.length) {
+if (failures.length && HOLDOUT) {
+  console.log(`\n${failures.length} failing (not listed for the held-out set)`);
+} else if (failures.length) {
   console.log(`\n${failures.length} failing`);
   for (const f of failures.slice(0, 25)) {
     if (f.kind === "domain") console.log(`  [domain] ${f.id} "${f.message}" want ${f.want}, got ${f.got}`);
@@ -216,7 +236,8 @@ if (jsonOut) {
         injectionResistance,
         latency: { p50, p95 },
         perField: Object.fromEntries(perField),
-        failures,
+        // Counts only for the held-out set, for the same reason as above.
+        failures: HOLDOUT ? failures.length : failures,
       },
       null,
       2,
