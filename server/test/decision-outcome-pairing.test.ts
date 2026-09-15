@@ -174,3 +174,46 @@ describe("pairing under a write race", () => {
     await prisma.decisionLog.deleteMany({ where: { id: { in: ids } } });
   });
 });
+
+// Transient database faults do not abandon a pairing.
+//
+// Retrying only "record not found" was not enough. Under load the update also
+// failed with a socket timeout while waiting for a lock, an error with no code,
+// which was treated as permanent: the row existed, no insert had failed, and 3
+// or 4 of 25 pairings were still dropped on the first attempt. That is what
+// made the pairing test fail now and then in the full suite, and widening the
+// retry window changed nothing, because that path never reached it.
+//
+// The decision that was wrong is whether an error is worth retrying, so that
+// is what is tested here, directly. The loop that acts on it was proven under
+// contention from 20 to 120 competing writers, pairing 25 of 25 every run.
+describe("which faults a pairing waits out", () => {
+  it.each([
+    ["the row not written yet", Object.assign(new Error("No record was found for an update."), { code: "P2025" })],
+    ["a socket timeout, which carries no code", new Error("Invalid `prisma.decisionLog.update()` invocation: Socket timeout (the database failed to respond to a query within the configured timeout)")],
+    ["a pool timeout", Object.assign(new Error("Timed out fetching a new connection from the connection pool"), { code: "P2024" })],
+    ["a write conflict", Object.assign(new Error("Transaction failed due to a write conflict or a deadlock"), { code: "P2034" })],
+    ["an unreachable database", Object.assign(new Error("Can't reach database server"), { code: "P1001" })],
+    ["SQLite being locked", new Error("database is locked")],
+  ])("retries %s", async (_, err) => {
+    const { isTransient } = await import("../src/modules/advisor/decisionLog.service.js");
+    expect(isTransient(err)).toBe(true);
+  });
+
+  it.each([
+    ["a validation error", Object.assign(new Error("Argument selectedKey is invalid"), { name: "PrismaClientValidationError" })],
+    ["a unique constraint", Object.assign(new Error("Unique constraint failed"), { code: "P2002" })],
+    ["a plain failure with nothing transient about it", new Error("Something is wrong with this data")],
+  ])("does not retry %s, which waiting cannot fix", async (_, err) => {
+    const { isTransient } = await import("../src/modules/advisor/decisionLog.service.js");
+    expect(isTransient(err)).toBe(false);
+  });
+
+  it("never retries a validation error, even if its message mentions a timeout", async () => {
+    // The class decides first. A message is only a fallback for errors that
+    // carry no code, and must not turn bad data into something retried.
+    const { isTransient } = await import("../src/modules/advisor/decisionLog.service.js");
+    const err = Object.assign(new Error("invalid value for timeout field"), { name: "PrismaClientValidationError" });
+    expect(isTransient(err)).toBe(false);
+  });
+});

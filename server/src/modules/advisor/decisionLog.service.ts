@@ -66,16 +66,7 @@ export function recordDecision(input: {
 }
 
 /**
- * Closes the loop: what the customer actually chose, and what it became.
- *
- * Derived server-side from the order being placed rather than sent by the
- * client, so the training signal cannot be shaped by whoever is calling the
- * API. Silent when the id does not match a row: a decision may have been
- * pruned, or the client may be quoting an id from a previous session, and
- * neither is a reason to fail an order that is otherwise good.
- */
-/**
- * How long to keep trying when the decision row is not there yet.
+ * How long to keep trying to pair a decision with its order.
  *
  * recordDecision does not wait for its own insert, so a customer who orders
  * immediately can have the update reach the database first. The update then
@@ -84,11 +75,55 @@ export function recordDecision(input: {
  * module exists to collect, lost precisely on the fastest, most decisive
  * orders. Verified by racing the two writes directly.
  *
- * A few hundred milliseconds is far more than an insert already in flight
- * needs, and this is off the request path either way.
+ * The window was first 800 ms, on the assumption that an insert lands well
+ * inside that. Under contention it does not: 25 inserts took 2.7 s and then
+ * 7.1 s. A write's latency has no bound, so the window is not tuned to it but
+ * made to outlast realistic slowness, doubling from 25 ms to a 5 s ceiling for
+ * about half a minute in all. That costs a customer nothing, because none of
+ * this is on the request path.
  */
-const PAIRING_RETRY_DELAYS_MS = [25, 75, 200, 500];
+const PAIRING_RETRY_DELAYS_MS = [
+  25, 50, 100, 200, 400, 800, 1600, 3200, 5000, 5000, 5000, 5000, 5000,
+];
 
+/**
+ * Prisma codes for faults that pass on their own.
+ *
+ * P2025 is the one this retry was written for: the decision's insert has not
+ * landed yet. The rest are the database being slow or briefly unreachable, a
+ * connection pool exhausted, a write conflict: all resolve if you wait.
+ */
+const TRANSIENT_CODES = new Set(["P2025", "P1001", "P1002", "P1008", "P1017", "P2024", "P2034"]);
+
+/**
+ * Whether waiting and trying again could succeed.
+ *
+ * The first version retried only P2025. Under load the update also fails with
+ * a socket timeout while it waits for a lock, which carries no code at all, so
+ * it was treated as permanent and the pairing abandoned on the first attempt
+ * however long the retry window was. With the row present and no insert
+ * failing, 3 or 4 of 25 pairings were still lost that way, and a longer window
+ * changed nothing, because that path never reached it.
+ *
+ * A validation error means the data itself is wrong, and no amount of waiting
+ * fixes that, so it is the one kind never retried, whatever its message says.
+ */
+export function isTransient(err: unknown): boolean {
+  const e = err as { code?: string; name?: string; message?: string };
+  if (e?.name === "PrismaClientValidationError") return false;
+  if (e?.code && TRANSIENT_CODES.has(e.code)) return true;
+  return /timeout|timed out|database is locked|busy|connection/i.test(e?.message ?? "");
+}
+
+/**
+ * Closes the loop: what the customer actually chose, and what it became.
+ *
+ * Derived server-side from the order being placed rather than sent by the
+ * client, so the training signal cannot be shaped by whoever is calling the
+ * API. Silent when the id does not match a row: a decision may have been
+ * pruned, or the client may be quoting an id from a previous session, and
+ * neither is a reason to fail an order that is otherwise good.
+ */
 export function recordSelection(input: {
   decisionId: string;
   /** In the same key space as the trace: "dishId@platform", or a ride's product name. */
@@ -108,11 +143,8 @@ export function recordSelection(input: {
         });
         return;
       } catch (err) {
-        // P2025 is "record to update not found", which here usually means the
-        // insert is still in flight rather than that the id is wrong.
-        const missing = (err as { code?: string }).code === "P2025";
         const delay = PAIRING_RETRY_DELAYS_MS[attempt];
-        if (missing && delay !== undefined) {
+        if (isTransient(err) && delay !== undefined) {
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }
@@ -120,9 +152,15 @@ export function recordSelection(input: {
         // than swallowing it: a decision log quietly missing its outcomes
         // looks exactly like customers who never ordered, and that is a
         // conclusion nobody should reach by accident.
+        //
+        // The code is logged, and the message flattened to one line. Prisma
+        // messages open with a blank line, so the old log showed nothing after
+        // the colon, and that blank is what hid which error was really
+        // abandoning these pairings.
+        const code = (err as { code?: string }).code ?? "no code";
+        const text = err instanceof Error ? err.message : String(err);
         console.warn(
-          `[decision] could not pair decision ${input.decisionId} with order ${input.orderId}:`,
-          err instanceof Error ? err.message : String(err),
+          `[decision] could not pair decision ${input.decisionId} with order ${input.orderId} (${code}): ${text.replace(/\s+/g, " ").trim()}`,
         );
         return;
       }
