@@ -55,6 +55,21 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: file:./test.db
 
+      # The floors in the harness are the evidence the keyless engine is
+      # argued from, and nothing was checking them: `npm test` never ran the
+      # harness, so intent accuracy could regress through a green build. Both
+      # sets run here, the tuned one and the held out one, against the rule
+      # engine rather than a vendor, so the gate costs nothing and needs no key.
+      - name: Intent eval (rule engine)
+        run: |
+          node scripts/eval-intent.mjs --provider demo
+          node scripts/eval-intent.mjs --provider demo --set holdout
+        env:
+          NODE_ENV: test
+          DATABASE_URL: file:./test.db
+          JWT_ACCESS_SECRET: ci-access-secret-not-used-for-anything-real
+          JWT_REFRESH_SECRET: ci-refresh-secret-not-used-for-anything-real
+
   web:
     name: Web (lint + build)
     runs-on: ubuntu-latest
