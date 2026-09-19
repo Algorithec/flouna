@@ -6,6 +6,7 @@ import { dishes as catalogue, type Dish, type Listing } from "../../data/restaur
 // group deal engine and order pricing still see them, and invisible to search
 // and recommendation, which is where a single person is being advised.
 const dishes = catalogue.filter((d) => !d.serves);
+import { qualityOf, type CommunityRating } from "../ratings/blend.js";
 import {
   scoreOptions,
   appliedWeights,
@@ -229,6 +230,19 @@ export function recommendFood(
   opts: SearchOpts & {
     priority?: Priority;
     personal?: Personalization;
+    /**
+     * What customers have actually said, keyed by dish.
+     *
+     * Ranking used the catalogue baseline while the screen showed a
+     * community-blended number, so the two could disagree: Flouna could call
+     * something its top-rated pick and display a rating lower than an
+     * alternative's. Ratings were collected, shown, and then ignored by the
+     * one step they were collected for.
+     *
+     * Optional, because a caller without a database (the tests, and the
+     * offline paths) still needs to be able to rank.
+     */
+    community?: Map<string, CommunityRating>;
   },
 ): FoodRecommendation | null {
   const { quotes, exclusions, substituted } = searchFoodTraced(opts);
@@ -238,7 +252,12 @@ export function recommendFood(
   const ranked = scoreOptions(
     quotes.map((q) => ({
       pricePaise: q.effectivePaise,
-      rating: q.rating,
+      // Rank on the number the customer is shown, with the weight of evidence
+      // behind it. Without a community map this is the catalogue baseline and
+      // confidence weighting stays off, exactly as before.
+      ...(opts.community
+        ? qualityOf(q.rating, opts.community.get(q.dishId))
+        : { rating: q.rating }),
       etaMinutes: q.etaMinutes,
       name: q.name,
       quote: q,
@@ -257,9 +276,25 @@ export function recommendFood(
     .slice(0, 3)
     .map((r) => r.item.quote);
 
-  // Savings vs the cheapest alternative platform for the same dish (honest:
-  // only positive when the pick really is the cheapest, or near it).
-  const saving = Math.max(0, cheapest.effectivePaise - best.effectivePaise);
+  // What the same dish costs on the next cheapest platform we did not pick.
+  //
+  // This used to measure against `cheapest`, the lowest price anywhere in the
+  // result set. The pick is drawn from that same set, so its price is never
+  // below the minimum and the difference could only ever be zero or negative:
+  // both messages below were unreachable. Measured across 2,420 searches
+  // covering every dish, priority, budget and dietary combination, neither
+  // line appeared once, including on the 387 where the pick genuinely was
+  // dearer than an alternative on screen and the customer most needed the
+  // trade explained.
+  //
+  // Comparing the same dish across platforms is what the saving was always
+  // meant to be, and is the number the savings ledger is built on.
+  const sameDishElsewhere = quotes
+    .filter((q) => q.dishId === best.dishId && q.platform !== best.platform)
+    .sort((a, b) => a.effectivePaise - b.effectivePaise)[0];
+  const saving = sameDishElsewhere
+    ? Math.max(0, sameDishElsewhere.effectivePaise - best.effectivePaise)
+    : 0;
 
   let why: string;
   if (priority === "rating") {

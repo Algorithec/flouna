@@ -5,6 +5,7 @@ import {
   quotesForDish,
   allQuotes,
 } from "../src/modules/food/food.service.js";
+import { dishes } from "../src/data/restaurants.js";
 
 // Guards the free-text food matching an LLM feeds into recommendFood: taste
 // descriptors expand to real dishes, filler words are ignored, and a vague
@@ -78,5 +79,49 @@ describe("food search — descriptors & fillers", () => {
     const searchEmpty = searchFood({ query: "" });
     expect(all.length).toBeGreaterThan(searchEmpty.length);
     expect(searchEmpty.some((q) => q.name.toLowerCase().includes("cake"))).toBe(false);
+  });
+});
+
+// The saving a recommendation claims has to be a saving that exists.
+//
+// It was measured against the cheapest option in the whole result set, and the
+// pick comes from that same set, so the difference could only ever be zero or
+// negative. Both messages were unreachable: across 2,420 searches covering
+// every dish, priority, budget and dietary combination, neither line appeared
+// once, including on the 387 where the pick really was dearer than something
+// on screen. The comparison belongs across platforms for one dish, which is
+// what the comment always claimed it was and what the savings ledger counts.
+describe("the saving a pick claims", () => {
+  it("is reachable at all", () => {
+    const seen = dishes.flatMap((d) => [d.name, ...(d.keywords ?? [])]);
+    const claims = seen
+      .map((q) => recommendFood({ query: q, priority: "price" }))
+      .filter((r): r is NonNullable<typeof r> => Boolean(r))
+      .filter((r) => /you save ₹/.test(r.why));
+    expect(claims.length).toBeGreaterThan(0);
+  });
+
+  it("never claims more than the same dish actually costs elsewhere", () => {
+    const terms = dishes.flatMap((d) => [d.name, ...(d.keywords ?? [])]);
+    for (const query of terms) {
+      for (const priority of ["price", "balanced"] as const) {
+        const rec = recommendFood({ query, priority });
+        if (!rec) continue;
+        const claimed = rec.why.match(/₹(\d+)/);
+        if (!/you save ₹|cheaper than the next/.test(rec.why) || !claimed) continue;
+
+        // Something else must carry this dish at a price high enough to
+        // justify the figure, or the claim is invented.
+        const elsewhere = rec.alternatives.filter(
+          (a) => a.dishId === rec.best.dishId && a.platform !== rec.best.platform,
+        );
+        const gap = Math.max(
+          0,
+          ...elsewhere.map((a) => a.effectivePaise - rec.best.effectivePaise),
+        );
+        // Rounded to rupees in the message, so allow the rounding itself.
+        expect(Number(claimed[1]) * 100).toBeLessThanOrEqual(gap + 100);
+      }
+    }
   });
 });

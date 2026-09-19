@@ -11,7 +11,7 @@ import { FallbackProvider } from "./llm/fallback.js";
 import type { Intent } from "./llm/types.js";
 import { recommendFood } from "../food/food.service.js";
 import { quoteRidesTraced } from "../rides/rides.service.js";
-import { withCommunityRatings } from "../ratings/ratings.service.js";
+import { withCommunityRatings, allCommunityRatings } from "../ratings/ratings.service.js";
 import { recommendProduct } from "../shop/shop.service.js";
 import { adviseFood, adviseRide } from "../advisor/advisor.service.js";
 import { recordObservation } from "../advisor/priceHistory.service.js";
@@ -163,6 +163,7 @@ async function buildAssistantPayload(
       budgetPaise: comboCap,
       dietary: intent.food.dietary,
       priority: intent.food.priority,
+      community: await allCommunityRatings("food"),
     });
     const { quotes: baseRideQuotes, trace: comboRideTrace } = quoteRidesTraced({
       distanceKm: 8,
@@ -226,6 +227,7 @@ async function buildAssistantPayload(
       dietary: intent.food.dietary,
       priority: intent.food.priority,
       personal,
+      community: await allCommunityRatings("food"),
     });
     if (rec) {
       recordObservation("food", rec.best.dishId, rec.best.effectivePaise);

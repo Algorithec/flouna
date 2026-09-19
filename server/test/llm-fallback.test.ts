@@ -72,3 +72,62 @@ describe("LLM provider chain", () => {
     expect(b.extractIntent).toHaveBeenCalledTimes(1);
   });
 });
+
+// A provider that is down must stop being tried on every request.
+//
+// Without this, the chain pays a dead provider's full timeout every single
+// time. The self-hosted model is the sharp case: it is allowed thirty seconds
+// because a cold box is worth waiting for, so an unreachable one turns every
+// message into a thirty second wait. The product is not down, it just behaves
+// as though it is. Section 12 of the architecture guide asks for exactly this.
+describe("standing down a failing provider", () => {
+  it("stops calling a provider after repeated failures", async () => {
+    const dead = broken("dead");
+    const alive = ok("alive");
+    const chain = new FallbackProvider([dead, alive]);
+
+    for (let i = 0; i < 6; i++) {
+      expect((await chain.extractIntent("hi")).reply).toBe("from alive");
+    }
+
+    // Three strikes, then stood down: it is not called again after that.
+    expect(dead.extractIntent).toHaveBeenCalledTimes(3);
+    expect(alive.extractIntent).toHaveBeenCalledTimes(6);
+  });
+
+  it("a single failure is not enough to stand a provider down", async () => {
+    const flaky = {
+      name: "flaky",
+      extractIntent: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("blip"))
+        .mockResolvedValue(intent("from flaky")),
+    };
+    const chain = new FallbackProvider([flaky, ok("backup")]);
+
+    expect((await chain.extractIntent("hi")).reply).toBe("from backup");
+    // Recovered, and still first in line: one timeout is ordinary.
+    expect((await chain.extractIntent("hi")).reply).toBe("from flaky");
+  });
+
+  it("clears the record once a provider answers again", async () => {
+    const flaky = {
+      name: "flaky",
+      extractIntent: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("a"))
+        .mockRejectedValueOnce(new Error("b"))
+        .mockResolvedValue(intent("from flaky")),
+    };
+    const chain = new FallbackProvider([flaky, ok("backup")]);
+
+    await chain.extractIntent("hi");
+    await chain.extractIntent("hi");
+    // Two failures, then a success: the count resets rather than carrying
+    // forward into a stand-down it no longer deserves.
+    expect((await chain.extractIntent("hi")).reply).toBe("from flaky");
+    for (let i = 0; i < 3; i++) {
+      expect((await chain.extractIntent("hi")).reply).toBe("from flaky");
+    }
+  });
+});

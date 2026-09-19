@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../../middleware/auth.js";
 import { recordDecision } from "../advisor/decisionLog.service.js";
 import { recommendFood, searchFood, quotesForDish, allQuotes } from "./food.service.js";
-import { withCommunityRatings } from "../ratings/ratings.service.js";
+import { withCommunityRatings, allCommunityRatings } from "../ratings/ratings.service.js";
 import { dishes } from "../../data/restaurants.js";
 import { adviseFood } from "../advisor/advisor.service.js";
 import { recordObservation } from "../advisor/priceHistory.service.js";
@@ -68,13 +68,14 @@ foodRouter.get("/search", async (req, res, next) => {
   }
 });
 
-foodRouter.get("/recommend", (req, res, next) => {
+foodRouter.get("/recommend", async (req, res, next) => {
   try {
     const parsed = searchQuery.parse(req.query);
     const rec = recommendFood({
       query: parsed.q,
       budgetPaise: parsed.budget ? parsed.budget * 100 : null,
       dietary: parsed.dietary,
+      community: await allCommunityRatings("food"),
     });
     // Handed to the client so that, if this recommendation becomes an order,
     // the order can be paired back to the ranking that produced it.

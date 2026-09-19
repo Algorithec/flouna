@@ -74,24 +74,60 @@ export function recordDecision(input: {
  * pruned, or the client may be quoting an id from a previous session, and
  * neither is a reason to fail an order that is otherwise good.
  */
+/**
+ * How long to keep trying when the decision row is not there yet.
+ *
+ * recordDecision does not wait for its own insert, so a customer who orders
+ * immediately can have the update reach the database first. The update then
+ * fails with "record not found", and because both writes are deliberately
+ * silent, the pairing disappears without a trace: the one piece of data this
+ * module exists to collect, lost precisely on the fastest, most decisive
+ * orders. Verified by racing the two writes directly.
+ *
+ * A few hundred milliseconds is far more than an insert already in flight
+ * needs, and this is off the request path either way.
+ */
+const PAIRING_RETRY_DELAYS_MS = [25, 75, 200, 500];
+
 export function recordSelection(input: {
   decisionId: string;
   /** In the same key space as the trace: "dishId@platform", or a ride's product name. */
   selectedKey: string;
   orderId: string;
 }): void {
-  void prisma.decisionLog
-    .update({
-      where: { id: input.decisionId },
-      data: {
-        selectedKey: input.selectedKey,
-        selectedAt: new Date(),
-        orderId: input.orderId,
-      },
-    })
-    .catch(() => {
-      // Best-effort, exactly like the write above.
-    });
+  void (async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await prisma.decisionLog.update({
+          where: { id: input.decisionId },
+          data: {
+            selectedKey: input.selectedKey,
+            selectedAt: new Date(),
+            orderId: input.orderId,
+          },
+        });
+        return;
+      } catch (err) {
+        // P2025 is "record to update not found", which here usually means the
+        // insert is still in flight rather than that the id is wrong.
+        const missing = (err as { code?: string }).code === "P2025";
+        const delay = PAIRING_RETRY_DELAYS_MS[attempt];
+        if (missing && delay !== undefined) {
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        // Out of retries, or a fault that retrying cannot help. Say so rather
+        // than swallowing it: a decision log quietly missing its outcomes
+        // looks exactly like customers who never ordered, and that is a
+        // conclusion nobody should reach by accident.
+        console.warn(
+          `[decision] could not pair decision ${input.decisionId} with order ${input.orderId}:`,
+          err instanceof Error ? err.message : String(err),
+        );
+        return;
+      }
+    }
+  })();
 }
 
 /**

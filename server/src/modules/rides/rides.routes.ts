@@ -4,7 +4,7 @@ import { requireAuth } from "../../middleware/auth.js";
 import { recordDecision } from "../advisor/decisionLog.service.js";
 import { env } from "../../config/env.js";
 import { quoteRides, quoteRidesTraced, fetchRoute } from "./rides.service.js";
-import { withCommunityRatings } from "../ratings/ratings.service.js";
+import { withCommunityRatings, allCommunityRatings } from "../ratings/ratings.service.js";
 import { adviseRide } from "../advisor/advisor.service.js";
 import { recordObservation } from "../advisor/priceHistory.service.js";
 
@@ -216,7 +216,10 @@ ridesRouter.get("/quotes", async (req, res, next) => {
         vehicle: z.enum(["bike", "auto", "cab", "any"]).default("any"),
       })
       .parse(req.query);
-    const { quotes: baseQuotes, trace } = quoteRidesTraced(parsed);
+    // Fetched before ranking, not after: the order and the ratings shown
+    // beside it now come from the same numbers.
+    const community = await allCommunityRatings("ride");
+    const { quotes: baseQuotes, trace } = quoteRidesTraced({ ...parsed, community });
     const quotes = await withCommunityRatings("ride", baseQuotes, (q) => q.provider);
     const cheapest = quotes[0];
     if (cheapest) recordObservation("ride", cheapest.vehicle, cheapest.effectivePaise);
