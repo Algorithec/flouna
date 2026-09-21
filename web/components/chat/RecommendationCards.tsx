@@ -26,7 +26,7 @@ import { FoodHeroCard } from "./FoodHeroCard";
 import { WhyBest } from "./WhyBest";
 import { InlineRideBooking } from "./inline/InlineRideBooking";
 import { SearchedPlatforms } from "./PlatformMark";
-import { FlounaInsights, cheaperVehicleHack } from "./FlounaInsights";
+import { FlounaInsights, cheaperVehicleHack, bundleHack } from "./FlounaInsights";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import type {
@@ -127,6 +127,14 @@ export function FoodRecommendation({
 }: {
   rec: Extract<Recommendation, { type: "food" }>;
 }) {
+  const insightProps = {
+    quote: rec.best.reviewSummary,
+    hacks: [
+      bundleHack(rec.best.addOns ?? [], rec.best.bundleDiscountPaise ?? 0),
+    ].filter((h): h is NonNullable<typeof h> => h !== null),
+    offers: rec.best.offers,
+  };
+
   return (
     <FadeIn y={8} className="flex w-full flex-col gap-2.5">
       <SectionHeader
@@ -176,6 +184,7 @@ export function FoodRecommendation({
           than another sentence saying the same thing. */}
       <SearchedPlatforms
         platforms={[rec.best.platform, ...rec.alternatives.map((a) => a.platform)]}
+        copy="checked-count"
       />
 
       {/* Figma: section header with the count of options the engine compared */}
@@ -187,25 +196,16 @@ export function FoodRecommendation({
         </span>
       </div>
 
+      {/* insightProps extracted once so both the desktop rail and the mobile
+          footer use the same values and cannot drift apart. */}
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-4">
         <FoodHeroCard q={rec.best} />
 
-        {/* Beside the card on desktop, under it on a phone.
-            This was desktop only, which quietly dropped the review summary and
-            the whole offers list on the size most people actually use. The
-            review is the trust signal and the offers are the explanation for
-            the price, so a phone was being shown the number with neither the
-            reason for it nor the reassurance. */}
-        <div className="mt-3 flex flex-col gap-3 lg:mt-0">
-          {/* The insight text is already rendered above as a plain paragraph
-              on mobile, so only the desktop needs it in card form. */}
-          <div className="hidden lg:block">
-            <InsightCard text={rec.why} />
-          </div>
-          <FlounaInsights
-            quote={rec.best.reviewSummary}
-            offers={rec.best.offers}
-          />
+        {/* Desktop rail: InsightCard + FlounaInsights beside the hero.
+            Hidden on mobile — insights render after alternatives below. */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-3">
+          <InsightCard text={rec.why} />
+          <FlounaInsights {...insightProps} />
         </div>
       </div>
 
@@ -233,6 +233,13 @@ export function FoodRecommendation({
             Group ordering
           </Link>
 
+          {/* Mobile: FlounaInsights after the group link — target reading order:
+              hero → alternatives → group ordering → insights. Desktop already
+              has it in the right rail above. */}
+          <div className="lg:hidden">
+            <FlounaInsights {...insightProps} />
+          </div>
+
           {/* Desktop: "Options we think you'll like" card grid (Figma) */}
           <div className="hidden lg:block">
             <p className="mt-2 text-[15px] font-bold text-ink">
@@ -249,6 +256,7 @@ export function FoodRecommendation({
     </FadeIn>
   );
 }
+
 
 // Mobile alternative row — Figma "Options we think you'll like": thumbnail,
 // the platform it came from, price against its pre-offer total, and a single
@@ -439,7 +447,7 @@ export function RideRecommendation({
 
       {rec.advice && <AdviceBanner advice={rec.advice} />}
 
-      <SearchedPlatforms platforms={rec.quotes.map((q) => q.provider)} />
+      <SearchedPlatforms platforms={rec.quotes.map((q) => q.provider)} copy="checked-count" />
 
       {rec.scheduledAt && (
         <p className="flex items-center gap-1.5 self-start rounded-pill bg-accent-soft px-3 py-1 text-[12px] font-semibold text-accent">
@@ -482,6 +490,7 @@ export function RideRecommendation({
               vehicle={rec.vehicle}
               scheduledAt={rec.scheduledAt}
               onBooked={onBook}
+              showAny={rec.vehicle === "any" || !rec.vehicle}
             />
           ) : (
             shown.map((q) => (
@@ -505,15 +514,17 @@ export function RideRecommendation({
           {/* Worked out from the quotes, never written in. If no alternative
               is meaningfully cheaper, no tile appears rather than a made-up
               saving. */}
-          <FlounaInsights
-            hacks={[
-              cheaperVehicleHack(
-                { vehicle: shown[0]?.vehicle ?? "", effectivePaise: shown[0]?.effectivePaise ?? 0 },
-                rec.quotes,
-              ),
-            ].filter((h): h is NonNullable<typeof h> => h !== null)}
-            offers={shown[0]?.offers ?? []}
-          />
+          {!onBook && (
+            <FlounaInsights
+              hacks={[
+                cheaperVehicleHack(
+                  { vehicle: shown[0]?.vehicle ?? "", effectivePaise: shown[0]?.effectivePaise ?? 0 },
+                  rec.quotes,
+                ),
+              ].filter((h): h is NonNullable<typeof h> => h !== null)}
+              offers={shown[0]?.offers ?? []}
+            />
+          )}
         </div>
       </div>
     </FadeIn>
