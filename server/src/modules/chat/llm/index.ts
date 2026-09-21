@@ -3,6 +3,7 @@ import type { LlmProvider } from "./types.js";
 import { AnthropicProvider } from "./anthropic.js";
 import { GoogleProvider } from "./google.js";
 import { DeepseekProvider } from "./deepseek.js";
+import { SelfHostedProvider } from "./selfHosted.js";
 import { DemoProvider } from "./demo.js";
 import { FallbackProvider } from "./fallback.js";
 
@@ -14,12 +15,19 @@ import { FallbackProvider } from "./fallback.js";
 // when an expired Anthropic key silently sent every request to the rule-based
 // engine.
 
-type ProviderName = "anthropic" | "google" | "deepseek";
+type ProviderName = "anthropic" | "google" | "deepseek" | "self_hosted";
 
 const BUILDERS: Record<ProviderName, { hasKey: () => boolean; make: () => LlmProvider }> = {
   anthropic: { hasKey: () => Boolean(env.ANTHROPIC_API_KEY), make: () => new AnthropicProvider() },
   google: { hasKey: () => Boolean(env.GOOGLE_AI_API_KEY), make: () => new GoogleProvider() },
   deepseek: { hasKey: () => Boolean(env.DEEPSEEK_API_KEY), make: () => new DeepseekProvider() },
+  // Ours. "Has a key" means "is actually running somewhere": without a URL
+  // there is nothing to call, and including it anyway would put a guaranteed
+  // timeout in front of every request the chain makes.
+  self_hosted: {
+    hasKey: () => Boolean(env.SELF_HOSTED_LLM_URL),
+    make: () => new SelfHostedProvider(),
+  },
 };
 
 /** Preferred provider first, then every other configured one, then demo. */

@@ -42,7 +42,21 @@ const envSchema = z.object({
 
   // LLM providers — hybrid setup (Claude / Gemini / DeepSeek). Chat falls back
   // to a scripted demo mode if the selected provider's key is unset.
-  LLM_PROVIDER: z.enum(["anthropic", "google", "deepseek", "demo"]).default("demo"),
+  LLM_PROVIDER: z
+    .enum(["anthropic", "google", "deepseek", "self_hosted", "demo"])
+    .default("demo"),
+
+  // A model we run ourselves, over an OpenAI-compatible endpoint. Left unset
+  // everywhere it is not running, which is what keeps it out of the fallback
+  // chain rather than adding a guaranteed timeout to every request.
+  SELF_HOSTED_LLM_URL: z.string().url().optional(),
+  SELF_HOSTED_LLM_MODEL: z.string().default("Qwen/Qwen3.5-9B"),
+  // vLLM enforces a key only when started with --api-key.
+  SELF_HOSTED_LLM_API_KEY: z.string().optional(),
+  // Higher than the hosted providers' 20s: a self-hosted server can be cold,
+  // and a first request that arrives while weights are still loading is worth
+  // waiting a little longer for than a warm API is.
+  SELF_HOSTED_LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   ANTHROPIC_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   // Google AI Studio (Gemini). Free-tier friendly; model is overridable.
