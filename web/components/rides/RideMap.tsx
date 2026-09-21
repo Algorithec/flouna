@@ -100,10 +100,17 @@ export function RideMap({
       const el = document.createElement("div");
       el.className =
         "flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-[#3d1c00] shadow-md whitespace-nowrap";
-      const dot = document.createElement("span");
-      dot.className = "size-2 shrink-0 rounded-full";
-      dot.style.background = kind === "pickup" ? "#1ca65c" : "#e8651a";
-      el.append(dot, document.createTextNode(text));
+      if (kind === "drop") {
+        const flag = document.createElement("span");
+        flag.textContent = "🏁";
+        flag.className = "text-[10px]";
+        el.append(flag, document.createTextNode(text));
+      } else {
+        const dot = document.createElement("span");
+        dot.className = "size-2 shrink-0 rounded-full";
+        dot.style.background = "#1ca65c";
+        el.append(dot, document.createTextNode(text));
+      }
       // Under the point, not over it. A pin points down, so the space above it
       // is where the pin body and the map's own zoom and attribution controls
       // are, and a destination in the top corner had its name clipped off the
@@ -134,8 +141,23 @@ export function RideMap({
         ];
         if (!at) return;
         const el = document.createElement("div");
+        const n = name.toLowerCase();
+        let bg = "#3d1c00";
+        let textCol = "white";
+        if (n.includes("ola")) {
+          bg = "#bada55";
+          textCol = "black";
+        } else if (n.includes("uber")) {
+          bg = "black";
+          textCol = "white";
+        } else if (n.includes("rapido")) {
+          bg = "#f6d000";
+          textCol = "black";
+        }
         el.className =
-          "rounded-full bg-[#3d1c00] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-md";
+          "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide shadow-md ring-2 ring-white/50";
+        el.style.backgroundColor = bg;
+        el.style.color = textCol;
         el.textContent = name;
         const m = new maplibregl.Marker({ element: el })
           .setLngLat([at[0], at[1]])

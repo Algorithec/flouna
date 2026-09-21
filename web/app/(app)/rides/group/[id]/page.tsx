@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { GroupCart, GroupShare } from "@/components/food/GroupCartTypes";
+import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
 
 const REFRESH_MS = 5000;
@@ -23,6 +24,7 @@ export default function GroupRidePage({
   const { id } = use(params);
   const { t } = useI18n();
   const router = useRouter();
+  const back = useBackTo("/rides");
   const [cart, setCart] = useState<GroupCart | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -101,8 +103,9 @@ export default function GroupRidePage({
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-6 lg:px-6">
       <button
-        onClick={() => router.push("/rides")}
-        className="flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
+        type="button"
+        onClick={back}
+        className="tap-target flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
         <ChevronLeft size={16} /> {t("nav.rides")}
       </button>

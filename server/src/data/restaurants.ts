@@ -23,6 +23,7 @@ export type Dish = {
   keywords: string[];
   dietary: "veg" | "nonveg";
   rating: number;
+  ratingsCount?: number;
   tag: string; // badge shown in UI, e.g. "High Protein"
   reviewSummary: string;
   image?: string;
@@ -34,6 +35,9 @@ export type Dish = {
   /** What is in a party-size item, for the "Includes" list on the suggestion
    *  card. Display copy — the price is still the listing's. */
   includes?: string[];
+  portion?: string[];
+  addOns?: { name: string; pricePaise: number }[];
+  bundleDiscountPaise?: number;
 };
 
 export const dishes: Dish[] = [
@@ -44,7 +48,11 @@ export const dishes: Dish[] = [
     keywords: ["biryani", "rice", "hyderabadi"],
     dietary: "nonveg",
     rating: 4.5,
+    ratingsCount: 2300,
     tag: "Best Seller",
+    portion: ["500g", "Basmati Rice"],
+    addOns: [{ name: "Raita", pricePaise: 3000 }, { name: "Mirchi Ka Salan", pricePaise: 4500 }],
+    bundleDiscountPaise: 8000,
     reviewSummary:
       "Verified users praise the tender meat quality and the perfect spice balance. Best paired with Mirchi Ka Salan.",
     listings: [
@@ -78,7 +86,9 @@ export const dishes: Dish[] = [
     keywords: ["quinoa", "salad", "healthy", "bowl"],
     dietary: "veg",
     rating: 4.6,
+    ratingsCount: 890,
     tag: "High Protein",
+    portion: ["350g", "Avocado, Quinoa"],
     reviewSummary:
       "Fresh ingredients and generous portions; reviewers call it the best healthy bowl nearby.",
     listings: [
@@ -281,7 +291,9 @@ export const dishes: Dish[] = [
     keywords: ["cake", "dessert", "chocolate", "ice cream"],
     dietary: "veg",
     rating: 4.7,
+    ratingsCount: 1450,
     tag: "Top Rated",
+    portion: ["180g"],
     reviewSummary:
       "Gooey centre every single time, the highest-rated dessert near you.",
     listings: [

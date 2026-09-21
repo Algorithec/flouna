@@ -149,6 +149,7 @@ export function cheaperVehicleHack(
 }
 
 /**
+<<<<<<< HEAD
  * "Add Coke + Dessert → Save ₹80" — the food-side equivalent of
  * `cheaperVehicleHack`, following the same rule: it only exists when there is
  * a real add-on with a real bundled discount behind it.
@@ -163,12 +164,20 @@ export function cheaperVehicleHack(
  * the payment-cashback tile it has no data for. Wire this up once the menu
  * endpoint exposes add-ons; don't fake the addOns array to make the tile
  * appear.
+=======
+ * "Add Raita and save ₹80 on this order", worked out from add-ons the
+ * restaurant actually offers, not invented.
+ *
+ * Returns null when the dish has no add-ons or the discount is zero,
+ * so the tile is never shown without real data behind it.
+>>>>>>> 6a17ea2367646bafdc001e7f62fec44113360937
  */
 export function bundleHack(
   addOns: { name: string; pricePaise: number }[],
   bundleDiscountPaise: number,
 ): Hack | null {
   if (addOns.length === 0 || bundleDiscountPaise <= 0) return null;
+<<<<<<< HEAD
   const MIN_WORTH_SAYING = 1000; // ₹10 in paise, same bar as the ride hack
   if (bundleDiscountPaise < MIN_WORTH_SAYING) return null;
 
@@ -180,3 +189,11 @@ export function bundleHack(
     detail: `Add ${label} → Save ${rupees(bundleDiscountPaise)}`,
   };
 }
+=======
+  const names = addOns.map((a) => a.name).join(" + ");
+  return {
+    label: "Bundle deal",
+    detail: `Add ${names} and save ${rupees(bundleDiscountPaise)} on this order.`,
+  };
+}
+>>>>>>> 6a17ea2367646bafdc001e7f62fec44113360937

@@ -62,10 +62,12 @@ function toQuotes(dish: Dish): FoodQuote[] {
     name: dish.name,
     restaurant: dish.restaurant,
     rating: dish.rating,
+    ratingsCount: dish.ratingsCount,
     tag: dish.tag,
     dietary: dish.dietary,
     reviewSummary: dish.reviewSummary,
     image: dish.image,
+    portion: dish.portion,
     platform: l.platform,
     // Everything is bought in-app — the user pays Flouna and the order is
     // routed to the seller through ONDC. No redirect to any external app.
@@ -75,6 +77,8 @@ function toQuotes(dish: Dish): FoodQuote[] {
     offers: l.offers,
     effectivePaise: effectivePrice(l),
     etaMinutes: l.etaMinutes,
+    addOns: dish.addOns,
+    bundleDiscountPaise: dish.bundleDiscountPaise,
   }));
 }
 

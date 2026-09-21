@@ -3,9 +3,19 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Star, Clock, BadgePercent, ShieldCheck, MapPin, Bell, Check } from "lucide-react";
+import {
+  Star,
+  Clock,
+  BadgePercent,
+  ShieldCheck,
+  MapPin,
+  Bell,
+  Check,
+  ChevronLeft,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
+import { useBackTo } from "@/lib/navHistory";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -39,6 +49,7 @@ export default function FoodOrderPage({
     { label: string; line1: string; city: string } | null | undefined
   >(undefined);
   const budget = useBudget();
+  const back = useBackTo("/food");
   const { t } = useI18n();
   const cart = useCart();
   const [alertOpen, setAlertOpen] = useState(false);
@@ -114,6 +125,16 @@ export default function FoodOrderPage({
 
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-6 lg:px-6">
+      {/* The only way off this screen used to be the sidebar or the browser's
+          own back, which a phone in a home-screen app does not offer. */}
+      <button
+        type="button"
+        onClick={back}
+        className="tap-target -ml-1 mb-3 flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
+      >
+        <ChevronLeft size={16} /> {t("nav.food")}
+      </button>
+
       <div className="flex items-center gap-3.5">
         <DishArt name={selected.name} image={selected.image} size={64} />
         <div className="min-w-0">
@@ -198,7 +219,7 @@ export default function FoodOrderPage({
           )}
           <Link
             href="/profile/addresses"
-            className="shrink-0 text-[12px] font-semibold text-accent hover:underline"
+            className="tap-target shrink-0 text-[12px] font-semibold text-accent hover:underline"
           >
             {address ? t("foodOrder.change") : t("foodOrder.add")}
           </Link>

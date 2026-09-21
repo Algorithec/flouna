@@ -128,14 +128,14 @@ export default function FoodLandingPage() {
             <Link
               href="/profile/alerts"
               aria-label="Notifications"
-              className="flex size-10 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
+              className="tap-target flex size-10 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
             >
               <Bell size={20} />
             </Link>
             <Link
               href="/cart"
               aria-label="Cart"
-              className="relative flex size-10 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
+              className="tap-target relative flex size-10 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
             >
               <ShoppingCart size={20} />
               {cartCount > 0 && (
@@ -164,14 +164,14 @@ export default function FoodLandingPage() {
           <Link
             href="/profile/alerts"
             aria-label="Notifications"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
+            className="tap-target flex size-10 shrink-0 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
           >
             <Bell size={20} />
           </Link>
           <Link
             href="/cart"
             aria-label="Cart"
-            className="relative flex size-10 shrink-0 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
+            className="tap-target relative flex size-10 shrink-0 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
           >
             <ShoppingCart size={20} />
             {cartCount > 0 && (
@@ -303,7 +303,7 @@ export default function FoodLandingPage() {
                 </h2>
                 <Link
                   href="/home"
-                  className="rounded-pill border border-accent px-3 py-1 text-[12px] font-semibold text-accent transition-colors hover:bg-accent-soft"
+                  className="tap-target rounded-pill border border-accent px-3 py-1 text-[12px] font-semibold text-accent transition-colors hover:bg-accent-soft"
                 >
                   Ask Flouna
                 </Link>
@@ -488,7 +488,7 @@ function DishRow({ q }: { q: FoodQuote }) {
             onClick={addToCart}
             aria-label={`Add ${q.name} to cart`}
             className={cn(
-              "flex size-8 items-center justify-center rounded-full border transition-colors",
+              "tap-target flex size-8 items-center justify-center rounded-full border transition-colors",
               added
                 ? "border-success bg-success/10 text-success"
                 : "border-accent/60 text-accent hover:bg-accent-soft",
@@ -498,7 +498,7 @@ function DishRow({ q }: { q: FoodQuote }) {
           </button>
           <Link
             href={`/food/order/${q.dishId}?platform=${q.platform}`}
-            className="rounded-pill bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#d4570f]"
+            className="tap-target rounded-pill bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#d4570f]"
           >
             Order now
           </Link>

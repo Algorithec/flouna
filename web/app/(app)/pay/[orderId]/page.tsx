@@ -27,33 +27,6 @@ import { FadeIn, SlideIn } from "@/components/ui/motion";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/components/i18n/I18nContext";
 
-type Status = {
-  orderStatus: string;
-  /** The gross bill. The wallet is an instrument against it, not a discount. */
-  amount: number;
-  /** Reward credit already committed to this order. */
-  walletAppliedPaise?: number;
-  /** What the gateway still has to collect: amount − walletApplied. */
-  payablePaise?: number;
-  /** Spendable balance, only sent while the order can still take it. */
-  walletBalancePaise?: number;
-  title: string;
-  domain: "food" | "ride";
-  provider?: string;
-  details?: {
-    basePaise?: number;
-    deliveryFeePaise?: number;
-    convenienceFeePaise?: number;
-    farePaise?: number;
-    offers?: { label: string; discountPaise: number }[];
-    items?: { name: string; qty: number; pricePaise: number }[];
-    etaMinutes?: number;
-    pickup?: string;
-    drop?: string;
-    displayName?: string;
-  };
-  payment: { status: string; method: string | null } | null;
-};
 
 type AddressSummary = { label: string; line1: string; city: string; isDefault: boolean };
 
@@ -505,13 +478,18 @@ export default function PayPage({
             </div>
           </Card>
 
+          {/* replace, not push: the money has moved, so this screen is spent.
+              Pushing left it in the history it was finished with, and back from
+              the tracking page landed on the checkout for an order already paid
+              — which reads as "did it not go through?" — with the place-order
+              screen one step further back, ready to charge for a second one. */}
           <div className="mt-6 flex w-full flex-col gap-3">
-            <Button onClick={() => router.push(`/orders/${orderId}`)} className="w-full">
+            <Button onClick={() => router.replace(`/orders/${orderId}`)} className="w-full">
               {isFood ? t("pay.trackOrder") : t("pay.trackRide")}
             </Button>
             <Button
               variant="secondary"
-              onClick={() => router.push(`/orders/${orderId}?invoice=1`)}
+              onClick={() => router.replace(`/orders/${orderId}?invoice=1`)}
               className="w-full"
             >
               {t("pay.viewInvoice")}

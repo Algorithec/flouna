@@ -72,12 +72,20 @@ export function PlatformMark({
  * it can never push the answer off the screen: past the cap it counts the rest
  * rather than wrapping to a second line.
  *
+<<<<<<< HEAD
  * `copy` picks the sentence that follows the marks:
  *  - "compared"        → "Compared across Swiggy, Zomato and 3 more" (default,
  *                          unchanged — names what was searched)
  *  - "checked-count"    → "Checked 5+ providers for you" (the mock's wording;
  *                          use where the exact list of names matters less than
  *                          the scale of the comparison)
+=======
+ * copy="compared" (default): "Compared across Swiggy, Zomato and 1 more"
+ * copy="checked-count": "Checked 5+ providers for you" (+ only when truncated)
+ *   The + appears only when rest > 0, i.e. the full list didn't fit — so a
+ *   three-provider result never reads "3+", which would claim we checked more
+ *   than we did.
+>>>>>>> 6a17ea2367646bafdc001e7f62fec44113360937
  */
 export function SearchedPlatforms({
   platforms,
@@ -118,10 +126,29 @@ export function SearchedPlatforms({
         ))}
       </span>
       <span className="text-[11px] text-cocoa">
+<<<<<<< HEAD
         {/* Says what the row is, so it reads as evidence rather than
             decoration. The names are here for screen readers too, since the
             marks themselves are hidden from them. */}
         {label}
+=======
+        {copy === "checked-count" ? (
+          // Says how many we checked, not which ones — the marks themselves
+          // show which. The + only appears when the list was actually
+          // truncated, so the count is always honest.
+          <>
+            Checked {seen.length}
+            {rest > 0 ? "+" : ""} providers for you
+          </>
+        ) : (
+          // Default: names every platform as evidence for the claim above.
+          // Screen readers get the names here since the marks are aria-hidden.
+          <>
+            Compared across {seen.map(platformLabel).join(", ")}
+            {rest > 0 ? ` and ${rest} more` : ""}
+          </>
+        )}
+>>>>>>> 6a17ea2367646bafdc001e7f62fec44113360937
       </span>
     </div>
   );

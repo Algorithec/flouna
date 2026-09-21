@@ -101,7 +101,7 @@ export function VoiceButton({
       onClick={toggle}
       aria-label={listening ? "Stop listening" : "Speak your request"}
       className={cn(
-        "relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
+        "tap-target relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
         listening
           ? "bg-accent text-white"
           : "text-cocoa hover:bg-beige",
