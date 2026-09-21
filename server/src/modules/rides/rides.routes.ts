@@ -220,17 +220,20 @@ ridesRouter.get("/quotes", async (req, res, next) => {
     const quotes = await withCommunityRatings("ride", baseQuotes, (q) => q.provider);
     const cheapest = quotes[0];
     if (cheapest) recordObservation("ride", cheapest.vehicle, cheapest.effectivePaise);
-    if (trace) {
-      recordDecision({
-        userId: req.userId,
-        domain: "ride",
-        query: `${parsed.vehicle} · ${parsed.distanceKm.toFixed(1)}km`,
-        trace,
-      });
-    }
+    // Handed to the client so a booking can be paired back to the ranking
+    // that produced it.
+    const decisionId = trace
+      ? recordDecision({
+          userId: req.userId,
+          domain: "ride",
+          query: `${parsed.vehicle} · ${parsed.distanceKm.toFixed(1)}km`,
+          trace,
+        })
+      : null;
     res.json({
       quotes,
       advice: await adviseRide(cheapest?.vehicle ?? null),
+      decisionId,
     });
   } catch (err) {
     next(err);

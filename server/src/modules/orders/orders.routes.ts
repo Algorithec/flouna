@@ -10,6 +10,7 @@ import { ApiError } from "../../middleware/error.js";
 import { quotesForDish } from "../food/food.service.js";
 import { quoteRides, fetchRoute } from "../rides/rides.service.js";
 import { quotesForProduct } from "../shop/shop.service.js";
+import { recordSelection } from "../advisor/decisionLog.service.js";
 import { env } from "../../config/env.js";
 import { rideProvider } from "../providers/index.js";
 import { catchUpDriverMessages } from "../rides/rideChat.service.js";
@@ -67,11 +68,16 @@ async function requireDeliveryAddress(userId: string) {
   return address;
 }
 
+// Pairs the order back to the ranking that produced it, so the decision log
+// records the option taken and not only the option offered. Optional
+// throughout: an order placed from a screen that never ran a ranking, or by a
+// client that predates this, is still a perfectly good order.
 const createFoodOrder = z.object({
   domain: z.literal("food"),
   dishId: z.string().max(60),
   platform: z.enum(["ondc", "swiggy", "zomato"]),
   couponCode: z.string().trim().max(24).optional(),
+  decisionId: z.string().max(64).optional(),
 });
 
 // Multi-item cart checkout: one order with line items. Every price is
@@ -97,6 +103,7 @@ const createFoodCartOrder = z.object({
 // short trip. Labels (pickup/drop strings) are display-only.
 const createRideOrder = z.object({
   domain: z.literal("ride"),
+  decisionId: z.string().max(64).optional(),
   provider: z.enum(["uber", "ola", "rapido", "ondc"]),
   productName: z.string().max(60),
   pickup: z.string().max(160),
@@ -429,6 +436,14 @@ ordersRouter.post(
         // Record the simulated ONDC discovery flow (search/select) for the
         // developer transaction viewer. Fire-and-forget — never blocks the order.
         void emitOrderDiscovery(order);
+        if (body.decisionId) {
+          recordSelection({
+            decisionId: body.decisionId,
+            // The trace's key space for food: which dish, on which listing.
+            selectedKey: `${body.dishId}@${body.platform}`,
+            orderId: order.id,
+          });
+        }
         return res.status(201).json({ order });
       }
 
@@ -581,6 +596,14 @@ ordersRouter.post(
         },
       });
       void emitOrderDiscovery(order);
+      if (body.decisionId) {
+        // Rides are keyed by product name in the trace.
+        recordSelection({
+          decisionId: body.decisionId,
+          selectedKey: body.productName,
+          orderId: order.id,
+        });
+      }
       res.status(201).json({ order });
     } catch (err) {
       // Two identical requests in flight together both pass the check above

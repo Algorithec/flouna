@@ -1214,10 +1214,25 @@ model DecisionLog {
   results        String // JSON [{key,pricePaise,rating,etaMinutes,score}], best first
   chosenKey      String // the option presented as the recommendation
 
+  // What the customer did with it.
+  //
+  // Without these the log answers "what did we recommend" and nothing else,
+  // which is half a sentence. A ranker learns from the gap between the option
+  // offered and the option taken, so until this pairing exists there is no
+  // training signal at all and the weights can only ever be hand-set guesses.
+  //
+  // Null is meaningful rather than missing: a search nobody ordered from is
+  // evidence about the recommendation, not an absent row.
+  selectedKey String? // the option actually chosen, in the same key space as results
+  selectedAt  DateTime?
+  orderId     String?   @unique // the order it became, when it became one
+
   createdAt DateTime @default(now())
 
   @@index([domain, createdAt])
   @@index([userId])
+  // Serves the ranker's extract: every decision that produced a choice.
+  @@index([domain, selectedAt])
 }
 
 // An entry in the consent log. Append-only: a consent record is evidence, and
