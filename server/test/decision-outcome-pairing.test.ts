@@ -261,3 +261,243 @@ describe("which faults a pairing waits out", () => {
     expect(isTransient(err)).toBe(false);
   });
 });
+
+// Chat is where orders actually start, and it was not handing the id out.
+//
+// The pairing tests above go through /api/food/recommend, which the web app
+// never calls. Chat discarded the id from recordDecision entirely, so the loop
+// this module exists for recorded nothing from the path customers use. These
+// cover that path end to end on the server: chat returns an id, and an order
+// quoting it is paired to the ranking that produced it.
+describe("pairing from the chat path", () => {
+  it("hands the client a decision id with a food recommendation", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent
+      .post("/api/chat/message")
+      .send({ message: "order biryani" })
+      .expect(200);
+
+    const rec = res.body.message.recommendation;
+    expect(rec?.type).toBe("food");
+    expect(typeof rec.decisionId).toBe("string");
+
+    const log = await waitForRow(() =>
+      prisma.decisionLog.findUnique({ where: { id: rec.decisionId } }),
+    );
+    expect(log?.domain).toBe("food");
+    expect(log?.selectedKey).toBeNull();
+  });
+
+  it("pairs an order placed from what chat recommended", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent
+      .post("/api/chat/message")
+      .send({ message: "order biryani" })
+      .expect(200);
+    const rec = res.body.message.recommendation;
+    const decisionId = rec.decisionId as string;
+
+    const order = await agent
+      .post("/api/orders")
+      .send({
+        domain: "food",
+        dishId: rec.best.dishId,
+        platform: rec.best.platform,
+        decisionId,
+      })
+      .expect(201);
+
+    const paired = await waitForRow(async () => {
+      const row = await prisma.decisionLog.findUnique({ where: { id: decisionId } });
+      return row?.selectedKey ? row : null;
+    });
+    expect(paired?.selectedKey).toBe(`${rec.best.dishId}@${rec.best.platform}`);
+    expect(paired?.orderId).toBe(order.body.order.id);
+  });
+
+  it("hands one out for a ride too", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent
+      .post("/api/chat/message")
+      .send({ message: "book a cab to hitec city" })
+      .expect(200);
+
+    const rec = res.body.message.recommendation;
+    expect(rec?.type).toBe("ride");
+    expect(typeof rec.decisionId).toBe("string");
+    const log = await waitForRow(() =>
+      prisma.decisionLog.findUnique({ where: { id: rec.decisionId } }),
+    );
+    expect(log?.domain).toBe("ride");
+  });
+});
+
+// The cart is the path a chat recommendation actually takes.
+//
+// The card's button adds to the cart rather than ordering, and the cart
+// checkout never paired anything, so the busiest route from a recommendation
+// to an order recorded nothing. The id rides on the line it belongs to,
+// because a cart can hold items from several recommendations.
+describe("pairing through the cart", () => {
+  it("pairs the line that came from a recommendation", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent
+      .post("/api/chat/message")
+      .send({ message: "order biryani" })
+      .expect(200);
+    const rec = res.body.message.recommendation;
+    const decisionId = rec.decisionId as string;
+
+    const order = await agent
+      .post("/api/orders")
+      .send({
+        domain: "food",
+        items: [
+          {
+            dishId: rec.best.dishId,
+            platform: rec.best.platform,
+            qty: 1,
+            decisionId,
+          },
+        ],
+      })
+      .expect(201);
+
+    const paired = await waitForRow(async () => {
+      const row = await prisma.decisionLog.findUnique({ where: { id: decisionId } });
+      return row?.selectedKey ? row : null;
+    });
+    expect(paired?.selectedKey).toBe(`${rec.best.dishId}@${rec.best.platform}`);
+    expect(paired?.orderId).toBe(order.body.order.id);
+  });
+
+  it("leaves a line that came from browsing unpaired", async () => {
+    // No decision, nothing to pair. The order must still go through.
+    const { agent } = await authedAgent();
+    await agent
+      .post("/api/orders")
+      .send({
+        domain: "food",
+        items: [{ dishId: "dum-biryani", platform: "ondc", qty: 1 }],
+      })
+      .expect(201);
+  });
+});
+
+// Rides had the same hole the cart did.
+//
+// Chat hands out a ride decision id and the order route knows how to pair one,
+// but the booking card never sent it, so every ride ended unpaired. The card
+// re-prices over the real route, so the ranking worth pairing is the one
+// behind the fares on screen: that is what /api/rides/quotes now returns and
+// what the booking sends back.
+describe("pairing a ride with the fares it was chosen from", () => {
+  const QUOTES = "/api/rides/quotes?distanceKm=8.20&rideMinutes=24&vehicle=any";
+
+  it("the fares carry the id of the ranking that ordered them", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent.get(QUOTES).expect(200);
+
+    expect(res.body.quotes.length).toBeGreaterThan(1);
+    expect(typeof res.body.decisionId).toBe("string");
+    const log = await waitForRow(() =>
+      prisma.decisionLog.findUnique({ where: { id: res.body.decisionId } }),
+    );
+    expect(log?.domain).toBe("ride");
+    expect(log?.selectedKey).toBeNull();
+  });
+
+  it("booking one of them records which fare was taken", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent.get(QUOTES).expect(200);
+    const decisionId = res.body.decisionId as string;
+    // Not the first: a pairing that only ever records the top row teaches the
+    // ranker nothing, so the test takes a fare the engine did not put first.
+    const chosen = res.body.quotes[1];
+
+    const order = await agent
+      .post("/api/orders")
+      .send({
+        domain: "ride",
+        decisionId,
+        provider: chosen.provider,
+        productName: chosen.productName,
+        pickup: "Hitech City",
+        drop: "Airport",
+        pickupLat: 17.4435,
+        pickupLng: 78.3772,
+        dropLat: 17.2403,
+        dropLng: 78.4294,
+      })
+      .expect(201);
+
+    const paired = await waitForRow(async () => {
+      const row = await prisma.decisionLog.findUnique({ where: { id: decisionId } });
+      return row?.selectedKey ? row : null;
+    });
+    expect(paired?.selectedKey).toBe(chosen.productName);
+    expect(paired?.orderId).toBe(order.body.order.id);
+    // The key has to be one the ranking actually contains, or the pair is
+    // recorded against nothing.
+    const keys = (JSON.parse(paired!.results) as { key: string }[]).map((r) => r.key);
+    expect(keys).toContain(chosen.productName);
+  });
+
+  it("a ride booked without one is still accepted", async () => {
+    const { agent } = await authedAgent();
+    await agent
+      .post("/api/orders")
+      .send({
+        domain: "ride",
+        provider: "ondc",
+        productName: "ONDC Auto",
+        pickup: "Hitech City",
+        drop: "Airport",
+        pickupLat: 17.4435,
+        pickupLng: 78.3772,
+        dropLat: 17.2403,
+        dropLng: 78.4294,
+      })
+      .expect(201);
+  });
+});
+
+// The reasoning goes to the log, not to the browser.
+//
+// The chat reply carried the whole decision trace: the engine's weights, every
+// candidate's score and what each filter removed. Nothing in the web app reads
+// it, so the ranking arithmetic was published to anyone with developer tools
+// open in exchange for no feature at all.
+describe("what the client is told about the ranking", () => {
+  it("sends the decision id and not the reasoning", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent
+      .post("/api/chat/message")
+      .send({ message: "order biryani" })
+      .expect(200);
+    const rec = res.body.message.recommendation;
+
+    expect(typeof rec.decisionId).toBe("string");
+    expect(rec.trace).toBeUndefined();
+    // The weights must not arrive under any other name either.
+    expect(JSON.stringify(rec)).not.toMatch(/"weights"|"chosenKey"|"excludedCount"/);
+  });
+
+  it("keeps the reasoning out of the recommend endpoint too", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent.get("/api/food/recommend?q=biryani").expect(200);
+    expect(res.body.recommendation.trace).toBeUndefined();
+    expect(typeof res.body.decisionId).toBe("string");
+  });
+
+  it("still records the reasoning where it belongs", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent.get("/api/food/recommend?q=biryani").expect(200);
+    const log = await waitForRow(() =>
+      prisma.decisionLog.findUnique({ where: { id: res.body.decisionId } }),
+    );
+    // Stripping it from the response must not stop it being logged.
+    expect(log?.weights).toBeTruthy();
+    expect(JSON.parse(log!.results)).toBeInstanceOf(Array);
+  });
+});

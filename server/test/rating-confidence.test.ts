@@ -170,3 +170,46 @@ describe("how a thin rating loses", () => {
     expect(raw[0]!.item.name).toBe("New Place");
   });
 });
+
+// Two counts, one letter apart, meaning opposite things.
+//
+// `ratingsCount` is a fixed catalogue figure that arrived with the results
+// page. `ratingCount` is what Flouna customers actually left, and it is the
+// one confidence weighting reads. Mixing them up would hand the ranker 2,300
+// pieces of evidence for a rating that three people produced, which is exactly
+// the failure confidence weighting exists to prevent.
+describe("catalogue ratings count is not evidence", () => {
+  it("carries the catalogue figure through untouched", async () => {
+    const { allQuotes } = await import("../src/modules/food/food.service.js");
+    const { withCommunityRatings } = await import("../src/modules/ratings/ratings.service.js");
+
+    const dish = allQuotes().find((q) => q.ratingsCount);
+    expect(dish).toBeDefined();
+
+    const [out] = await withCommunityRatings("food", [dish!], (q) => q.dishId);
+    // The catalogue figure is display data and survives the blend unchanged.
+    expect(out!.ratingsCount).toBe(dish!.ratingsCount);
+    // The evidence count is the service's to set, and is never this number.
+    expect(out!.ratingCount).not.toBe(dish!.ratingsCount);
+  });
+
+  it("uses a real count as evidence and the catalogue figure as neither", async () => {
+    const { qualityOf } = await import("../src/modules/ratings/blend.js");
+    // What the scorer is handed for a dish three people rated: three, not the
+    // 2,300 sitting beside it on the same object.
+    expect(qualityOf(4.5, { average: 4.9, count: 3 })).toEqual({
+      rating: 4.6,
+      ratingCount: 3,
+    });
+  });
+
+  it("ranks on the evidence count, which the scorer is the only reader of", async () => {
+    const { scoreOptions } = await import("../src/modules/advisor/scoring.js");
+    // A thin rating with a large catalogue figure must not benefit from it:
+    // the scorer takes ratingCount, and nothing hands it ratingsCount.
+    const thin = { pricePaise: 20000, etaMinutes: 30, name: "thin", rating: 4.4, ratingCount: 2 };
+    const solid = { pricePaise: 20000, etaMinutes: 30, name: "solid", rating: 4.6, ratingCount: 4000 };
+    const ranked = scoreOptions([{ ...thin, ratingsCount: 9999 } as typeof thin, solid], "rating");
+    expect(ranked[0]!.item.name).toBe("solid");
+  });
+});
