@@ -13,12 +13,30 @@ type PlusStatus = {
 // Shown once per result to free users, outlining the benefits of upgrading.
 // Disappears completely if the user is already subscribed, or if the status
 // fetch fails (so it doesn't flash on a slow connection for a subscriber).
+/**
+ * One request per page, however many results are on it.
+ *
+ * This renders once under every recommendation, so a conversation with ten
+ * results asked the same question ten times. The promise is shared, so the
+ * first card to mount fetches and the rest read the same answer. Cleared on a
+ * failure so a later card can try again rather than caching the outage.
+ */
+let statusRequest: Promise<PlusStatus> | null = null;
+
+function subscriptionStatus(): Promise<PlusStatus> {
+  statusRequest ??= api<PlusStatus>("/api/subscription").catch((err) => {
+    statusRequest = null;
+    throw err;
+  });
+  return statusRequest;
+}
+
 export function RadiuesUpsell() {
   const [status, setStatus] = useState<PlusStatus | null>(null);
 
   useEffect(() => {
     let active = true;
-    api<PlusStatus>("/api/subscription")
+    subscriptionStatus()
       .then((res) => {
         if (active) setStatus(res);
       })
