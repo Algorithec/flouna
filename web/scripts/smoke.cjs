@@ -142,7 +142,15 @@ let browser = null;
     await ask(page, "I want biryani under 300");
     const text = await page.evaluate(() => document.body.innerText);
     check("food recommendation returns a pick", /Available Providers/i.test(text));
-    check("shows which platforms were compared", /Compared across/i.test(text));
+    // The evidence row under the answer. Its wording changed with the results
+    // page (it now counts providers instead of naming them), so the check is
+    // on the claim being made rather than on one sentence: keying a smoke
+    // check to exact copy is what made this one fail on a redesign that broke
+    // nothing.
+    check(
+      "shows how widely it looked",
+      /Checked \d+\+? providers/i.test(text) || /Compared across/i.test(text),
+    );
     check("shows the reasoning", /Why this is the best choice/i.test(text));
     check("shows the insights panel", /FLOUNA INSIGHTS/i.test(text));
     check("shows a timestamp", /\d{1,2}:\d{2}\s?(am|pm)/i.test(text));
