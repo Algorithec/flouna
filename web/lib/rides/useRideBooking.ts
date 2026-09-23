@@ -49,6 +49,14 @@ export function useRideBooking(opts: {
   initialScheduledAt?: string | null;
   /** Skips the live-position read. The chat card sets this until it is opened. */
   enabled?: boolean;
+  /**
+   * The ranking this booking came from, when it started as a recommendation.
+   *
+   * Sent with the order so the ride taken is paired with the ride offered.
+   * Absent when the rider opened the rides screen directly, which came from
+   * no ranking.
+   */
+  decisionId?: string;
 } = {}) {
   const enabled = opts.enabled !== false;
 
@@ -57,6 +65,15 @@ export function useRideBooking(opts: {
   const [route, setRoute] = useState<RouteInfo | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle>(opts.initialVehicle ?? "any");
   const [quotes, setQuotes] = useState<RideQuote[]>([]);
+  /**
+   * The ranking these fares came from.
+   *
+   * The booking card re-prices over the real route, so this, not the one the
+   * chat reply carried, is the list the rider actually chose from. Replaced
+   * whenever the quotes are, so a booking is never paired to a ranking of
+   * fares that are no longer on screen.
+   */
+  const [quoteDecisionId, setQuoteDecisionId] = useState<string | null>(null);
   const [advice, setAdvice] = useState<Advice | null>(null);
   const [selected, setSelected] = useState<RideQuote | null>(null);
   const [scheduledAt, setScheduledAt] = useState<string | null>(
@@ -301,15 +318,19 @@ export function useRideBooking(opts: {
 
   const loadQuotes = useCallback(() => {
     if (!route) return;
-    api<{ quotes: RideQuote[]; advice?: Advice }>(
+    api<{ quotes: RideQuote[]; advice?: Advice; decisionId?: string | null }>(
       `/api/rides/quotes?distanceKm=${route.distanceKm.toFixed(2)}&rideMinutes=${route.rideMinutes}&vehicle=${vehicle}`,
     )
       .then((d) => {
         setQuotes(d.quotes);
         setAdvice(d.advice ?? null);
         setSelected(d.quotes[0] ?? null);
+        setQuoteDecisionId(d.decisionId ?? null);
       })
-      .catch(() => setError("Could not fetch ride options"));
+      .catch(() => {
+        setError("Could not fetch ride options");
+        setQuoteDecisionId(null);
+      });
   }, [route, vehicle]);
   useEffect(loadQuotes, [loadQuotes]);
 
@@ -339,6 +360,12 @@ export function useRideBooking(opts: {
         headers: { "Idempotency-Key": attemptKey.current },
         json: {
           domain: "ride",
+          // The ranking the chosen fare came from. Prefer the one behind the
+          // fares on screen; fall back to the chat's ranking when the quotes
+          // route recorded none.
+          ...(quoteDecisionId || opts.decisionId
+            ? { decisionId: quoteDecisionId ?? opts.decisionId }
+            : {}),
           provider: selected.provider,
           productName: selected.productName,
           pickup: pickup.name,

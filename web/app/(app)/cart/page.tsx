@@ -105,6 +105,9 @@ export default function CartPage() {
             dishId: l.dishId,
             platform: l.platform,
             qty: l.qty,
+            // Pairs this line with the ranking it came from, so the engine
+            // learns what was chosen and not only what was offered.
+            ...(l.decisionId ? { decisionId: l.decisionId } : {}),
           })),
           ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
           ...(coupon ? { couponCode: coupon.code } : {}),

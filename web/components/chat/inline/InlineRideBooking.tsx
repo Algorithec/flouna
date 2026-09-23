@@ -48,6 +48,7 @@ export function InlineRideBooking({
   scheduledAt,
   onBooked,
   showAny = true,
+  decisionId,
 }: {
   /** Destination the chat already understood, resolved on open. */
   drop?: string | null;
@@ -56,11 +57,14 @@ export function InlineRideBooking({
   /** Handed the new order id so the thread can move on to payment. */
   onBooked: (orderId: string) => void;
   showAny?: boolean;
+  /** The ranking behind these quotes, paired with the order on booking. */
+  decisionId?: string;
 }) {
   const b = useRideBooking({
     initialDrop: drop ?? null,
     initialVehicle: vehicle ?? "any",
     initialScheduledAt: scheduledAt ?? null,
+    decisionId,
   });
   const [confirming, setConfirming] = useState(false);
   // Choosing a fare and paying for it used to be the same tap. The summary is

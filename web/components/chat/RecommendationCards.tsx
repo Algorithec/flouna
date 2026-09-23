@@ -199,7 +199,7 @@ export function FoodRecommendation({
       {/* insightProps extracted once so both the desktop rail and the mobile
           footer use the same values and cannot drift apart. */}
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-4">
-        <FoodHeroCard q={rec.best} />
+        <FoodHeroCard q={rec.best} decisionId={rec.decisionId} />
 
         {/* Desktop rail: InsightCard + FlounaInsights beside the hero.
             Hidden on mobile — insights render after alternatives below. */}
@@ -247,7 +247,11 @@ export function FoodRecommendation({
             </p>
             <div className="mt-2 grid grid-cols-2 gap-3 xl:grid-cols-3">
               {rec.alternatives.map((q) => (
-                <FoodAltCard key={`${q.dishId}-${q.platform}`} q={q} />
+                <FoodAltCard
+                  key={`${q.dishId}-${q.platform}`}
+                  q={q}
+                  decisionId={rec.decisionId}
+                />
               ))}
             </div>
           </div>
@@ -310,9 +314,12 @@ function FoodAltRow({ q }: { q: FoodQuote }) {
 }
 
 // Compact alternative card for the desktop grid.
-function FoodAltCard({ q }: { q: FoodQuote }) {
+function FoodAltCard({ q, decisionId }: { q: FoodQuote; decisionId?: string }) {
   return (
-    <Link href={`/food/order/${q.dishId}?platform=${q.platform}`} className="block">
+    <Link
+      href={`/food/order/${q.dishId}?platform=${q.platform}${decisionId ? `&decision=${decisionId}` : ""}`}
+      className="block"
+    >
       <Card className="h-full py-3.5 transition-all hover:-translate-y-0.5 hover:shadow-card">
         <div className="flex items-center gap-3">
           <DishArt name={q.name} image={q.image} size={44} />
@@ -491,6 +498,7 @@ export function RideRecommendation({
               scheduledAt={rec.scheduledAt}
               onBooked={onBook}
               showAny={rec.vehicle === "any" || !rec.vehicle}
+              decisionId={rec.decisionId}
             />
           ) : (
             shown.map((q) => (

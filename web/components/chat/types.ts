@@ -64,6 +64,14 @@ export type PickReason = "top_rated" | "best_price" | "fastest" | "best_overall"
 
 type FoodRec = {
   type: "food";
+  /**
+   * The ranking this recommendation came from.
+   *
+   * Sent back when the customer orders, which is what pairs the option taken
+   * with the option offered. Without it the decision log records what was
+   * recommended and never what happened next.
+   */
+  decisionId?: string;
   best: FoodQuote;
   alternatives: FoodQuote[];
   why: string;
@@ -77,6 +85,8 @@ type FoodRec = {
 
 type RideRec = {
   type: "ride";
+  /** The ranking this recommendation came from; sent back when booking. */
+  decisionId?: string;
   drop: string;
   pickup: string | null;
   /** What the rider asked for. "any" when they did not say. */

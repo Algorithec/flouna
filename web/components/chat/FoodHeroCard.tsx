@@ -17,7 +17,7 @@ import type { FoodQuote } from "./types";
 // detail we do not hold (gram weight, rating counts), the card uses what we
 // actually know rather than inventing numbers for a screenshot.
 
-export function FoodHeroCard({ q }: { q: FoodQuote }) {
+export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: string }) {
   const { add } = useCart();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -39,6 +39,7 @@ export function FoodHeroCard({ q }: { q: FoodQuote }) {
         restaurant: q.restaurant,
         image: q.image,
         pricePaise: q.effectivePaise,
+        decisionId,
       },
       qty,
     );
@@ -97,7 +98,11 @@ export function FoodHeroCard({ q }: { q: FoodQuote }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[12px] font-semibold text-success">
             <Star size={12} className="fill-success" /> {q.rating}
-            {q.ratingsCount && (
+            {/* Written as a comparison, not a truthiness check: a dish with
+                zero ratings would otherwise render a bare "0" beside the
+                stars, because React prints the number that `&&` returns. No
+                catalogue entry has zero today; every new one will. */}
+            {q.ratingsCount != null && q.ratingsCount > 0 && (
               <span className="text-[12px] text-cocoa">
                 · {formatCount(q.ratingsCount)} ratings
               </span>

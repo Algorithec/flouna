@@ -152,6 +152,21 @@ let browser = null;
   // --- Ride: booked inside the conversation ---
   group("ride");
   await guarded("ride books in the thread", async () => {
+    // What the booking actually sends. The decision id is the only link
+    // between the fares the rider was shown and the one they took, and it
+    // lives entirely in the client: the server cannot tell a booking that
+    // omitted it from a booking made by someone browsing. Read off the wire
+    // because that is the only place the answer is.
+    const orderPosts = [];
+    page.on("request", (r) => {
+      if (r.method() === "POST" && r.url().endsWith("/api/orders")) {
+        try {
+          orderPosts.push(JSON.parse(r.postData() || "{}"));
+        } catch {
+          orderPosts.push({});
+        }
+      }
+    });
     await page.goto(`${WEB}/home`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
     await ask(page, "book a cab to Hitech City");
@@ -190,6 +205,13 @@ let browser = null;
         await page.waitForTimeout(5000);
         check("booking stays in the conversation", page.url().includes("/home"));
         check("payment appears in the thread", (await page.locator('button:has-text("Pay ")').count()) > 0);
+        const ride = orderPosts.find((b) => b.domain === "ride");
+        check("the booking was sent", !!ride);
+        check(
+          "the booking carries the ranking it was chosen from",
+          typeof ride?.decisionId === "string" && ride.decisionId.length > 0,
+          ride ? `decisionId=${ride.decisionId}` : "no ride order posted",
+        );
       }
     }
   });

@@ -21,6 +21,14 @@ export type CartLine = {
   image?: string; // display-only snapshot, falls back to the drawn tile
   pricePaise: number; // display-only estimate; server reprices
   qty: number;
+  /**
+   * The ranking this line came from, when it came from one.
+   *
+   * Carried per line because a cart can hold items from several
+   * recommendations, and sent at checkout so each is paired with the order it
+   * became. Absent for anything added by browsing the menu.
+   */
+  decisionId?: string;
 };
 
 type CartContextValue = {

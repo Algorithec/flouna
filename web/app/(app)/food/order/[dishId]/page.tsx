@@ -96,6 +96,8 @@ export default function FoodOrderPage({
   }, [dishId]);
 
   const selected = quotes.find((q) => q.platform === platform);
+  // Present when this page was opened from a recommendation card.
+  const decisionId = search.get("decision") ?? undefined;
 
   async function placeOrder() {
     if (!selected) return;
@@ -104,7 +106,14 @@ export default function FoodOrderPage({
     try {
       const d = await api<{ order: { id: string } }>("/api/orders", {
         method: "POST",
-        json: { domain: "food", dishId, platform: selected.platform },
+        json: {
+          domain: "food",
+          dishId,
+          platform: selected.platform,
+          // Carried from the recommendation that linked here, so this order
+          // is paired with the ranking that produced it.
+          ...(decisionId ? { decisionId } : {}),
+        },
       });
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
