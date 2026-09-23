@@ -12,6 +12,7 @@ import type { Intent } from "./llm/types.js";
 import {
   recommendFood,
   searchFoodTraced,
+  withoutTrace,
   type FoodQuote,
 } from "../food/food.service.js";
 import type { NearestMiss } from "../advisor/constraints.js";
@@ -213,12 +214,12 @@ async function buildAssistantPayload(
     if (rideQuotes[0]) recordObservation("ride", rideQuotes[0].vehicle, rideQuotes[0].effectivePaise);
     // A combo is two rankings in one message; both are logged so neither half
     // of the decision is unexplainable after the fact.
-    if (foodRec) {
-      recordDecision({ userId, domain: "food", query: message, trace: foodRec.trace });
-    }
-    if (comboRideTrace) {
-      recordDecision({ userId, domain: "ride", query: message, trace: comboRideTrace });
-    }
+    const comboFoodDecisionId = foodRec
+      ? recordDecision({ userId, domain: "food", query: message, trace: foodRec.trace })
+      : null;
+    const comboRideDecisionId = comboRideTrace
+      ? recordDecision({ userId, domain: "ride", query: message, trace: comboRideTrace })
+      : null;
     const comboScheduledAt = resolveScheduleAt(intent.ride.scheduleAt);
     return {
       reply: intent.reply,
@@ -227,12 +228,17 @@ async function buildAssistantPayload(
       recommendation: {
         type: "combo",
         food: foodRec
-          ? { ...foodRec, advice: await adviseFood(foodRec.best.dishId, ctx.now, ctx) }
+          ? {
+              ...withoutTrace(foodRec),
+              ...(comboFoodDecisionId ? { decisionId: comboFoodDecisionId } : {}),
+              advice: await adviseFood(foodRec.best.dishId, ctx.now, ctx),
+            }
           : null,
         // Why the food half is empty, when the reason is the customer's own
         // limit rather than an unmatched dish.
         ...(foodUnmet ? { foodNote: unmetFoodReply(intent.food.item, foodUnmet) } : {}),
         ride: {
+          ...(comboRideDecisionId ? { decisionId: comboRideDecisionId } : {}),
           drop: intent.ride.drop,
           pickup: intent.ride.pickup,
           quotes: rideQuotes.slice(0, 3),
@@ -289,7 +295,16 @@ async function buildAssistantPayload(
     });
     if (rec) {
       recordObservation("food", rec.best.dishId, rec.best.effectivePaise);
-      recordDecision({ userId, domain: "food", query: message, trace: rec.trace });
+      // Kept, not discarded. The pairing that closes the learning loop needs
+      // this id to come back with the order, and chat is where almost every
+      // order starts, so throwing it away here left the loop recording
+      // nothing at all.
+      const decisionId = recordDecision({
+        userId,
+        domain: "food",
+        query: message,
+        trace: rec.trace,
+      });
       // If the best in-budget pick still exceeds what's left, the engine returns
       // the cheapest option anyway — we surface that honestly via the note
       // rather than hiding it or refusing.
@@ -301,7 +316,8 @@ async function buildAssistantPayload(
         served,
         recommendation: {
           type: "food",
-          ...rec,
+          ...withoutTrace(rec),
+          decisionId,
           advice: await adviseFood(rec.best.dishId, ctx.now, ctx),
           ...(budgetNote ? { budgetNote } : {}),
           ...(personalNote ? { personalNote } : {}),
@@ -352,9 +368,9 @@ async function buildAssistantPayload(
     }
     const quotes = await withCommunityRatings("ride", baseQuotes, (q) => q.provider);
     if (quotes[0]) recordObservation("ride", quotes[0].vehicle, quotes[0].effectivePaise);
-    if (rideTrace) {
-      recordDecision({ userId, domain: "ride", query: message, trace: rideTrace });
-    }
+    const rideDecisionId = rideTrace
+      ? recordDecision({ userId, domain: "ride", query: message, trace: rideTrace })
+      : null;
     // Send the full spread so the chat's Bike/Cab/Auto switcher always has
     // every available vehicle type (we only cap when a specific type was asked).
     // Resolved, not raw: the model regularly omits a vehicle the rider named,
@@ -370,6 +386,7 @@ async function buildAssistantPayload(
       served,
       recommendation: {
         type: "ride",
+        ...(rideDecisionId ? { decisionId: rideDecisionId } : {}),
         drop: intent.ride.drop,
         pickup: intent.ride.pickup,
         // What the rider actually asked for. Without this the booking card in

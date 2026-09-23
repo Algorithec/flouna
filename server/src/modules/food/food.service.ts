@@ -28,6 +28,26 @@ export type FoodQuote = {
   name: string;
   restaurant: string;
   rating: number;
+  /**
+   * How many ratings the catalogue claims for this dish.
+   *
+   * Not the same thing as `ratingCount`, which the ratings service attaches
+   * and which counts what Flouna customers actually left. One letter apart and
+   * opposite in meaning: this one is a fixed catalogue figure, that one is
+   * evidence, and it is the evidence that drives confidence weighting so a
+   * thin 4.9 cannot outrank an established 4.6. Never feed this into ranking.
+   */
+  ratingsCount?: number;
+  /** Display chips such as "500g" or "Basmati Rice". */
+  portion?: string[];
+  /**
+   * Shown with the dish, not priced by it.
+   *
+   * The order routes do not read these: nothing lets a customer add one, and
+   * no discount is applied if they could. They exist for display only.
+   */
+  addOns?: { name: string; pricePaise: number }[];
+  bundleDiscountPaise?: number;
   tag: string;
   dietary: "veg" | "nonveg";
   reviewSummary: string;
@@ -51,6 +71,20 @@ export type FoodRecommendation = {
   /** Nothing matched what was asked for; these are stand-ins. */
   substituted: boolean;
 };
+
+/**
+ * The recommendation without its reasoning, for sending to a client.
+ *
+ * The trace carries the engine's weights, every candidate's score and what
+ * each filter removed. It is written to the decision log, which is where it
+ * belongs, and it was also being sent to the browser with every chat reply
+ * even though nothing there reads it. That published the ranking arithmetic to
+ * anyone with developer tools open, for no feature.
+ */
+export function withoutTrace(rec: FoodRecommendation): Omit<FoodRecommendation, "trace"> {
+  const { trace: _trace, ...rest } = rec;
+  return rest;
+}
 
 /** Stable identity of a food option: which dish, on which listing. */
 function quoteKey(q: FoodQuote): string {

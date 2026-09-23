@@ -2,7 +2,13 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../../middleware/auth.js";
 import { recordDecision } from "../advisor/decisionLog.service.js";
-import { recommendFood, searchFood, quotesForDish, allQuotes } from "./food.service.js";
+import {
+  recommendFood,
+  searchFood,
+  quotesForDish,
+  allQuotes,
+  withoutTrace,
+} from "./food.service.js";
 import { withCommunityRatings, allCommunityRatings } from "../ratings/ratings.service.js";
 import { dishes } from "../../data/restaurants.js";
 import { adviseFood } from "../advisor/advisor.service.js";
@@ -87,7 +93,9 @@ foodRouter.get("/recommend", async (req, res, next) => {
           trace: rec.trace,
         })
       : null;
-    res.json({ recommendation: rec, decisionId });
+    // Without the trace: the reasoning goes to the decision log, not to the
+    // browser, which never reads it.
+    res.json({ recommendation: rec ? withoutTrace(rec) : null, decisionId });
   } catch (err) {
     next(err);
   }
