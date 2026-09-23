@@ -109,3 +109,22 @@ export function cheaperVehicleHack(
     detail: `Switch to ${cheapest.vehicle} and save ${rupees(saving)} on this trip.`,
   };
 }
+
+/**
+ * "Add Raita and save ₹80 on this order", worked out from add-ons the
+ * restaurant actually offers, not invented.
+ *
+ * Returns null when the dish has no add-ons or the discount is zero,
+ * so the tile is never shown without real data behind it.
+ */
+export function bundleHack(
+  addOns: { name: string; pricePaise: number }[],
+  bundleDiscountPaise: number,
+): Hack | null {
+  if (addOns.length === 0 || bundleDiscountPaise <= 0) return null;
+  const names = addOns.map((a) => a.name).join(" + ");
+  return {
+    label: "Bundle deal",
+    detail: `Add ${names} and save ${rupees(bundleDiscountPaise)} on this order.`,
+  };
+}

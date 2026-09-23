@@ -3,10 +3,12 @@ export type FoodQuote = {
   name: string;
   restaurant: string;
   rating: number;
+  ratingsCount?: number;
   tag: string;
   dietary: "veg" | "nonveg";
   reviewSummary: string;
   image?: string;
+  portion?: string[];
   platform: string;
   fulfillment: "in_app";
   basePaise: number;
@@ -14,6 +16,8 @@ export type FoodQuote = {
   offers: { label: string; discountPaise: number }[];
   effectivePaise: number;
   etaMinutes: number;
+  addOns?: { name: string; pricePaise: number }[];
+  bundleDiscountPaise?: number;
 };
 
 export type RideQuote = {

@@ -6,6 +6,7 @@ import { DishArt } from "@/components/food/DishArt";
 import { useCart } from "@/lib/cart";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
+import { formatCount } from "@/lib/format";
 import type { FoodQuote } from "./types";
 
 // The winning pick, drawn as the Figma result card: a hero image with the
@@ -96,6 +97,11 @@ export function FoodHeroCard({ q }: { q: FoodQuote }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[12px] font-semibold text-success">
             <Star size={12} className="fill-success" /> {q.rating}
+            {q.ratingsCount && (
+              <span className="text-[12px] text-cocoa">
+                · {formatCount(q.ratingsCount)} ratings
+              </span>
+            )}
           </span>
           <span className="rounded-full bg-beige px-2 py-0.5 text-[11px] font-medium text-cocoa">
             {q.tag}
@@ -103,6 +109,14 @@ export function FoodHeroCard({ q }: { q: FoodQuote }) {
           <span className="rounded-full bg-beige px-2 py-0.5 text-[11px] font-medium text-cocoa">
             {q.dietary === "veg" ? "Veg" : "Non-veg"}
           </span>
+          {q.portion?.map((p) => (
+            <span
+              key={p}
+              className="rounded-full bg-beige px-2 py-0.5 text-[11px] font-medium text-cocoa"
+            >
+              {p}
+            </span>
+          ))}
         </div>
 
         <div className="flex items-end justify-between gap-3">

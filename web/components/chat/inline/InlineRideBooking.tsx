@@ -10,6 +10,7 @@ import { VehicleArt } from "@/components/rides/VehicleArt";
 import { RideBestCard, RideOptionRow } from "@/components/rides/RideOptionCard";
 import { TripSummary } from "@/components/rides/TripSummary";
 import { useRideBooking, VEHICLES, type Vehicle } from "@/lib/rides/useRideBooking";
+import { FlounaInsights, cheaperVehicleHack } from "@/components/chat/FlounaInsights";
 
 // Booking a ride without leaving the conversation.
 //
@@ -46,6 +47,7 @@ export function InlineRideBooking({
   vehicle,
   scheduledAt,
   onBooked,
+  showAny = true,
 }: {
   /** Destination the chat already understood, resolved on open. */
   drop?: string | null;
@@ -53,6 +55,7 @@ export function InlineRideBooking({
   scheduledAt?: string | null;
   /** Handed the new order id so the thread can move on to payment. */
   onBooked: (orderId: string) => void;
+  showAny?: boolean;
 }) {
   const b = useRideBooking({
     initialDrop: drop ?? null,
@@ -280,17 +283,17 @@ export function InlineRideBooking({
         </div>
       )}
 
-      <div className="mt-3 flex gap-1.5">
-        {VEHICLES.map((v) => (
+      <div className="mt-3 flex gap-1.5 rounded-pill bg-accent-soft/40 p-1">
+        {VEHICLES.filter((v) => showAny || v !== "any").map((v) => (
           <button
             key={v}
             type="button"
             onClick={() => b.setVehicle(v)}
             className={cn(
-              "tap-target flex-1 rounded-pill border px-2 py-2 text-[12px] font-semibold transition-colors",
+              "tap-target flex-1 rounded-pill py-1.5 text-[13px] font-semibold capitalize transition-colors",
               b.vehicle === v
-                ? "border-accent bg-accent text-white"
-                : "border-line text-cocoa hover:bg-beige/50",
+                ? "bg-white text-accent shadow-soft"
+                : "text-cocoa hover:text-ink",
             )}
           >
             <span className="flex items-center justify-center gap-1.5">
@@ -310,6 +313,16 @@ export function InlineRideBooking({
 
       {b.quotes.length > 0 && (
         <div className="mt-3 flex flex-col gap-2.5">
+          {(() => {
+            const vehicleHack = cheaperVehicleHack(b.quotes[0]!, b.quotes);
+            return (
+              <FlounaInsights
+                hacks={[vehicleHack].filter((h): h is NonNullable<typeof h> => h !== null)}
+                offers={b.quotes[0]?.offers ?? []}
+              />
+            );
+          })()}
+
           <div className="flex items-center justify-between gap-2">
             <p className="text-[15px] font-bold text-ink">Available providers</p>
             <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent">

@@ -71,13 +71,21 @@ export function PlatformMark({
  * Overlapped slightly so a long list stays compact on a phone, and capped so
  * it can never push the answer off the screen: past the cap it counts the rest
  * rather than wrapping to a second line.
+ *
+ * copy="compared" (default): "Compared across Swiggy, Zomato and 1 more"
+ * copy="checked-count": "Checked 5+ providers for you" (+ only when truncated)
+ *   The + appears only when rest > 0, i.e. the full list didn't fit — so a
+ *   three-provider result never reads "3+", which would claim we checked more
+ *   than we did.
  */
 export function SearchedPlatforms({
   platforms,
   max = 6,
+  copy = "compared",
 }: {
   platforms: string[];
   max?: number;
+  copy?: "compared" | "checked-count";
 }) {
   // Deduplicated in place so the order follows the ranking rather than an
   // alphabet: the first mark is the platform that won.
@@ -99,11 +107,22 @@ export function SearchedPlatforms({
         ))}
       </span>
       <span className="text-[11px] text-cocoa">
-        {/* Says what the row is, so it reads as evidence rather than
-            decoration. The names are here for screen readers too, since the
-            marks themselves are hidden from them. */}
-        Compared across {seen.map(platformLabel).join(", ")}
-        {rest > 0 ? ` and ${rest} more` : ""}
+        {copy === "checked-count" ? (
+          // Says how many we checked, not which ones — the marks themselves
+          // show which. The + only appears when the list was actually
+          // truncated, so the count is always honest.
+          <>
+            Checked {seen.length}
+            {rest > 0 ? "+" : ""} providers for you
+          </>
+        ) : (
+          // Default: names every platform as evidence for the claim above.
+          // Screen readers get the names here since the marks are aria-hidden.
+          <>
+            Compared across {seen.map(platformLabel).join(", ")}
+            {rest > 0 ? ` and ${rest} more` : ""}
+          </>
+        )}
       </span>
     </div>
   );

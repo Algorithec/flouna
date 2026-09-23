@@ -18,6 +18,7 @@ import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
+import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
@@ -76,6 +77,7 @@ export default function ComplaintPage() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
   const { t } = useI18n();
+  const back = useBackTo("/history");
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [orderTitle, setOrderTitle] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -222,13 +224,14 @@ export default function ComplaintPage() {
     <div className="min-h-dvh bg-cream">
       <div className="mx-auto w-full max-w-xl px-4 pb-10 lg:max-w-[680px] lg:px-6">
         <div className="flex items-center py-4">
-          <Link
-            href="/history"
+          <button
+            type="button"
+            onClick={back}
             aria-label={t("common.back")}
             className="tap-target flex size-9 items-center justify-center rounded-full bg-card shadow-soft transition-colors hover:bg-beige/60"
           >
             <ArrowLeft size={18} className="text-ink" />
-          </Link>
+          </button>
           <h1 className="flex-1 pr-9 text-center text-[17px] font-extrabold text-ink">
             {resolved ? t("cx.resolvedTitle") : t("cx.trackTitle")}
           </h1>
