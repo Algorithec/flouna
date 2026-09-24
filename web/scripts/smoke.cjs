@@ -179,9 +179,12 @@ let browser = null;
     await checkout.click();
     await page.waitForURL(/\/pay\//, { timeout: 30000 });
     await page.waitForTimeout(2500);
-    const payLabel = (await page.locator('button:has-text("Pay ")').first().textContent()) || "";
-    const charged = Number((payLabel.match(/₹\s?([\d,]+)/) || [])[1]?.replace(/,/g, ""));
-    check("payment states a total", Number.isFinite(charged), payLabel.trim());
+    // The bill line, not a button: "Pay with any UPI app" also begins with Pay.
+    const payText = await page.evaluate(() => document.body.innerText);
+    const charged = Number(
+      (payText.match(/Total amount\s*₹\s?([\d,]+)/) || [])[1]?.replace(/,/g, ""),
+    );
+    check("payment states a total", Number.isFinite(charged), `₹${charged}`);
     check(
       "the cart total equals the amount charged",
       promised === charged,
