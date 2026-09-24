@@ -8,6 +8,7 @@ import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
 import { quotesForDish } from "../food/food.service.js";
+import { priceFoodCart, type CartItem } from "./cartPricing.js";
 import { quoteRides, fetchRoute } from "../rides/rides.service.js";
 import { quotesForProduct } from "../shop/shop.service.js";
 import { recordSelection } from "../advisor/decisionLog.service.js";
@@ -198,62 +199,25 @@ ordersRouter.post(
 
       // ---------- multi-item cart ----------
       if (body.domain === "food" && "items" in body) {
-        type Line = {
-          dishId: string;
-          platform: string;
-          name: string;
-          restaurant: string;
-          qty: number;
-          pricePaise: number; // unit base price
-          offer: { label: string; discountPaise: number } | null;
-        };
-        const lines: Line[] = [];
-        let itemsTotal = 0;
-        let discount = 0;
-        let deliveryFeePaise = 0;
-        let savedPaise = 0;
-        const offers: { label: string; discountPaise: number }[] = [];
-
-        for (const item of body.items) {
-          const quotes = quotesForDish(item.dishId);
-          const quote = quotes.find((q) => q.platform === item.platform);
-          if (!quote) {
-            throw new ApiError(404, `An item in your cart is no longer available`);
-          }
-          itemsTotal += quote.basePaise * item.qty;
-          // One delivery per order — charge the highest fee among the lines,
-          // never a per-line stack.
-          deliveryFeePaise = Math.max(deliveryFeePaise, quote.deliveryFeePaise);
-          const lineOffer = quote.offers[0] ?? null;
-          if (lineOffer) {
-            discount += lineOffer.discountPaise;
-            offers.push(lineOffer);
-          }
-          const cheapestOther = Math.min(
-            ...quotes
-              .filter((q) => q.platform !== item.platform)
-              .map((q) => q.effectivePaise),
-          );
-          if (Number.isFinite(cheapestOther)) {
-            savedPaise += Math.max(0, cheapestOther - quote.effectivePaise);
-          }
-          lines.push({
-            dishId: item.dishId,
-            platform: item.platform,
-            name: quote.name,
-            restaurant: quote.restaurant,
-            qty: item.qty,
-            pricePaise: quote.basePaise,
-            offer: lineOffer,
-          });
-        }
-
-        const defaultAddress = await requireDeliveryAddress(req.userId!);
         const me = await prisma.user.findUniqueOrThrow({
           where: { id: req.userId! },
           select: { plusActive: true, plusUntil: true },
         });
         const convenienceFeePaise = !isPlusActive(me) ? CONVENIENCE_FEE_PAISE : 0;
+        // The same function the cart screen's preview answers with, so the
+        // total shown and the amount charged cannot drift apart. Priced before
+        // the address is required, which is the order the messages came in
+        // before: an item that has gone is worth saying first.
+        const bill = priceFoodCart(body.items, { convenienceFeePaise });
+        const defaultAddress = await requireDeliveryAddress(req.userId!);
+        const {
+          lines,
+          itemsTotalPaise: itemsTotal,
+          deliveryFeePaise,
+          offers,
+          offersDiscountPaise: discount,
+          savedPaise,
+        } = bill;
 
         // Promo code — re-evaluated here (never trusted from the client) and
         // applied to the item subtotal, on top of any per-line offers.
@@ -644,6 +608,52 @@ ordersRouter.post(
           return;
         }
       }
+      next(err);
+    }
+  },
+);
+
+// What a cart will cost, before committing to it.
+//
+// The screen cannot work this out for itself: one delivery fee for the order,
+// each listing's offer once, and whether the convenience fee applies at all
+// are all properties of the order rather than of a line, and the last one
+// depends on the customer's subscription. It used to try, and at quantity two
+// it promised a total nobody was going to charge. This answers with the same
+// function the order is priced by.
+ordersRouter.post(
+  "/preview",
+  validateBody(
+    z
+      .object({
+        items: z
+          .array(
+            z.object({
+              dishId: z.string().max(60),
+              platform: z.enum(["ondc", "swiggy", "zomato"]),
+              qty: z.number().int().min(1).max(20),
+            }),
+          )
+          .min(1)
+          .max(30),
+      })
+      .strict(),
+  ),
+  async (req, res, next) => {
+    try {
+      const { items } = req.body as { items: CartItem[] };
+      const me = await prisma.user.findUniqueOrThrow({
+        where: { id: req.userId! },
+        select: { plusActive: true, plusUntil: true },
+      });
+      const bill = priceFoodCart(items, {
+        convenienceFeePaise: !isPlusActive(me) ? CONVENIENCE_FEE_PAISE : 0,
+      });
+      // A promo code is deliberately not applied here: the cart validates one
+      // through the coupons route, which is where a code is checked against
+      // the customer and their history.
+      res.json({ bill });
+    } catch (err) {
       next(err);
     }
   },

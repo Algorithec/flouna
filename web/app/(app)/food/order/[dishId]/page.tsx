@@ -99,6 +99,37 @@ export default function FoodOrderPage({
   // Present when this page was opened from a recommendation card.
   const decisionId = search.get("decision") ?? undefined;
 
+  // The bill, from the server that charges it.
+  //
+  // This page showed the dish price as the total, and the order adds a
+  // convenience fee on top unless the customer is on Plus, so the button
+  // promised ₹7 less than the card was debited. Whether that fee applies is a
+  // property of the account, which only the server knows.
+  const [bill, setBill] = useState<{
+    convenienceFeePaise: number;
+    totalPaise: number;
+  } | null>(null);
+  const selectedPlatform = selected?.platform;
+  useEffect(() => {
+    if (!selectedPlatform) return;
+    let active = true;
+    api<{ bill: { convenienceFeePaise: number; totalPaise: number } }>(
+      "/api/orders/preview",
+      {
+        method: "POST",
+        json: { items: [{ dishId, platform: selectedPlatform, qty: 1 }] },
+      },
+    )
+      .then((d) => active && setBill(d.bill))
+      .catch(() => active && setBill(null));
+    return () => {
+      active = false;
+    };
+  }, [dishId, selectedPlatform]);
+  // Falls back to the dish price, which is the bill minus a fee we could not
+  // read: lower than the truth, and clearly labelled as the dish total.
+  const payable = bill?.totalPaise ?? selected?.effectivePaise ?? 0;
+
   async function placeOrder() {
     if (!selected) return;
     setBusy(true);
@@ -242,17 +273,23 @@ export default function FoodOrderPage({
         {discount > 0 && (
           <Row label={t("bill.offers")} value={`− ${rupees(discount)}`} accent />
         )}
+        {bill && bill.convenienceFeePaise > 0 && (
+          <Row
+            label={t("bill.convenienceFee")}
+            value={rupees(bill.convenienceFeePaise)}
+          />
+        )}
         <div className="my-2 h-px bg-line" />
-        <Row label={t("bill.totalAmount")} value={rupees(selected.effectivePaise)} bold />
+        <Row label={t("bill.totalAmount")} value={rupees(payable)} bold />
       </Card>
 
       {/* Budget Guardian check */}
       {budget?.remainingPaise !== null &&
         budget?.remainingPaise !== undefined &&
-        selected.effectivePaise > budget.remainingPaise && (
+        payable > budget.remainingPaise && (
           <p className="mt-4 rounded-card border border-danger/30 bg-danger/5 px-3.5 py-2.5 text-[12px] text-danger">
             Heads up, this order takes you{" "}
-            {rupees(selected.effectivePaise - Math.max(0, budget.remainingPaise))}{" "}
+            {rupees(payable - Math.max(0, budget.remainingPaise))}{" "}
             over your weekly food budget.
           </p>
         )}
@@ -274,7 +311,7 @@ export default function FoodOrderPage({
           disabled={busy || address === undefined}
           className="mt-5 w-full"
         >
-          {busy ? t("foodOrder.placing") : `${t("foodOrder.pay")} ${rupees(selected.effectivePaise)}`}
+          {busy ? t("foodOrder.placing") : `${t("foodOrder.pay")} ${rupees(payable)}`}
         </Button>
       )}
       <Button
@@ -287,6 +324,11 @@ export default function FoodOrderPage({
             restaurant: selected.restaurant,
             image: selected.image,
             pricePaise: selected.effectivePaise,
+            // Carried on the line, so a recommendation added to the cart and
+            // ordered later still pairs with the ranking it came from. Ordering
+            // straight from this page already did; adding to the cart, which is
+            // the likelier path, lost it.
+            decisionId,
           });
           router.push("/cart");
         }}

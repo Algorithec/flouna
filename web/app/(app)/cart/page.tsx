@@ -31,6 +31,24 @@ import { useToast } from "@/components/ui/Toast";
 import { FadeIn, MOTION } from "@/components/ui/motion";
 
 type AppliedCoupon = { code: string; description: string; discountPaise: number };
+
+/**
+ * The bill, priced by the server from the same code the order route uses.
+ *
+ * This screen used to add its own total from the prices stored when each item
+ * was added. Those are per-item effective prices, so two of something counted
+ * the delivery fee twice and took its offer off twice, while the order route
+ * charges one delivery fee and one offer. The screen therefore promised a
+ * total nobody was going to charge. Now it asks.
+ */
+type CartBill = {
+  itemsTotalPaise: number;
+  deliveryFeePaise: number;
+  convenienceFeePaise: number;
+  offersDiscountPaise: number;
+  savedPaise: number;
+  totalPaise: number;
+};
 type OfferedCoupon = { code: string; description: string; minOrderPaise: number };
 
 type AddressLine = {
@@ -56,6 +74,7 @@ export default function CartPage() {
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [offers, setOffers] = useState<OfferedCoupon[]>([]);
+  const [bill, setBill] = useState<CartBill | null>(null);
 
   useEffect(() => {
     api<{ addresses: AddressLine[] }>("/api/users/addresses")
@@ -90,7 +109,38 @@ export default function CartPage() {
     }
   }
 
-  const itemsTotal = lines.reduce((s, l) => s + l.pricePaise * l.qty, 0);
+  // Only a fallback now, for a preview that could not be fetched. It cannot be
+  // the amount charged, because it prices each line as though it were the whole
+  // order.
+  const estimateTotal = lines.reduce((s, l) => s + l.pricePaise * l.qty, 0);
+  const itemsTotal = bill?.itemsTotalPaise ?? estimateTotal;
+  const toPay = Math.max(
+    0,
+    (bill ? bill.totalPaise : estimateTotal) - (coupon?.discountPaise ?? 0),
+  );
+
+  // Re-priced whenever the cart changes, keyed on what actually affects the
+  // bill so editing the cooking instructions does not re-ask.
+  const cartKey = lines.map((l) => `${l.dishId}@${l.platform}x${l.qty}`).join(",");
+  useEffect(() => {
+    // Nothing to price, and nothing to clear either: an empty cart shows the
+    // empty state rather than a summary, and any refill changes the key below
+    // and re-prices.
+    if (lines.length === 0) return;
+    let active = true;
+    api<{ bill: CartBill }>("/api/orders/preview", {
+      method: "POST",
+      json: { items: lines.map((l) => ({ dishId: l.dishId, platform: l.platform, qty: l.qty })) },
+    })
+      .then((d) => active && setBill(d.bill))
+      // No bill rather than a wrong one: the summary falls back to an estimate
+      // and says so.
+      .catch(() => active && setBill(null));
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartKey]);
 
   async function checkout() {
     if (lines.length === 0) return;
@@ -330,10 +380,41 @@ export default function CartPage() {
                 </span>
                 <span className="font-medium text-ink">{rupees(itemsTotal)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-cocoa">{t("cart.deliveryFees")}</span>
-                <span className="font-medium text-ink">{t("cart.shownAtPay")}</span>
-              </div>
+              {/* Every fee and offer as the server priced them. The frame
+                  prints a fixed "FREE" and "₹5"; these are the real numbers,
+                  and a free delivery is only stated when the fee is actually
+                  nothing. */}
+              {bill ? (
+                <>
+                  {bill.offersDiscountPaise > 0 && (
+                    <div className="flex justify-between text-success">
+                      <span>{t("bill.offers")}</span>
+                      <span className="font-semibold">
+                        − {rupees(bill.offersDiscountPaise)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-cocoa">{t("cart.deliveryFees")}</span>
+                    <span className="font-medium text-ink">
+                      {bill.deliveryFeePaise === 0 ? "FREE" : rupees(bill.deliveryFeePaise)}
+                    </span>
+                  </div>
+                  {bill.convenienceFeePaise > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-cocoa">{t("bill.convenienceFee")}</span>
+                      <span className="font-medium text-ink">
+                        {rupees(bill.convenienceFeePaise)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex justify-between">
+                  <span className="text-cocoa">{t("cart.deliveryFees")}</span>
+                  <span className="font-medium text-ink">{t("cart.shownAtPay")}</span>
+                </div>
+              )}
               {coupon && (
                 <div className="flex justify-between text-success">
                   <span>Promo {coupon.code}</span>
@@ -343,10 +424,13 @@ export default function CartPage() {
               <div className="my-1 h-px bg-line" />
               <div className="flex items-center justify-between">
                 <span className="text-[16px] font-extrabold text-ink">
-                  {t("cart.toPay")}
+                  {/* "To pay (est.)" was the honest label while this screen
+                      added the total up itself. With the server's bill it is
+                      the amount charged, so the hedge goes. */}
+                  {bill ? t("pay.toPay") : t("cart.toPay")}
                 </span>
                 <span className="text-[20px] font-extrabold text-ink">
-                  {rupees(Math.max(0, itemsTotal - (coupon?.discountPaise ?? 0)))}
+                  {rupees(toPay)}
                 </span>
               </div>
             </div>
@@ -378,7 +462,7 @@ export default function CartPage() {
               >
                 {busy
                   ? t("foodOrder.placing")
-                  : `${t("cart.checkout")} · ${rupees(Math.max(0, itemsTotal - (coupon?.discountPaise ?? 0)))}`}
+                  : `${t("cart.checkout")} · ${rupees(toPay)}`}
               </Button>
             )}
           </div>

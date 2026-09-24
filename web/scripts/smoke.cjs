@@ -157,6 +157,38 @@ let browser = null;
     check("offers a way to disagree", /I disagree with this pick/i.test(text));
   });
 
+  // --- Cart: the total on the screen is the amount charged ---
+  group("cart");
+  await guarded("the cart total is what the order charges", async () => {
+    // The screen used to add the total up itself from per-item prices, which
+    // counted one delivery fee per line and took each offer off once per unit.
+    // At quantity two it showed a number nobody was going to charge, so the
+    // check is the comparison: what the cart promises against what the order
+    // is created for. Two of one dish, because one hid the bug.
+    await page.goto(`${WEB}/food/order/dum-biryani?platform=ondc`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Add to cart" }).click();
+    await page.waitForURL(/\/cart/, { timeout: 20000 });
+    await page.getByRole("button", { name: "Increase quantity" }).first().click();
+    await page.waitForTimeout(2500);
+
+    const checkout = page.getByRole("button", { name: /Proceed to checkout/ }).first();
+    const label = (await checkout.textContent()) || "";
+    const promised = Number((label.match(/₹\s?([\d,]+)/) || [])[1]?.replace(/,/g, ""));
+    check("checkout states a total", Number.isFinite(promised), label.trim());
+
+    await checkout.click();
+    await page.waitForURL(/\/pay\//, { timeout: 30000 });
+    await page.waitForTimeout(2500);
+    const payLabel = (await page.locator('button:has-text("Pay ")').first().textContent()) || "";
+    const charged = Number((payLabel.match(/₹\s?([\d,]+)/) || [])[1]?.replace(/,/g, ""));
+    check("payment states a total", Number.isFinite(charged), payLabel.trim());
+    check(
+      "the cart total equals the amount charged",
+      promised === charged,
+      `cart ₹${promised} vs pay ₹${charged}`,
+    );
+  });
+
   // --- Ride: booked inside the conversation ---
   group("ride");
   await guarded("ride books in the thread", async () => {
