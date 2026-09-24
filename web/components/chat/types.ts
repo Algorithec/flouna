@@ -94,6 +94,16 @@ type RideRec = {
   quotes: RideQuote[];
   // ISO timestamp when the user asked to book for later ("cab at 10pm").
   scheduledAt?: string | null;
+  /**
+   * Limits the rider stated, to be applied where the real trip is priced.
+   *
+   * Chat quotes a placeholder distance, so it cannot honestly hold a fare to a
+   * stated maximum; the booking card re-prices the actual route and applies
+   * them there. Carried rather than dropped, or the reply would promise a
+   * budget nothing enforces.
+   */
+  fareLimitPaise?: number;
+  pickupLimitMinutes?: number;
   why: string;
   advice?: Advice;
 };

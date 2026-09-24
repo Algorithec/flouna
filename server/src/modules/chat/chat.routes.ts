@@ -16,7 +16,7 @@ import {
   type FoodQuote,
 } from "../food/food.service.js";
 import type { NearestMiss } from "../advisor/constraints.js";
-import { quoteRidesTraced } from "../rides/rides.service.js";
+import { quoteRidesTraced, unmetRideNote } from "../rides/rides.service.js";
 import { withCommunityRatings, allCommunityRatings } from "../ratings/ratings.service.js";
 import { recommendProduct } from "../shop/shop.service.js";
 import { adviseFood, adviseRide } from "../advisor/advisor.service.js";
@@ -200,7 +200,11 @@ async function buildAssistantPayload(
       community: await allCommunityRatings("food"),
     });
     const foodUnmet = foodRec ? null : searchFoodTraced(comboFoodOpts).unmet;
-    const { quotes: baseRideQuotes, trace: comboRideTrace } = quoteRidesTraced({
+    const {
+      quotes: baseRideQuotes,
+      trace: comboRideTrace,
+      unmet: comboRideUnmet,
+    } = quoteRidesTraced({
       distanceKm: 8,
       rideMinutes: 24,
       vehicle: vehicleFrom(message, intent.ride.vehicle),
@@ -246,8 +250,8 @@ async function buildAssistantPayload(
           // With no ride left, naming "the cheapest" would print "undefined".
           why:
             rideQuotes.length === 0
-              ? intent.ride.maxPickupMinutes
-                ? `No ride can pick you up within ${intent.ride.maxPickupMinutes} minutes right now.`
+              ? comboRideUnmet
+                ? unmetRideNote(comboRideUnmet)
                 : `No rides are available for that trip right now.`
               : comboScheduledAt
                 ? `Cheapest fare is ${rideQuotes[0]!.displayName}, scheduled for ${scheduleLabel(comboScheduledAt)}, open Rides to confirm.`
@@ -359,9 +363,8 @@ async function buildAssistantPayload(
       constraints: { maxPickupMinutes: intent.ride.maxPickupMinutes ?? null },
     });
     if (baseQuotes.length === 0 && unmet) {
-      const q = unmet.item;
       return {
-        reply: `No ride can pick you up within ${q.pickupEtaMinutes - unmet.by} minutes right now. The soonest is ${q.displayName}, ${q.pickupEtaMinutes} minutes away.`,
+        reply: unmetRideNote(unmet),
         intent,
         served,
       };
@@ -401,6 +404,12 @@ async function buildAssistantPayload(
         // does, the reply below asks the rider to compare rather than claiming
         // a check that does not happen.
         ...(intent.ride.budgetPaise ? { fareLimitPaise: intent.ride.budgetPaise } : {}),
+        // Carried for the same reason as the fare: the booking card re-prices
+        // the real trip, and a limit left behind here is a limit the rider
+        // stated and nothing applied.
+        ...(intent.ride.maxPickupMinutes
+          ? { pickupLimitMinutes: intent.ride.maxPickupMinutes }
+          : {}),
         why: intent.ride.budgetPaise
           ? `You asked for under ${rupees(intent.ride.budgetPaise)}. These fares are for a typical 8 km trip, so set your pickup and drop below to see the exact fare before you book.`
           : scheduledAt

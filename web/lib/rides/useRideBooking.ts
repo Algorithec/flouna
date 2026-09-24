@@ -57,6 +57,16 @@ export function useRideBooking(opts: {
    * no ranking.
    */
   decisionId?: string;
+  /**
+   * Limits the rider stated in the conversation.
+   *
+   * Applied here because this is where the real route is priced: a fare limit
+   * checked against chat's placeholder distance would refuse a short trip that
+   * fits and pass a long one that does not. Absent on the rides screen, which
+   * states no limits.
+   */
+  maxFarePaise?: number;
+  maxPickupMinutes?: number;
 } = {}) {
   const enabled = opts.enabled !== false;
 
@@ -74,6 +84,14 @@ export function useRideBooking(opts: {
    * fares that are no longer on screen.
    */
   const [quoteDecisionId, setQuoteDecisionId] = useState<string | null>(null);
+  /**
+   * Why there are no fares, when the reason is the rider's own limit.
+   *
+   * Without it an empty list is indistinguishable from a slow one, and the
+   * button sits on "Getting prices…" for a request that has already come back
+   * with an answer.
+   */
+  const [unmetNote, setUnmetNote] = useState<string | null>(null);
   const [advice, setAdvice] = useState<Advice | null>(null);
   const [selected, setSelected] = useState<RideQuote | null>(null);
   const [scheduledAt, setScheduledAt] = useState<string | null>(
@@ -316,22 +334,33 @@ export function useRideBooking(opts: {
     };
   }, [pickup, drop]);
 
+  const { maxFarePaise, maxPickupMinutes } = opts;
   const loadQuotes = useCallback(() => {
     if (!route) return;
-    api<{ quotes: RideQuote[]; advice?: Advice; decisionId?: string | null }>(
-      `/api/rides/quotes?distanceKm=${route.distanceKm.toFixed(2)}&rideMinutes=${route.rideMinutes}&vehicle=${vehicle}`,
+    const limits =
+      (maxFarePaise ? `&maxFarePaise=${maxFarePaise}` : "") +
+      (maxPickupMinutes ? `&maxPickupMinutes=${maxPickupMinutes}` : "");
+    api<{
+      quotes: RideQuote[];
+      advice?: Advice;
+      decisionId?: string | null;
+      unmetNote?: string;
+    }>(
+      `/api/rides/quotes?distanceKm=${route.distanceKm.toFixed(2)}&rideMinutes=${route.rideMinutes}&vehicle=${vehicle}${limits}`,
     )
       .then((d) => {
         setQuotes(d.quotes);
         setAdvice(d.advice ?? null);
         setSelected(d.quotes[0] ?? null);
         setQuoteDecisionId(d.decisionId ?? null);
+        setUnmetNote(d.unmetNote ?? null);
       })
       .catch(() => {
         setError("Could not fetch ride options");
         setQuoteDecisionId(null);
+        setUnmetNote(null);
       });
-  }, [route, vehicle]);
+  }, [route, vehicle, maxFarePaise, maxPickupMinutes]);
   useEffect(loadQuotes, [loadQuotes]);
 
   const mapPoints = useMemo(
@@ -394,6 +423,7 @@ export function useRideBooking(opts: {
     route,
     vehicle, setVehicle,
     quotes, advice,
+    unmetNote,
     selected, setSelected,
     scheduledAt, setScheduledAt,
     saved,

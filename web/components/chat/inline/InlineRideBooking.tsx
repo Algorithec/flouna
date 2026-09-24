@@ -49,6 +49,8 @@ export function InlineRideBooking({
   onBooked,
   showAny = true,
   decisionId,
+  fareLimitPaise,
+  pickupLimitMinutes,
 }: {
   /** Destination the chat already understood, resolved on open. */
   drop?: string | null;
@@ -59,12 +61,24 @@ export function InlineRideBooking({
   showAny?: boolean;
   /** The ranking behind these quotes, paired with the order on booking. */
   decisionId?: string;
+  /**
+   * Limits the rider stated in the conversation, applied to the real trip.
+   *
+   * Chat prices a placeholder distance, so it cannot hold a fare to a stated
+   * maximum. This card prices the route the rider actually set, which is the
+   * only place the limit can be applied honestly, so it arrives here rather
+   * than being dropped after the reply had already mentioned it.
+   */
+  fareLimitPaise?: number;
+  pickupLimitMinutes?: number;
 }) {
   const b = useRideBooking({
     initialDrop: drop ?? null,
     initialVehicle: vehicle ?? "any",
     initialScheduledAt: scheduledAt ?? null,
     decisionId,
+    maxFarePaise: fareLimitPaise,
+    maxPickupMinutes: pickupLimitMinutes,
   });
   const [confirming, setConfirming] = useState(false);
   // Choosing a fare and paying for it used to be the same tap. The summary is
@@ -367,6 +381,17 @@ export function InlineRideBooking({
         </div>
       )}
 
+      {/* The rider's own limit left nothing to show. Said plainly, with what
+          is actually available, because an empty list with a button reading
+          "Getting prices…" claims a request is still running when it has
+          already been answered. The limit is not quietly waived: the nearest
+          option is named, not offered. */}
+      {b.quotes.length === 0 && b.unmetNote && (
+        <p role="status" className="mt-3 rounded-2xl bg-beige/60 px-3 py-2.5 text-[12px] text-ink">
+          {b.unmetNote}
+        </p>
+      )}
+
       {b.error && (
         <p role="alert" className="mt-2.5 text-[12px] text-danger">
           {b.error}
@@ -383,9 +408,11 @@ export function InlineRideBooking({
           ? "Booking…"
           : b.selected
             ? `Review ${b.selected.displayName} · ${rupees(b.selected.effectivePaise)}`
-            : b.pickup && b.drop
-              ? "Getting prices…"
-              : "Set pickup and destination"}
+            : b.unmetNote
+              ? "Nothing fits that limit"
+              : b.pickup && b.drop
+                ? "Getting prices…"
+                : "Set pickup and destination"}
       </button>
     </div>
   );

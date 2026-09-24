@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   journeyMinutes,
   quoteRidesTraced,
+  unmetRideNote,
 } from "../src/modules/rides/rides.service.js";
+import { authedAgent } from "./helpers.js";
 
 // Stated limits applied to real ride quotes.
 //
@@ -150,5 +152,110 @@ describe("counting what was removed", () => {
     expect(r.trace!.excludedCount).toBe(
       r.trace!.exclusions.reduce((s, e) => s + e.count, 0),
     );
+  });
+});
+
+// The limits have to reach the screen that prices the real trip.
+//
+// Chat quotes a placeholder 8 km ride, so a stated fare could not honestly be
+// enforced there and was left out of the ranking. It was then also left out of
+// everything downstream: the booking card re-priced the real route with no
+// limit at all, so a reply that said "within your budget" was followed by a
+// list of fares well above it. The limits now travel to the quotes route,
+// which is the one place the route is known.
+describe("the quotes route applies the limits the rider stated", () => {
+  const TRIP = "distanceKm=8.20&rideMinutes=24&vehicle=any";
+
+  it("returns every fare when no limit is stated", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent.get(`/api/rides/quotes?${TRIP}`).expect(200);
+    expect(res.body.quotes.length).toBe(quoteRidesTraced({ distanceKm: 8.2, rideMinutes: 24 }).quotes.length);
+    expect(res.body.unmetNote).toBeUndefined();
+  });
+
+  it("drops every fare above a stated maximum", async () => {
+    const { agent } = await authedAgent();
+    const all = await agent.get(`/api/rides/quotes?${TRIP}`).expect(200);
+    const fares = all.body.quotes.map((q: { effectivePaise: number }) => q.effectivePaise);
+    // A limit that is real: some options are under it and some are over, so a
+    // route that ignored the limit would be caught rather than pass by luck.
+    const limit = Math.round((Math.min(...fares) + Math.max(...fares)) / 2);
+    expect(fares.some((f: number) => f > limit)).toBe(true);
+    expect(fares.some((f: number) => f <= limit)).toBe(true);
+
+    const res = await agent
+      .get(`/api/rides/quotes?${TRIP}&maxFarePaise=${limit}`)
+      .expect(200);
+    expect(res.body.quotes.length).toBeGreaterThan(0);
+    for (const q of res.body.quotes) expect(q.effectivePaise).toBeLessThanOrEqual(limit);
+    expect(res.body.quotes.length).toBeLessThan(fares.length);
+    expect(res.body.unmetNote).toBeUndefined();
+  });
+
+  it("drops every fare that cannot pick up in time", async () => {
+    const { agent } = await authedAgent();
+    const all = await agent.get(`/api/rides/quotes?${TRIP}`).expect(200);
+    const waits = all.body.quotes.map((q: { pickupEtaMinutes: number }) => q.pickupEtaMinutes);
+    const limit = Math.round((Math.min(...waits) + Math.max(...waits)) / 2);
+    expect(waits.some((w: number) => w > limit)).toBe(true);
+
+    const res = await agent
+      .get(`/api/rides/quotes?${TRIP}&maxPickupMinutes=${limit}`)
+      .expect(200);
+    expect(res.body.quotes.length).toBeGreaterThan(0);
+    for (const q of res.body.quotes) expect(q.pickupEtaMinutes).toBeLessThanOrEqual(limit);
+  });
+
+  it("says why, and offers nothing, when the limit rules everything out", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent.get(`/api/rides/quotes?${TRIP}&maxFarePaise=100`).expect(200);
+
+    expect(res.body.quotes).toEqual([]);
+    // The nearest option is named as information, never handed over as one to
+    // book: a client given the quote will eventually draw it.
+    expect(res.body.unmetNote).toMatch(/No ride comes in under ₹1 for this trip\. The cheapest is ₹\d+/);
+    expect(JSON.stringify(res.body)).not.toMatch(/"effectivePaise"/);
+  });
+
+  it("still records the ranking it made under the limit", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent
+      .get(`/api/rides/quotes?${TRIP}&maxPickupMinutes=4`)
+      .expect(200);
+    // A constrained ranking is still a decision, and the booking made from it
+    // still has to pair.
+    expect(typeof res.body.decisionId).toBe("string");
+  });
+
+  it("refuses a limit that is not a number, rather than ignoring it", async () => {
+    // Silently dropping an unparseable limit is how a limit stops being
+    // applied without anybody noticing.
+    const { agent } = await authedAgent();
+    await agent.get(`/api/rides/quotes?${TRIP}&maxFarePaise=cheap`).expect(400);
+    await agent.get(`/api/rides/quotes?${TRIP}&maxFarePaise=-500`).expect(400);
+  });
+});
+
+describe("what the rider is told when nothing fits", () => {
+  it.each([
+    [
+      "a fare limit",
+      { maxPricePaise: 100 },
+      /No ride comes in under ₹1 for this trip\. The cheapest is ₹\d+, .+\./,
+    ],
+    [
+      "a pickup limit",
+      { maxPickupMinutes: 1 },
+      /No ride can pick you up within 1 minutes? right now\. The soonest is .+, \d+ minutes away\./,
+    ],
+    [
+      "an arrival limit",
+      { maxEtaMinutes: 1 },
+      /No ride gets you there within 1 minutes?\. The quickest is .+, \d+ minutes\./,
+    ],
+  ])("names the limit and the closest miss for %s", (_, constraints, shape) => {
+    const r = quoteRidesTraced({ ...base, constraints });
+    expect(r.quotes).toEqual([]);
+    expect(unmetRideNote(r.unmet!)).toMatch(shape);
   });
 });

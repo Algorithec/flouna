@@ -499,6 +499,10 @@ export function RideRecommendation({
               onBooked={onBook}
               showAny={rec.vehicle === "any" || !rec.vehicle}
               decisionId={rec.decisionId}
+              // The limits the rider stated. Chat could not apply them to a
+              // placeholder trip; this card prices the real one.
+              fareLimitPaise={rec.fareLimitPaise}
+              pickupLimitMinutes={rec.pickupLimitMinutes}
             />
           ) : (
             shown.map((q) => (

@@ -3,7 +3,12 @@ import { z } from "zod";
 import { requireAuth } from "../../middleware/auth.js";
 import { recordDecision } from "../advisor/decisionLog.service.js";
 import { env } from "../../config/env.js";
-import { quoteRides, quoteRidesTraced, fetchRoute } from "./rides.service.js";
+import {
+  quoteRides,
+  quoteRidesTraced,
+  unmetRideNote,
+  fetchRoute,
+} from "./rides.service.js";
 import { withCommunityRatings, allCommunityRatings } from "../ratings/ratings.service.js";
 import { adviseRide } from "../advisor/advisor.service.js";
 import { recordObservation } from "../advisor/priceHistory.service.js";
@@ -214,12 +219,31 @@ ridesRouter.get("/quotes", async (req, res, next) => {
         distanceKm: z.coerce.number().positive().max(150),
         rideMinutes: z.coerce.number().int().positive().max(600),
         vehicle: z.enum(["bike", "auto", "cab", "any"]).default("any"),
+        // Limits the rider stated in the conversation, carried here because
+        // this is the only place the real trip is priced. Chat can only quote
+        // a placeholder distance, so a fare limit could not honestly be
+        // applied there; it was therefore dropped entirely, and a reply saying
+        // "within your budget" was followed by a list that ignored it.
+        // Optional: the rides screen states no limits.
+        maxFarePaise: z.coerce.number().int().positive().max(10_000_000).optional(),
+        maxPickupMinutes: z.coerce.number().int().positive().max(600).optional(),
       })
       .parse(req.query);
     // Fetched before ranking, not after: the order and the ratings shown
     // beside it now come from the same numbers.
     const community = await allCommunityRatings("ride");
-    const { quotes: baseQuotes, trace } = quoteRidesTraced({ ...parsed, community });
+    const {
+      quotes: baseQuotes,
+      trace,
+      unmet,
+    } = quoteRidesTraced({
+      ...parsed,
+      community,
+      constraints: {
+        maxPricePaise: parsed.maxFarePaise ?? null,
+        maxPickupMinutes: parsed.maxPickupMinutes ?? null,
+      },
+    });
     const quotes = await withCommunityRatings("ride", baseQuotes, (q) => q.provider);
     const cheapest = quotes[0];
     if (cheapest) recordObservation("ride", cheapest.vehicle, cheapest.effectivePaise);
@@ -237,6 +261,10 @@ ridesRouter.get("/quotes", async (req, res, next) => {
       quotes,
       advice: await adviseRide(cheapest?.vehicle ?? null),
       decisionId,
+      // Why the list is empty, when the reason is the rider's own limit rather
+      // than an absence of rides. A sentence, not the rejected option: handing
+      // that back is how it ends up drawn as bookable.
+      ...(unmet ? { unmetNote: unmetRideNote(unmet) } : {}),
     });
   } catch (err) {
     next(err);
