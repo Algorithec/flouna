@@ -240,7 +240,23 @@ export function quoteRidesTraced(
         // charged: rounding only the label would have shown ₹131 against a
         // ₹131.44 payment.
         const fare = Math.round((prod.basePaise + prod.perKmPaise * opts.distanceKm) / 100) * 100;
-        const offers = prod.offer ? [prod.offer] : [];
+        // A coupon cannot be worth more than the ride.
+        //
+        // The flat offers here are ₹50 off an auto and ₹25 off a bike, which
+        // is more than the whole fare on a short trip: every ride under 2.2 km
+        // had at least one option priced at zero, and being the cheapest it
+        // was badged BEST PRICE and ranked first, so the product gave away the
+        // ride the rider was most likely to take. Clamping the total to zero
+        // only hid it, because the order route charges this number.
+        //
+        // An offer therefore applies only when the fare can absorb it and
+        // still leave the boarding charge, which is what a minimum fare is.
+        // Applying it partly would be worse than not applying it at all: the
+        // label states an amount, and a "₹25 off" that comes off by ₹8 is a
+        // claim the bill contradicts.
+        const offer =
+          prod.offer && fare - prod.offer.discountPaise >= prod.basePaise ? prod.offer : null;
+        const offers = offer ? [offer] : [];
         const discount = offers.reduce((s, o) => s + o.discountPaise, 0);
         return {
           provider: p.provider,
@@ -249,7 +265,10 @@ export function quoteRidesTraced(
           displayName: prod.displayName,
           farePaise: fare,
           offers,
-          effectivePaise: Math.max(0, fare - discount),
+          // No clamp: an offer that cannot be absorbed is not applied, so this
+          // is always at least the boarding charge. A clamp here would hide
+          // the next offer that outgrows a fare rather than refuse it.
+          effectivePaise: fare - discount,
           pickupEtaMinutes: prod.pickupEta,
           rideMinutes: opts.rideMinutes,
           driverRating: prod.rating,
@@ -349,4 +368,25 @@ export function quoteRidesTraced(
  */
 export function journeyMinutes(q: Pick<RideQuote, "pickupEtaMinutes" | "rideMinutes">): number {
   return q.pickupEtaMinutes + q.rideMinutes;
+}
+
+/**
+ * What to tell a rider whose own limit left nothing to offer.
+ *
+ * Shared by chat and the quotes route so both surfaces say the same thing, and
+ * kept as a sentence rather than the rejected quote itself: a client handed
+ * the option would sooner or later draw it as bookable, which is the one thing
+ * a hard constraint exists to prevent. The limit is recovered from the miss
+ * (`by` is how far over it went) so nothing has to be passed in twice.
+ */
+export function unmetRideNote(unmet: NearestMiss<RideQuote>): string {
+  const q = unmet.item;
+  const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
+  if (unmet.rule === "max_price") {
+    return `No ride comes in under ${rupees(q.effectivePaise - unmet.by)} for this trip. The cheapest is ${rupees(q.effectivePaise)}, ${q.displayName}.`;
+  }
+  if (unmet.rule === "max_pickup") {
+    return `No ride can pick you up within ${q.pickupEtaMinutes - unmet.by} minutes right now. The soonest is ${q.displayName}, ${q.pickupEtaMinutes} minutes away.`;
+  }
+  return `No ride gets you there within ${journeyMinutes(q) - unmet.by} minutes. The quickest is ${q.displayName}, ${journeyMinutes(q)} minutes.`;
 }
