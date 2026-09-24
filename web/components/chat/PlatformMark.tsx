@@ -73,10 +73,11 @@ export function PlatformMark({
  * rather than wrapping to a second line.
  *
  * copy="compared" (default): "Compared across Swiggy, Zomato and 1 more"
- * copy="checked-count": "Checked 5+ providers for you" (+ only when truncated)
- *   The + appears only when rest > 0, i.e. the full list didn't fit — so a
- *   three-provider result never reads "3+", which would claim we checked more
- *   than we did.
+ * copy="checked-count": "Checked 5 providers for you"
+ *   The count is the number checked, exactly. It used to gain a "+" once the
+ *   row of marks was truncated, which read as "8+" for eight providers and so
+ *   claimed more than had been looked at. The cap is about how many marks fit
+ *   on a phone; it says nothing about how many were compared.
  */
 export function SearchedPlatforms({
   platforms,
@@ -111,10 +112,7 @@ export function SearchedPlatforms({
           // Says how many we checked, not which ones — the marks themselves
           // show which. The + only appears when the list was actually
           // truncated, so the count is always honest.
-          <>
-            Checked {seen.length}
-            {rest > 0 ? "+" : ""} providers for you
-          </>
+          <>Checked {seen.length} providers for you</>
         ) : (
           // Default: names every platform as evidence for the claim above.
           // Screen readers get the names here since the marks are aria-hidden.
