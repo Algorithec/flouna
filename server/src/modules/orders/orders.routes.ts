@@ -90,6 +90,10 @@ const createFoodCartOrder = z.object({
         dishId: z.string().max(60),
         platform: z.enum(["ondc", "swiggy", "zomato"]),
         qty: z.number().int().min(1).max(20),
+        // Per line, not per order: a cart can hold items from several
+        // recommendations, and one id on the order could be paired with only
+        // one of them with nothing to say which.
+        decisionId: z.string().max(64).optional(),
       }),
     )
     .min(1)
@@ -336,6 +340,22 @@ ordersRouter.post(
           });
         }
         void emitOrderDiscovery(order);
+        // Pair each line that came from a recommendation with the ranking that
+        // produced it. The key is built here from the line being ordered, not
+        // taken from the caller, so nothing can plant a choice that was never
+        // made. Deduplicated by decision: a row records one chosen option, so
+        // two lines from the same ranking would otherwise race to be it.
+        const paired = new Set<string>();
+        for (const item of body.items) {
+          if (!item.decisionId || paired.has(item.decisionId)) continue;
+          paired.add(item.decisionId);
+          void recordSelection({
+            decisionId: item.decisionId,
+            selectedKey: `${item.dishId}@${item.platform}`,
+            orderId: order.id,
+            userId: req.userId!,
+          });
+        }
         return res.status(201).json({ order });
       }
 

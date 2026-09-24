@@ -315,6 +315,34 @@ describe("pairing from the chat path", () => {
     expect(paired?.orderId).toBe(order.body.order.id);
   });
 
+  it("logs both halves of a combo separately, and neither carries the trace", async () => {
+    // A combo is two rankings in one reply. One id for both would pair an
+    // order with whichever half it happened to be written for, so each half
+    // carries its own, and both must be stripped of reasoning like any other.
+    const { agent } = await authedAgent();
+    const res = await agent
+      .post("/api/chat/message")
+      .send({ message: "biryani and a cab to hitec city" })
+      .expect(200);
+
+    const rec = res.body.message.recommendation;
+    expect(rec?.type).toBe("combo");
+    expect(typeof rec.food.decisionId).toBe("string");
+    expect(typeof rec.ride.decisionId).toBe("string");
+    expect(rec.food.decisionId).not.toBe(rec.ride.decisionId);
+    expect(rec.food.trace).toBeUndefined();
+    expect(JSON.stringify(rec)).not.toMatch(/"weights"|"chosenKey"|"excludedCount"/);
+
+    const food = await waitForRow(() =>
+      prisma.decisionLog.findUnique({ where: { id: rec.food.decisionId } }),
+    );
+    const ride = await waitForRow(() =>
+      prisma.decisionLog.findUnique({ where: { id: rec.ride.decisionId } }),
+    );
+    expect(food?.domain).toBe("food");
+    expect(ride?.domain).toBe("ride");
+  });
+
   it("hands one out for a ride too", async () => {
     const { agent } = await authedAgent();
     const res = await agent
