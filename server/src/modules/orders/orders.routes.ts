@@ -22,7 +22,7 @@ import {
   CONVENIENCE_FEE_PAISE,
 } from "../subscription/subscription.service.js";
 import { sendPushToUser } from "../notifications/push.service.js";
-import { evaluateCoupon, redeemCoupon } from "../coupons/coupons.service.js";
+import { evaluateCoupon, createOrderClaimingCoupon } from "../coupons/coupons.service.js";
 import { enqueueNotification } from "../notifications/outbox.service.js";
 import { emitOrderDiscovery } from "../backoffice/ondc.service.js";
 
@@ -252,7 +252,12 @@ ordersRouter.post(
         const { restaurantLat, restaurantLng, deliveryLat, deliveryLng } =
           simulateDeliveryCoords(first.dishId);
 
-        const order = await prisma.order.create({
+        // One step: the code is claimed with the order or not at all.
+        const order = await createOrderClaimingCoupon(
+          coupon
+            ? { couponId: coupon.couponId, userId: req.userId!, discountPaise: couponDiscount }
+            : null,
+          (tx) => tx.order.create({
           data: {
             userId: req.userId!,
             ...(fingerprint ? { requestKey: fingerprint } : {}),
@@ -294,15 +299,8 @@ ordersRouter.post(
             savedPaise: savedPaise + couponDiscount,
             addressId: defaultAddress?.id ?? null,
           },
-        });
-        if (coupon) {
-          await redeemCoupon({
-            couponId: coupon.couponId,
-            userId: req.userId!,
-            orderId: order.id,
-            discountPaise: couponDiscount,
-          });
-        }
+        }),
+        );
         void emitOrderDiscovery(order);
         // Pair each line that came from a recommendation with the ranking that
         // produced it. The key is built here from the line being ordered, not
@@ -376,7 +374,12 @@ ordersRouter.post(
         const { restaurantLat, restaurantLng, deliveryLat, deliveryLng } =
           simulateDeliveryCoords(body.dishId);
 
-        const order = await prisma.order.create({
+        // One step: the code is claimed with the order or not at all.
+        const order = await createOrderClaimingCoupon(
+          coupon
+            ? { couponId: coupon.couponId, userId: req.userId!, discountPaise: couponDiscount }
+            : null,
+          (tx) => tx.order.create({
           data: {
             userId: req.userId!,
             ...(fingerprint ? { requestKey: fingerprint } : {}),
@@ -408,15 +411,8 @@ ordersRouter.post(
             savedPaise: savedPaise + couponDiscount,
             addressId: defaultAddress?.id ?? null,
           },
-        });
-        if (coupon) {
-          await redeemCoupon({
-            couponId: coupon.couponId,
-            userId: req.userId!,
-            orderId: order.id,
-            discountPaise: couponDiscount,
-          });
-        }
+        }),
+        );
         // Record the simulated ONDC discovery flow (search/select) for the
         // developer transaction viewer. Fire-and-forget — never blocks the order.
         void emitOrderDiscovery(order);
@@ -472,7 +468,12 @@ ordersRouter.post(
           };
         }
 
-        const order = await prisma.order.create({
+        // One step: the code is claimed with the order or not at all.
+        const order = await createOrderClaimingCoupon(
+          coupon
+            ? { couponId: coupon.couponId, userId: req.userId!, discountPaise: couponDiscount }
+            : null,
+          (tx) => tx.order.create({
           data: {
             userId: req.userId!,
             ...(fingerprint ? { requestKey: fingerprint } : {}),
@@ -497,15 +498,8 @@ ordersRouter.post(
             savedPaise: savedPaise + couponDiscount,
             addressId: defaultAddress?.id ?? null,
           },
-        });
-        if (coupon) {
-          await redeemCoupon({
-            couponId: coupon.couponId,
-            userId: req.userId!,
-            orderId: order.id,
-            discountPaise: couponDiscount,
-          });
-        }
+        }),
+        );
         void emitOrderDiscovery(order);
         return res.status(201).json({ order });
       }
