@@ -3,6 +3,7 @@ import type { LlmProvider } from "./types.js";
 import { AnthropicProvider } from "./anthropic.js";
 import { GoogleProvider } from "./google.js";
 import { DeepseekProvider } from "./deepseek.js";
+import { NvidiaProvider } from "./nvidia.js";
 import { DemoProvider } from "./demo.js";
 import { FallbackProvider } from "./fallback.js";
 
@@ -14,12 +15,13 @@ import { FallbackProvider } from "./fallback.js";
 // when an expired Anthropic key silently sent every request to the rule-based
 // engine.
 
-type ProviderName = "anthropic" | "google" | "deepseek";
+type ProviderName = "anthropic" | "google" | "deepseek" | "nvidia";
 
 const BUILDERS: Record<ProviderName, { hasKey: () => boolean; make: () => LlmProvider }> = {
   anthropic: { hasKey: () => Boolean(env.ANTHROPIC_API_KEY), make: () => new AnthropicProvider() },
   google: { hasKey: () => Boolean(env.GOOGLE_AI_API_KEY), make: () => new GoogleProvider() },
   deepseek: { hasKey: () => Boolean(env.DEEPSEEK_API_KEY), make: () => new DeepseekProvider() },
+  nvidia: { hasKey: () => Boolean(env.NVIDIA_API_KEY), make: () => new NvidiaProvider() },
 };
 
 /** Preferred provider first, then every other configured one, then demo. */
