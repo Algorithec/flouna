@@ -281,6 +281,25 @@ paymentsRouter.post(
       // re-derived, so a second attempt reuses the first attempt's debit
       // instead of adding to it. Cancelling the order returns it.
       let walletApplied = walletAppliedOn(order);
+
+      // Once the gateway has been asked for an amount, that amount is fixed.
+      // Cashfree order ids are unique, so a later checkout cannot create a new
+      // session and reuses the old one, at the price it was created with.
+      // Taking credit now would tell the customer a smaller number while the
+      // session still charged the full one: ₹485 plus ₹300 of credit for a
+      // ₹485 order. Refused, so nothing is debited and the app can say why.
+      if (useWallet && walletApplied === 0) {
+        const started = await prisma.payment.findUnique({
+          where: { orderId },
+          select: { gatewayOrderId: true },
+        });
+        if (started?.gatewayOrderId) {
+          throw new ApiError(
+            409,
+            "Payment for this order has already started, so rewards can't be added to it now",
+          );
+        }
+      }
       if (useWallet && walletApplied === 0) {
         const took = await spendFromWallet({
           userId: req.userId!,
@@ -350,6 +369,15 @@ paymentsRouter.post(
           // still-valid payment session instead of failing the retry.
           if ((err as { cfStatus?: number }).cfStatus === 409) {
             cf = await getCashfreeOrder(orderId);
+            // A session is only reusable if it charges what is owed. Whatever
+            // changed the bill after payment started, handing this one out
+            // would charge the customer a number they were not shown.
+            if (Math.round(Number(cf.order_amount) * 100) !== payable) {
+              throw new ApiError(
+                409,
+                "This payment no longer matches the bill. Please place the order again",
+              );
+            }
           } else {
             throw err;
           }
