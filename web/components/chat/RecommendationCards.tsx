@@ -610,6 +610,10 @@ export function ShopRecommendation({
       <PickBadge reason={rec.pickReason} />
       <p className="text-[14px] leading-relaxed text-ink">{rec.why}</p>
       <PersonalNote note={rec.personalNote} />
+      <SearchedPlatforms
+        platforms={[rec.best.platform, ...rec.alternatives.map((a) => a.platform)]}
+        copy="checked-count"
+      />
       <ProductRow q={rec.best} highlight />
       <p className="-mt-1 text-[12px] italic text-cocoa/80">“{rec.best.reviewSummary}”</p>
       {rec.alternatives.length > 0 && (
