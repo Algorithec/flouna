@@ -54,6 +54,7 @@ const envSchema = z.object({
   CASHFREE_APP_ID: z.string().optional(),
   CASHFREE_SECRET_KEY: z.string().optional(),
   CASHFREE_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+  CASHFREE_RETURN_ORIGIN: z.string().url().optional(),
 
   // Maps
   MAPTILER_KEY: z.string().optional(),

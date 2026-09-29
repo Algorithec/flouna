@@ -343,7 +343,7 @@ paymentsRouter.post(
             customerId: order.userId,
             customerEmail: order.user.email,
             customerPhone: order.user.phone ?? "",
-            returnUrl: `${env.WEB_ORIGIN}/pay/${orderId}?from=cashfree`,
+            returnUrl: `${env.CASHFREE_RETURN_ORIGIN ?? env.WEB_ORIGIN}/pay/${orderId}?from=cashfree`,
           });
         } catch (err) {
           // Retried checkout: the order already exists at Cashfree — reuse its
