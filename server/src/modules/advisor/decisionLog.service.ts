@@ -39,28 +39,53 @@ export function recordDecision(input: {
   const { trace } = input;
   const id = randomUUID();
 
-  void prisma.decisionLog
-    .create({
-      data: {
-        id,
-        userId: input.userId ?? null,
-        domain: input.domain,
-        query: input.query.slice(0, 500),
-        priority: trace.priority,
-        weights: JSON.stringify(trace.weights),
-        personalized: trace.personalized,
-        candidateCount: trace.candidateCount,
-        excludedCount: trace.excludedCount,
-        exclusions: trace.exclusions.length ? JSON.stringify(trace.exclusions) : null,
-        // Best-first, truncated: the top of the ordering is what explains the
-        // decision, and a pathological result set shouldn't bloat a row.
-        results: JSON.stringify(trace.scores.slice(0, MAX_SCORED_ROWS)),
-        chosenKey: trace.chosenKey,
-      },
-    })
-    .catch(() => {
-      // Best-effort by design; never block or fail a user's request.
-    });
+  // Still fire-and-forget: logging must never slow or fail a search. But it
+  // used to make one attempt and swallow any error, so a moment of contention
+  // (SQLite reports it as locked, Postgres as a pool timeout or a dropped
+  // connection) silently deleted the decision. The audit trail got a hole,
+  // and the order that later quoted this id retried for half a minute against
+  // a row that would never exist. With the database refusing writes for six
+  // seconds, 0 of 10 decisions were recorded. Transient refusals are now
+  // waited out on the same schedule pairing uses.
+  const data = {
+    id,
+    userId: input.userId ?? null,
+    domain: input.domain,
+    query: input.query.slice(0, 500),
+    priority: trace.priority,
+    weights: JSON.stringify(trace.weights),
+    personalized: trace.personalized,
+    candidateCount: trace.candidateCount,
+    excludedCount: trace.excludedCount,
+    exclusions: trace.exclusions.length ? JSON.stringify(trace.exclusions) : null,
+    // Best-first, truncated: the top of the ordering is what explains the
+    // decision, and a pathological result set shouldn't bloat a row.
+    results: JSON.stringify(trace.scores.slice(0, MAX_SCORED_ROWS)),
+    chosenKey: trace.chosenKey,
+  };
+  void (async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await prisma.decisionLog.create({ data });
+        return;
+      } catch (err) {
+        // The id is ours and unique, so finding it taken means an earlier
+        // attempt did land and only its reply was lost.
+        if ((err as { code?: string }).code === "P2002") return;
+        const delay = PAIRING_RETRY_DELAYS_MS[attempt];
+        if (isTransient(err) && delay !== undefined) {
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        const code = (err as { code?: string }).code ?? "no code";
+        const text = err instanceof Error ? err.message : String(err);
+        console.warn(
+          `[decision] could not record decision ${id} (${code}): ${text.replace(/\s+/g, " ").trim()}`,
+        );
+        return;
+      }
+    }
+  })();
 
   return id;
 }
