@@ -10,12 +10,16 @@ shopRouter.use(requireAuth);
 const CATEGORIES = ["All", "Electronics", "Fashion", "Home", "Appliances"];
 
 // Landing feed: trending picks + categories.
-shopRouter.get("/feed", (_req, res) => {
-  const picks = ["gaming-laptop-rtx", "wireless-earbuds", "running-shoes"]
-    .map((id) => searchProducts({ query: products.find((p) => p.id === id)?.name ?? "" })[0])
-    .filter((q) => q !== undefined);
+shopRouter.get("/feed", (_req, res, next) => {
+  try {
+    const picks = ["gaming-laptop-rtx", "wireless-earbuds", "running-shoes"]
+      .map((id) => searchProducts({ query: products.find((p) => p.id === id)?.name ?? "" })[0])
+      .filter((q) => q !== undefined);
 
-  res.json({ categories: CATEGORIES, picks });
+    res.json({ categories: CATEGORIES, picks });
+  } catch (err) {
+    next(err);
+  }
 });
 
 const searchQuery = z.object({
