@@ -27,34 +27,45 @@ function Results() {
   const chatId = params.get("chat");
   const msgId = params.get("msg");
 
+  // A link with no chat or message in it cannot be loaded, and that is known
+  // before any effect runs. Deciding it inside the effect meant setting state
+  // synchronously as the component mounted, which is a cascading render and is
+  // what the lint rule that turned CI red is there to catch.
+  const addressed = Boolean(chatId && msgId);
+
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(addressed);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [shared, setShared] = useState(false);
+  const loading = addressed && fetching;
+  const error = addressed ? fetchError : "Missing chat or message ID";
 
   useEffect(() => {
-    if (!chatId || !msgId) {
-      setError("Missing chat or message ID");
-      setLoading(false);
-      return;
-    }
+    if (!addressed) return;
+    let active = true;
 
     api<{ session: { id: string; messages: ChatMessage[] } }>(
       `/api/chat/sessions/${chatId}`,
     )
       .then((d) => {
+        if (!active) return;
         const msg = d.session.messages.find((m) => m.id === msgId);
         if (!msg?.recommendation) {
-          setError("Recommendation not found");
+          setFetchError("Recommendation not found");
         } else {
           setRec(msg.recommendation);
           setContent(msg.content);
         }
       })
-      .catch(() => setError("Could not load results"))
-      .finally(() => setLoading(false));
-  }, [chatId, msgId]);
+      // A reply that arrives after the reader has moved on must not write to a
+      // component that is gone.
+      .catch(() => active && setFetchError("Could not load results"))
+      .finally(() => active && setFetching(false));
+    return () => {
+      active = false;
+    };
+  }, [chatId, msgId, addressed]);
 
   const onShare = async () => {
     const text = `Check out this recommendation on Flouna`;
