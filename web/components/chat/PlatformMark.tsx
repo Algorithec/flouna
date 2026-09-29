@@ -119,7 +119,7 @@ export function SearchedPlatforms({
           // Default: names every platform as evidence for the claim above.
           // Screen readers get the names here since the marks are aria-hidden.
           <>
-            Compared across {seen.map(platformLabel).join(", ")}
+            Compared across {shown.map(platformLabel).join(", ")}
             {rest > 0 ? ` and ${rest} more` : ""}
           </>
         )}
