@@ -48,7 +48,7 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
   };
 
   const onShare = async () => {
-    const text = `${q.name} at ${q.restaurant} to ${rupees(q.effectivePaise)} on Flouna`;
+    const text = `${q.name} at ${q.restaurant} for ${rupees(q.effectivePaise)} on Flouna`;
     try {
       if (navigator.share) await navigator.share({ title: q.name, text });
       else {

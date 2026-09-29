@@ -21,31 +21,34 @@ foodRouter.use(requireAuth);
 const CATEGORIES = ["All", "Burger", "Pizza", "Healthy", "South Indian", "Dessert"];
 
 // Landing feed: AI picks + smart suggestion stats, per the Figma food landing.
-foodRouter.get("/feed", async (_req, res) => {
-  const picks = ["quinoa-bowl", "mushroom-pasta", "masala-dosa"]
-    .map((id) => dishes.find((d) => d.id === id))
-    .filter((d) => d !== undefined)
-    .map((d) => {
-      const best = searchFood({ query: d.name })[0];
-      return best;
-    })
-    .filter((q) => q !== undefined);
+foodRouter.get("/feed", async (_req, res, next) => {
+  try {
+    const picks = ["quinoa-bowl", "mushroom-pasta", "masala-dosa"]
+      .map((id) => dishes.find((d) => d.id === id))
+      .filter((d) => d !== undefined)
+      .map((d) => {
+        const best = searchFood({ query: d.name })[0];
+        return best;
+      })
+      .filter((q) => q !== undefined);
 
-  const all = allQuotes();
-  const fastest = Math.min(...all.map((q) => q.etaMinutes));
-  const topRated = dishes.filter((d) => d.rating >= 4.0).length;
+    const all = allQuotes();
+    const fastest = Math.min(...all.map((q) => q.etaMinutes));
+    const topRated = dishes.filter((d) => d.rating >= 4.0).length;
 
-  res.json({
-    categories: CATEGORIES,
-    // Real diner ratings blended over the catalog baseline.
-    picks: await withCommunityRatings("food", picks, (q) => q.dishId),
-    suggestions: {
-      fastestDeliveryMinutes: fastest,
-      nearestKm: 1.5,
-      topRatedCount: topRated,
-    },
-    advice: await adviseFood(null),
-  });
+    res.json({
+      categories: CATEGORIES,
+      picks: await withCommunityRatings("food", picks, (q) => q.dishId),
+      suggestions: {
+        fastestDeliveryMinutes: fastest,
+        nearestKm: 1.5,
+        topRatedCount: topRated,
+      },
+      advice: await adviseFood(null),
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 const searchQuery = z.object({
@@ -102,14 +105,18 @@ foodRouter.get("/recommend", async (req, res, next) => {
 });
 
 // Quote detail for the order screen — dish + chosen platform listing.
-foodRouter.get("/dishes/:dishId", async (req, res) => {
-  const quotes = quotesForDish(req.params.dishId);
-  if (quotes.length === 0) {
-    return res.status(404).json({ error: "Dish not found" });
+foodRouter.get("/dishes/:dishId", async (req, res, next) => {
+  try {
+    const quotes = quotesForDish(req.params.dishId);
+    if (quotes.length === 0) {
+      return res.status(404).json({ error: "Dish not found" });
+    }
+    res.json({
+      quotes: await withCommunityRatings("food", quotes, (q) => q.dishId),
+    });
+  } catch (err) {
+    next(err);
   }
-  res.json({
-    quotes: await withCommunityRatings("food", quotes, (q) => q.dishId),
-  });
 });
 
 // Daily price history for a dish, from observed quotes. Returns one point per

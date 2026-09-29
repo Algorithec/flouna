@@ -74,10 +74,10 @@ export function PlatformMark({
  *
  * copy="compared" (default): "Compared across Swiggy, Zomato and 1 more"
  * copy="checked-count": "Checked 5 providers for you"
- *   The count is the number checked, exactly. It used to gain a "+" once the
- *   row of marks was truncated, which read as "8+" for eight providers and so
- *   claimed more than had been looked at. The cap is about how many marks fit
- *   on a phone; it says nothing about how many were compared.
+ *   The count is the number checked, exactly, with no "+": the cap is about
+ *   how many marks fit on a phone and says nothing about how many were
+ *   compared. The named variant lists only the ones actually shown, so the
+ *   names and the marks always agree, with the remainder counted after them.
  */
 export function SearchedPlatforms({
   platforms,
@@ -110,14 +110,15 @@ export function SearchedPlatforms({
       <span className="text-[11px] text-cocoa">
         {copy === "checked-count" ? (
           // Says how many we checked, not which ones — the marks themselves
-          // show which. The + only appears when the list was actually
-          // truncated, so the count is always honest.
+          // show which. Exactly how many: this used to gain a "+" as soon as
+          // the row of marks was truncated, which read "8+" for eight and so
+          // claimed more than had been looked at.
           <>Checked {seen.length} providers for you</>
         ) : (
           // Default: names every platform as evidence for the claim above.
           // Screen readers get the names here since the marks are aria-hidden.
           <>
-            Compared across {seen.map(platformLabel).join(", ")}
+            Compared across {shown.map(platformLabel).join(", ")}
             {rest > 0 ? ` and ${rest} more` : ""}
           </>
         )}

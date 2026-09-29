@@ -43,7 +43,7 @@ const envSchema = z.object({
   // LLM providers — hybrid setup (Claude / Gemini / DeepSeek). Chat falls back
   // to a scripted demo mode if the selected provider's key is unset.
   LLM_PROVIDER: z
-    .enum(["anthropic", "google", "deepseek", "self_hosted", "demo"])
+    .enum(["anthropic", "google", "deepseek", "nvidia", "self_hosted", "demo"])
     .default("demo"),
 
   // A model we run ourselves, over an OpenAI-compatible endpoint. Left unset
@@ -59,6 +59,7 @@ const envSchema = z.object({
   SELF_HOSTED_LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   ANTHROPIC_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
+  NVIDIA_API_KEY: z.string().optional(),
   // Google AI Studio (Gemini). Free-tier friendly; model is overridable.
   GOOGLE_AI_API_KEY: z.string().optional(),
   GOOGLE_AI_MODEL: z.string().default("gemini-2.0-flash"),
@@ -67,6 +68,7 @@ const envSchema = z.object({
   CASHFREE_APP_ID: z.string().optional(),
   CASHFREE_SECRET_KEY: z.string().optional(),
   CASHFREE_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+  CASHFREE_RETURN_ORIGIN: z.string().url().optional(),
 
   // Maps
   MAPTILER_KEY: z.string().optional(),

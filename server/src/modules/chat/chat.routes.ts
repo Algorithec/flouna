@@ -591,7 +591,7 @@ chatRouter.get("/sessions/:id", async (req, res, next) => {
           // timestamp, and so does the live one the moment the URL gains a
           // ?chat= and the client swaps its local list for this response.
           at: m.createdAt.toISOString(),
-          ...(m.intent ? JSON.parse(m.intent) : {}),
+          ...(m.intent ? (() => { try { return JSON.parse(m.intent); } catch { return {}; } })() : {}),
         })),
       },
     });

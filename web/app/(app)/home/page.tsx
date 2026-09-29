@@ -15,6 +15,7 @@ import {
   Coffee,
   Moon,
   Search as SearchIcon,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -28,7 +29,7 @@ import {
 } from "@/components/chat/RecommendationCards";
 import { VoiceButton } from "@/components/chat/VoiceButton";
 import { ThinkingSteps } from "@/components/chat/ThinkingSteps";
-import { RadiuesUpsell } from "@/components/chat/RadiuesUpsell";
+import { RadiusUpsell } from "@/components/chat/RadiusUpsell";
 import { PredictionBanner } from "@/components/chat/PredictionBanner";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
@@ -448,7 +449,18 @@ function ChatHome() {
                       <ComboRecommendation rec={m.recommendation} />
                     </div>
                   )}
-                  {m.recommendation && <RadiuesUpsell />}
+                  {m.recommendation && (
+                    <>
+                      <Link
+                        href={`/results?chat=${sessionId}&msg=${m.id}`}
+                        className="mt-2 flex items-center justify-center gap-1.5 rounded-pill border border-accent/40 bg-accent-soft/30 px-4 py-2.5 text-[13px] font-semibold text-accent transition-colors hover:bg-accent-soft/60"
+                      >
+                        <Sparkles size={13} />
+                        View full results
+                      </Link>
+                      <RadiusUpsell />
+                    </>
+                  )}
                 </div>
               )}
             </div>
