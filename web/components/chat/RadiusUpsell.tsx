@@ -13,7 +13,7 @@ type PlusStatus = {
 // Shown once per result to free users, outlining the benefits of upgrading.
 // Disappears completely if the user is already subscribed, or if the status
 // fetch fails (so it doesn't flash on a slow connection for a subscriber).
-export function RadiuesUpsell() {
+export function RadiusUpsell() {
   const [status, setStatus] = useState<PlusStatus | null>(null);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export function RadiuesUpsell() {
   return (
     <div className="mt-4 rounded-card border border-accent/30 bg-accent-soft/40 p-4">
       <div className="mb-3">
-        <h3 className="text-[15px] font-bold text-ink">Unlock more with Radiues</h3>
+        <h3 className="text-[15px] font-bold text-ink">Unlock more with Radius</h3>
         <p className="text-[13px] text-cocoa">Get the best prices, fastest delivery and exclusive offers.</p>
       </div>
       
