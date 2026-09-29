@@ -69,7 +69,53 @@ async function markPaid(
   } = {},
 ) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order || order.status !== "pending_payment") return order;
+  if (!order) return order;
+
+  // The gateway took money for an order that was cancelled while its payment
+  // was still in flight. The order stays cancelled, but the money has to be
+  // recorded as owed back. This used to fall through to the return below: the
+  // customer had paid, the payment row still said "processing", and nothing
+  // told ops a refund was due.
+  //
+  // Only the gateway paths report an amount, so only real money reaches this.
+  // Status-scoped, because webhooks repeat: a refund already flagged, or
+  // already paid out, must not be reopened.
+  if (order.status === "cancelled" && opts.paidPaise !== undefined) {
+    const existing = await prisma.payment.findUnique({ where: { orderId } });
+    const flagged = existing
+      ? (
+          await prisma.payment.updateMany({
+            where: { orderId, status: { in: ["created", "processing", "pending", "failed"] } },
+            data: {
+              status: "refund_pending",
+              amount: opts.paidPaise,
+              method,
+              gatewayResponse: opts.gatewayResponse,
+            },
+          })
+        ).count
+      : (
+          await prisma.payment.create({
+            data: {
+              orderId,
+              userId: order.userId,
+              amount: opts.paidPaise,
+              currency: "INR",
+              status: "refund_pending",
+              method,
+              gatewayResponse: opts.gatewayResponse,
+            },
+          }),
+          1
+        );
+    if (flagged > 0) {
+      console.warn(
+        `[payments] ${orderId} was paid after it was cancelled: ${opts.paidPaise} paise flagged for refund`,
+      );
+    }
+    return order;
+  }
+  if (order.status !== "pending_payment") return order;
 
   // Amount integrity: never confirm an order for less than it costs. The
   // gateway is the source of truth for what was actually charged — but it was
