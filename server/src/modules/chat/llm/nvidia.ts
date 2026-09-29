@@ -1,6 +1,6 @@
 import { env } from "../../../config/env.js";
 import { intentSchema, type Intent, type LlmProvider } from "./types.js";
-import { SYSTEM_PROMPT } from "./prompt.js";
+import { SYSTEM_PROMPT, JSON_SHAPE } from "./prompt.js";
 
 // NVIDIA NIM — DeepSeek V4.1 Flash via the OpenAI-compatible NIM endpoint.
 export class NvidiaProvider implements LlmProvider {
@@ -23,7 +23,18 @@ export class NvidiaProvider implements LlmProvider {
           messages: [
             {
               role: "system",
-              content: `${SYSTEM_PROMPT}\n\nRespond ONLY with a JSON object: {"domain": "food"|"ride"|"shop"|"combo"|"greeting"|"out_of_scope", "reply": string, "food"?: {"item": string, "budgetPaise": number|null, "dietary": "veg"|"nonveg"|"any", "priority": "price"|"rating"|"speed"|"balanced"}, "ride"?: {"pickup": string|null, "drop": string, "vehicle": "bike"|"auto"|"cab"|"any", "priority": "price"|"rating"|"speed"|"balanced", "scheduleAt": "HH:mm"|null}, "shop"?: {"item": string, "budgetPaise": number|null, "category": "electronics"|"fashion"|"home"|"appliances"|"any", "priority": "price"|"rating"|"speed"|"balanced"}}. Set priority from the user's words: "rating" for top-rated/best, "price" for cheap/budget, "speed" for fast/quick, else "balanced".`,
+              // The shared shape, not a copy of it. This provider arrived
+              // with the spec pasted inline, and the copy was already out of
+              // date: it omitted food.maxEtaMinutes, ride.budgetPaise and
+              // ride.maxPickupMinutes, so with this provider selected the
+              // limits customers state ("in 20 minutes", "under ₹200", "pick
+              // me up in 5") could not be returned at all. zod then fills them
+              // as null and the hard constraints quietly stop existing, with
+              // no error anywhere — which is exactly how "priority" went
+              // missing once before.
+              content: `${SYSTEM_PROMPT}
+
+${JSON_SHAPE}`,
             },
             { role: "user", content: userMessage },
           ],
