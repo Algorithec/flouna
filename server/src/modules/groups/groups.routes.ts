@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { splitFare, rupeesExact } from "./split.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
@@ -171,7 +172,10 @@ async function summarize(cartId: string, viewerId: string) {
   if (cart.domain === "ride") {
     const ride = JSON.parse(cart.rideDetails ?? "{}") as RideSnapshot;
     const memberCount = Math.max(1, cart.members.length);
-    const equalSplitPaise = Math.round(ride.farePaise / memberCount);
+    const split = splitFare(ride.farePaise, memberCount);
+    // What each friend owes. The host's own line carries the remainder, so
+    // the lines on screen add up to the fare.
+    const equalSplitPaise = split.otherPaise;
     const view = await privacyView(
       viewerId,
       cart.members.map((m) => m.userId),
@@ -192,7 +196,7 @@ async function summarize(cartId: string, viewerId: string) {
         userId: m.userId,
         name: view.nameFor(m.userId, m.user.name),
         active: view.activeFor(m.userId),
-        subtotalPaise: equalSplitPaise,
+        subtotalPaise: m.userId === cart.hostId ? split.hostPaise : split.otherPaise,
         hasOrdered: true, // a seat in the cab is the order
         isHost: m.userId === cart.hostId,
         isYou: m.userId === viewerId,
@@ -733,11 +737,12 @@ groupsRouter.post(
         const hostName =
           cart.members.find((m) => m.userId === cart.hostId)?.user.name ?? "Host";
         const memberCount = Math.max(1, cart.members.length);
-        const sharePaise = Math.round(quote.effectivePaise / memberCount);
+        const split = splitFare(quote.effectivePaise, memberCount);
+        const sharePaise = split.otherPaise;
         const shares = cart.members.map((m) => ({
           userId: m.userId,
           name: m.user.name,
-          sharePaise,
+          sharePaise: m.userId === cart.hostId ? split.hostPaise : sharePaise,
           isHost: m.userId === cart.hostId,
           upiLink:
             m.userId === cart.hostId || !hostUpiId
@@ -793,7 +798,7 @@ groupsRouter.post(
           if (m.userId === cart.hostId) continue;
           void sendPushToUser(m.userId, {
             title: "Your shared ride is booked 🚕",
-            body: `${quote.displayName} to ${ride.drop}, your share is ₹${(sharePaise / 100).toFixed(0)}.`,
+            body: `${quote.displayName} to ${ride.drop}, your share is ${rupeesExact(sharePaise)}.`,
             url: `/rides/group/${cart.id}`,
           });
         }
