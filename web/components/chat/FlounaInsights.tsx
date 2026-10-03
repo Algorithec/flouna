@@ -104,6 +104,9 @@ export function FlounaInsights({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
+          // Says whether the rest is showing, so a screen reader hears the
+          // panel open and close rather than a button that appears inert.
+          aria-expanded={expanded}
           className="tap-target mt-3 flex items-center gap-1 text-[12px] font-bold text-accent"
         >
           {expanded ? (
