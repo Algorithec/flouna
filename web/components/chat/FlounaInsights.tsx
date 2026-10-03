@@ -1,4 +1,7 @@
-import { Zap, Tag, CircleCheck } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { Zap, Tag, CircleCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { rupees } from "@/lib/money";
 
 // The insights panel from the design: the review, the cheaper route through the
@@ -15,6 +18,11 @@ import { rupees } from "@/lib/money";
 
 export type Hack = { label: string; detail: string };
 
+// Above this many hacks+offers combined, the panel collapses behind "MORE" —
+// mirrors the mock, and keeps a long insights list from pushing the answer
+// (and the composer) off a phone screen.
+const COLLAPSE_AFTER = 2;
+
 export function FlounaInsights({
   quote,
   hacks = [],
@@ -26,7 +34,19 @@ export function FlounaInsights({
   hacks?: Hack[];
   offers?: { label: string; discountPaise: number }[];
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (!quote && hacks.length === 0 && offers.length === 0) return null;
+
+  const totalTiles = hacks.length + offers.length;
+  const collapsible = totalTiles > COLLAPSE_AFTER;
+  // Hacks read first, so if something has to hide behind "MORE" it's the
+  // longer, less decision-critical offers list rather than a hack that might
+  // change what someone orders.
+  const visibleHacks = collapsible && !expanded ? hacks.slice(0, COLLAPSE_AFTER) : hacks;
+  const remainingSlots = collapsible && !expanded ? Math.max(0, COLLAPSE_AFTER - visibleHacks.length) : offers.length;
+  const visibleOffers = collapsible && !expanded ? offers.slice(0, remainingSlots) : offers;
+  const hiddenCount = totalTiles - visibleHacks.length - visibleOffers.length;
 
   return (
     <div className="rounded-card border border-accent/30 bg-accent-soft/40 p-4">
@@ -40,9 +60,9 @@ export function FlounaInsights({
         </p>
       )}
 
-      {hacks.length > 0 && (
+      {visibleHacks.length > 0 && (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {hacks.map((h) => (
+          {visibleHacks.map((h) => (
             <div
               key={h.label}
               className="rounded-xl border border-line bg-card px-3 py-2.5"
@@ -56,13 +76,13 @@ export function FlounaInsights({
         </div>
       )}
 
-      {offers.length > 0 && (
+      {visibleOffers.length > 0 && (
         <div className="mt-3">
           <p className="flex items-center gap-1.5 text-[12px] font-bold text-success">
             <Tag size={13} /> Available offers and coupons
           </p>
           <div className="mt-1.5 flex flex-col gap-1">
-            {offers.map((o) => (
+            {visibleOffers.map((o) => (
               <p
                 key={o.label}
                 className="flex items-center gap-1.5 text-[12px] text-ink"
@@ -78,6 +98,24 @@ export function FlounaInsights({
             ))}
           </div>
         </div>
+      )}
+
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="tap-target mt-3 flex items-center gap-1 text-[12px] font-bold text-accent"
+        >
+          {expanded ? (
+            <>
+              LESS <ChevronUp size={13} />
+            </>
+          ) : (
+            <>
+              MORE {hiddenCount > 0 ? `(${hiddenCount})` : ""} <ChevronDown size={13} />
+            </>
+          )}
+        </button>
       )}
     </div>
   );
