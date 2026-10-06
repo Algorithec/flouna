@@ -119,14 +119,19 @@ export function loadGoogleMaps(): Promise<GMaps> {
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
     script.async = true;
-    script.onerror = () => reject(new Error("Google Maps did not load"));
+    script.onerror = () => {
+      // Nothing loaded, so a later map may try again with a fresh script.
+      script.remove();
+      reject(Object.assign(new Error("Google Maps did not load"), { retryable: true }));
+    };
     document.head.appendChild(script);
     // A venue network that silently drops the request never fires onerror.
+    // Not retryable: the script may still arrive, and a second copy added
+    // while the first is loading is an error of its own in Google's loader.
     setTimeout(() => reject(new Error("Google Maps timed out")), 8000);
   });
-  // A failed load can be retried by a later map, rather than cached for ever.
-  loading.catch(() => {
-    loading = null;
+  loading.catch((err: { retryable?: boolean }) => {
+    if (err?.retryable) loading = null;
   });
   return loading;
 }
