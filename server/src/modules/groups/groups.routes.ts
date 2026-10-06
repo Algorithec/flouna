@@ -774,43 +774,55 @@ groupsRouter.post(
                 }),
         }));
 
-        const order = await prisma.order.create({
-          data: {
-            userId: req.userId!,
-            domain: "ride",
-            status: "pending_payment",
-            provider: quote.provider,
-            fulfillment: quote.fulfillment,
-            title: `${quote.displayName}: ${ride.pickup} → ${ride.drop} · ${memberCount} riders`,
-            details: JSON.stringify({
-              ...quote,
-              pickup: ride.pickup,
-              drop: ride.drop,
-              pickupLat: ride.pickupLat,
-              pickupLng: ride.pickupLng,
-              dropLat: ride.dropLat,
-              dropLng: ride.dropLng,
-              distanceKm: route.distanceKm,
-              vehicle: quote.vehicle,
-              routeGeometry: route.geometry,
-              comparedOptions: quotes.length,
-              comparedPlatforms: new Set(quotes.map((q) => q.provider)).size,
-              group: true,
-              memberCount,
-              shares: shares.map((s) => ({
-                name: s.name,
-                sharePaise: s.sharePaise,
-                isHost: s.isHost,
-              })),
-            }),
-            amount: quote.effectivePaise,
-          },
+        // The group is claimed and its order created together, or neither.
+        // Checkout used to read the group as open, create the order, then mark
+        // it ordered; two taps at once both read it as open and both created
+        // an order. The claim is a conditional write, so only one wins.
+        const order = await prisma.$transaction(async (tx) => {
+          const claimed = await tx.groupCart.updateMany({
+            where: { id: cart.id, status: "open" },
+            data: { status: "ordered" },
+          });
+          if (claimed.count === 0) throw new ApiError(409, "Already checked out");
+          const created = await tx.order.create({
+            data: {
+              userId: req.userId!,
+              domain: "ride",
+              status: "pending_payment",
+              provider: quote.provider,
+              fulfillment: quote.fulfillment,
+              title: `${quote.displayName}: ${ride.pickup} → ${ride.drop} · ${memberCount} riders`,
+              details: JSON.stringify({
+                ...quote,
+                pickup: ride.pickup,
+                drop: ride.drop,
+                pickupLat: ride.pickupLat,
+                pickupLng: ride.pickupLng,
+                dropLat: ride.dropLat,
+                dropLng: ride.dropLng,
+                distanceKm: route.distanceKm,
+                vehicle: quote.vehicle,
+                routeGeometry: route.geometry,
+                comparedOptions: quotes.length,
+                comparedPlatforms: new Set(quotes.map((q) => q.provider)).size,
+                group: true,
+                memberCount,
+                shares: shares.map((s) => ({
+                  name: s.name,
+                  sharePaise: s.sharePaise,
+                  isHost: s.isHost,
+                })),
+              }),
+              amount: quote.effectivePaise,
+            },
+          });
+          await tx.groupCart.update({
+            where: { id: cart.id },
+            data: { orderId: created.id },
+          });
+          return created;
         });
 
-        await prisma.groupCart.update({
-          where: { id: cart.id },
-          data: { status: "ordered", orderId: order.id },
-        });
 
         // Everyone in the ride learns it's booked (host is on the pay screen).
         for (const m of cart.members) {
@@ -873,38 +885,50 @@ groupsRouter.post(
         );
       }
 
-      const order = await prisma.order.create({
-        data: {
-          userId: req.userId!,
-          addressId: deliveryAddress.id,
-          domain: "food",
-          status: "pending_payment",
-          provider: cart.platform,
-          fulfillment: "in_app",
-          title: `Group order · ${cart.items.length} items · ${owed.size} people`,
-          details: JSON.stringify({
-            group: true,
-            memberCount: owed.size,
-            items: cart.items.map((i) => ({
-              name: i.name,
-              qty: i.qty,
-              pricePaise: i.pricePaise,
-            })),
-            shares: shares.map((s) => ({
-              name: s.name,
-              sharePaise: s.sharePaise,
-              isHost: s.isHost,
-            })),
-            comparedOptions: 0,
-          }),
-          amount: totalPaise,
-        },
+      // The group is claimed and its order created together, or neither.
+      // Checkout used to read the group as open, create the order, then mark
+      // it ordered; two taps at once both read it as open and both created
+      // an order. The claim is a conditional write, so only one wins.
+      const order = await prisma.$transaction(async (tx) => {
+        const claimed = await tx.groupCart.updateMany({
+          where: { id: cart.id, status: "open" },
+          data: { status: "ordered" },
+        });
+        if (claimed.count === 0) throw new ApiError(409, "Already checked out");
+        const created = await tx.order.create({
+          data: {
+            userId: req.userId!,
+            addressId: deliveryAddress.id,
+            domain: "food",
+            status: "pending_payment",
+            provider: cart.platform,
+            fulfillment: "in_app",
+            title: `Group order · ${cart.items.length} items · ${owed.size} people`,
+            details: JSON.stringify({
+              group: true,
+              memberCount: owed.size,
+              items: cart.items.map((i) => ({
+                name: i.name,
+                qty: i.qty,
+                pricePaise: i.pricePaise,
+              })),
+              shares: shares.map((s) => ({
+                name: s.name,
+                sharePaise: s.sharePaise,
+                isHost: s.isHost,
+              })),
+              comparedOptions: 0,
+            }),
+            amount: totalPaise,
+          },
+        });
+        await tx.groupCart.update({
+          where: { id: cart.id },
+          data: { orderId: created.id },
+        });
+        return created;
       });
 
-      await prisma.groupCart.update({
-        where: { id: cart.id },
-        data: { status: "ordered", orderId: order.id },
-      });
 
       res.json({ orderId: order.id, totalPaise, shares });
     } catch (err) {
