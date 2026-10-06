@@ -37,6 +37,23 @@ export class OllamaProvider implements LlmProvider {
     };
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("Ollama returned no content");
-    return intentSchema.parse(JSON.parse(content));
+    const raw = JSON.parse(content) as Record<string, unknown>;
+
+    // The 0.5B model reliably outputs the right sub-objects but sometimes
+    // omits the domain field. Infer it from whichever keys are present.
+    if (!raw.domain) {
+      const hasFood = "food" in raw;
+      const hasRide = "ride" in raw;
+      const hasShop = "shop" in raw;
+      if (hasFood && hasRide) raw.domain = "combo";
+      else if (hasFood) raw.domain = "food";
+      else if (hasRide) raw.domain = "ride";
+      else if (hasShop) raw.domain = "shop";
+      else if (raw.reply) raw.domain = "greeting";
+      else raw.domain = "out_of_scope";
+    }
+    if (!raw.reply) raw.reply = "";
+
+    return intentSchema.parse(raw);
   }
 }
