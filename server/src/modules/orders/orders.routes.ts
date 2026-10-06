@@ -1146,16 +1146,24 @@ ordersRouter.post(
       const itemKey =
         order.domain === "food" ? (details.dishId ?? order.provider) : order.provider;
 
-      const rating = await prisma.orderRating.create({
-        data: {
-          orderId: order.id,
-          userId: req.userId!,
-          domain: order.domain,
-          itemKey,
-          stars,
-          comment: comment || null,
-        },
-      });
+      const rating = await prisma.orderRating
+        .create({
+          data: {
+            orderId: order.id,
+            userId: req.userId!,
+            domain: order.domain,
+            itemKey,
+            stars,
+            comment: comment || null,
+          },
+        })
+        .catch((err: { code?: string }) => {
+          // A second submission at the same moment passed the check above and
+          // hit the one-rating-per-order index. It is the same answer, not a
+          // server fault, and a 500 here put a false alarm in the error log.
+          if (err?.code === "P2002") throw new ApiError(409, "You've already rated this order");
+          throw err;
+        });
       res.status(201).json({ rating });
     } catch (err) {
       next(err);
