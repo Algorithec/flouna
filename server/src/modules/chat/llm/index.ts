@@ -5,6 +5,7 @@ import { GoogleProvider } from "./google.js";
 import { DeepseekProvider } from "./deepseek.js";
 import { SelfHostedProvider } from "./selfHosted.js";
 import { NvidiaProvider } from "./nvidia.js";
+import { OllamaProvider } from "./ollama.js";
 import { DemoProvider } from "./demo.js";
 import { FallbackProvider } from "./fallback.js";
 
@@ -16,13 +17,14 @@ import { FallbackProvider } from "./fallback.js";
 // when an expired Anthropic key silently sent every request to the rule-based
 // engine.
 
-type ProviderName = "anthropic" | "google" | "deepseek" | "nvidia" | "self_hosted";
+type ProviderName = "anthropic" | "google" | "deepseek" | "nvidia" | "ollama" | "self_hosted";
 
 const BUILDERS: Record<ProviderName, { hasKey: () => boolean; make: () => LlmProvider }> = {
   anthropic: { hasKey: () => Boolean(env.ANTHROPIC_API_KEY), make: () => new AnthropicProvider() },
   google: { hasKey: () => Boolean(env.GOOGLE_AI_API_KEY), make: () => new GoogleProvider() },
   deepseek: { hasKey: () => Boolean(env.DEEPSEEK_API_KEY), make: () => new DeepseekProvider() },
   nvidia: { hasKey: () => Boolean(env.NVIDIA_API_KEY), make: () => new NvidiaProvider() },
+  ollama: { hasKey: () => Boolean(env.OLLAMA_URL || env.OLLAMA_MODEL), make: () => new OllamaProvider() },
   // Ours. "Has a key" means "is actually running somewhere": without a URL
   // there is nothing to call, and including it anyway would put a guaranteed
   // timeout in front of every request the chain makes.

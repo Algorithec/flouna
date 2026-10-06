@@ -81,6 +81,8 @@ type FoodRec = {
   pickReason?: PickReason;
   /** Nothing in the catalogue matched the request; these are stand-ins. */
   substituted?: boolean;
+  /** The user stated a budget and the best option exceeds it (amount over, in paise). */
+  overBudgetPaise?: number;
 };
 
 type RideRec = {

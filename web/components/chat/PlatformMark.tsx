@@ -109,11 +109,11 @@ export function SearchedPlatforms({
       </span>
       <span className="text-[11px] text-cocoa">
         {copy === "checked-count" ? (
-          // Says how many we checked, not which ones — the marks themselves
-          // show which. Exactly how many: this used to gain a "+" as soon as
-          // the row of marks was truncated, which read "8+" for eight and so
-          // claimed more than had been looked at.
-          <>Checked {seen.length} providers for you</>
+          // Says how many we compared, not which ones — the marks themselves
+          // show which. Exactly how many, with no "+": the cap is about how
+          // many marks fit on a phone, so "8+" for eight claimed more than
+          // had been looked at.
+          <>Compared {seen.length} providers</>
         ) : (
           // Default: names every platform as evidence for the claim above.
           // Screen readers get the names here since the marks are aria-hidden.

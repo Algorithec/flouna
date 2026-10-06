@@ -176,6 +176,17 @@ export function FoodRecommendation({
         </p>
       )}
 
+      {rec.overBudgetPaise && rec.overBudgetPaise > 0 && (
+        <p className="flex items-start gap-2 rounded-2xl border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning">
+          <Wallet size={15} className="mt-0.5 shrink-0" />
+          <span>
+            This is {rupees(rec.overBudgetPaise)} above your stated budget.
+            It&apos;s the closest option we found &mdash; prices shown are final
+            after all offers.
+          </span>
+        </p>
+      )}
+
       <WhyBest best={rec.best} alternatives={rec.alternatives} />
 
       {/* The places we actually looked, as evidence for the claim above it.
@@ -216,16 +227,13 @@ export function FoodRecommendation({
               the thing the engine just did. */}
           <div className="flex flex-col gap-2.5 lg:hidden">
             <p className="mt-1 text-[15px] font-bold text-ink">
-              Options we think you&apos;ll like
+              Compare other providers
             </p>
             {rec.alternatives.map((q) => (
               <FoodAltRow key={`${q.dishId}-${q.platform}`} q={q} />
             ))}
           </div>
 
-          {/* Ordering together, offered where the alternatives are: the moment
-              somebody is looking at four dishes is the moment splitting one
-              bill occurs to them. */}
           <Link
             href="/food/group"
             className="tap-target mt-1 flex w-full items-center justify-center rounded-2xl border border-accent/50 bg-accent-soft/30 px-4 py-3 text-[14px] font-bold text-accent transition-colors hover:bg-accent-soft/60 lg:hidden"
@@ -233,17 +241,13 @@ export function FoodRecommendation({
             Group ordering
           </Link>
 
-          {/* Mobile: FlounaInsights after the group link — target reading order:
-              hero → alternatives → group ordering → insights. Desktop already
-              has it in the right rail above. */}
           <div className="lg:hidden">
             <FlounaInsights {...insightProps} />
           </div>
 
-          {/* Desktop: "Options we think you'll like" card grid (Figma) */}
           <div className="hidden lg:block">
             <p className="mt-2 text-[15px] font-bold text-ink">
-              Options we think you&apos;ll like
+              Compare other providers
             </p>
             <div className="mt-2 grid grid-cols-2 gap-3 xl:grid-cols-3">
               {rec.alternatives.map((q) => (
@@ -273,41 +277,43 @@ function FoodAltRow({ q }: { q: FoodQuote }) {
   return (
     <Card className="py-3">
       <div className="flex items-center gap-3">
-        <DishArt name={q.name} image={q.image} size={44} />
+        <DishArt name={q.name} image={q.image} size={52} />
         <div className="min-w-0 flex-1">
           <span className="inline-block rounded-full bg-beige px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cocoa">
             {q.platform}
           </span>
           <p className="mt-1 truncate text-[14px] font-semibold text-ink">{q.name}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2.5">
           <p className="flex items-baseline gap-1.5">
-            <span className="text-[14px] font-bold text-ink">{rupees(q.effectivePaise)}</span>
+            <span className="text-[20px] font-bold text-ink">{rupees(q.effectivePaise)}</span>
             {originalPaise > q.effectivePaise && (
-              <span className="text-[12px] text-cocoa/70 line-through">
+              <span className="text-[13px] text-cocoa/60 line-through">
                 {rupees(originalPaise)}
               </span>
             )}
           </p>
+          <button
+            onClick={() => {
+              add(
+                {
+                  dishId: q.dishId,
+                  platform: q.platform,
+                  name: q.name,
+                  restaurant: q.restaurant,
+                  image: q.image,
+                  pricePaise: q.effectivePaise,
+                },
+                1,
+              );
+              setAdded(true);
+              setTimeout(() => setAdded(false), 2000);
+            }}
+            className="rounded-lg border border-ink/80 px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:bg-beige/50"
+          >
+            {added ? "Added" : "+ Add"}
+          </button>
         </div>
-        <button
-          onClick={() => {
-            add(
-              {
-                dishId: q.dishId,
-                platform: q.platform,
-                name: q.name,
-                restaurant: q.restaurant,
-                image: q.image,
-                pricePaise: q.effectivePaise,
-              },
-              1,
-            );
-            setAdded(true);
-            setTimeout(() => setAdded(false), 2000);
-          }}
-          className="shrink-0 rounded-pill border border-accent px-3.5 py-1.5 text-[12px] font-semibold text-accent transition-colors hover:bg-accent-soft"
-        >
-          {added ? "Added" : "+ Add"}
-        </button>
       </div>
     </Card>
   );

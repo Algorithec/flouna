@@ -67,6 +67,20 @@ function Results() {
     };
   }, [chatId, msgId, addressed]);
 
+  if (!chatId || !msgId) {
+    return (
+      <div className="flex h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-4 px-4 lg:h-dvh">
+        <p className="text-[15px] text-cocoa">Missing chat or message ID</p>
+        <button
+          onClick={() => router.back()}
+          className="rounded-pill bg-accent px-5 py-2.5 text-[14px] font-semibold text-white"
+        >
+          Go back
+        </button>
+      </div>
+    );
+  }
+
   const onShare = async () => {
     const text = `Check out this recommendation on Flouna`;
     try {

@@ -136,7 +136,7 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
             </p>
             {savingPaise > 0 && (
               <p className="text-[12px] font-semibold text-success">
-                You save {rupees(savingPaise)}
+                {rupees(savingPaise)} off with current offers
               </p>
             )}
           </div>

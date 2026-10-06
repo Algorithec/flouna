@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 // Dish artwork.
 //
@@ -78,9 +79,12 @@ export function DishArt({
 
   if (image && !imgError) {
     return (
-      <img
+      <Image
         src={image}
         alt={name}
+        width={fill ? 400 : size}
+        height={fill ? 400 : size}
+        unoptimized
         onError={() => setImgError(true)}
         className={
           fill ? `object-cover ${className}` : `shrink-0 rounded-2xl object-cover ${className}`

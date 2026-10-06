@@ -1,0 +1,19 @@
+# Generated datasets (regenerate with: python gen_data.py)
+train.jsonl
+eval.jsonl
+valid.jsonl
+
+# Model weights & adapters
+*.gguf
+*.bin
+*.safetensors
+out/
+flouna-lora/
+flouna-fused/
+flouna_gguf/
+flouna_full/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
