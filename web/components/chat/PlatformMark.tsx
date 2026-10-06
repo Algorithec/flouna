@@ -108,12 +108,9 @@ export function SearchedPlatforms({
       </span>
       <span className="text-[11px] text-cocoa">
         {copy === "checked-count" ? (
-          // Says how many we checked, not which ones — the marks themselves
-          // show which. The + only appears when the list was actually
-          // truncated, so the count is always honest.
           <>
-            Checked {seen.length}
-            {rest > 0 ? "+" : ""} providers for you
+            Compared {seen.length}
+            {rest > 0 ? "+" : ""} providers
           </>
         ) : (
           // Default: names every platform as evidence for the claim above.

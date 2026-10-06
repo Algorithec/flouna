@@ -86,10 +86,10 @@ export function AdviceBanner({
             {/* The figure the advice turns on, stated rather than implied. */}
             {wait && saving && (
               <p className="text-[15px] font-bold text-ink">
-                Save {saving}
+                Save {saving} more by waiting
                 {wallClock && (
                   <span className="ml-1 text-[12px] font-medium text-cocoa">
-                    in about {wallClock}
+                    ~{wallClock}
                   </span>
                 )}
               </p>

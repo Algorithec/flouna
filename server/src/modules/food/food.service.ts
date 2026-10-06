@@ -44,6 +44,8 @@ export type FoodRecommendation = {
   trace: DecisionTrace;
   /** Nothing matched what was asked for; these are stand-ins. */
   substituted: boolean;
+  /** The user stated a budget and the best option exceeds it. */
+  overBudgetPaise?: number;
 };
 
 /** Stable identity of a food option: which dish, on which listing. */
@@ -285,11 +287,17 @@ export function recommendFood(
     why += `. Want the highest rated? ${topRated.restaurant} is ${topRated.rating}★`;
   }
 
+  const overBudgetPaise =
+    opts.budgetPaise && best.effectivePaise > opts.budgetPaise
+      ? best.effectivePaise - opts.budgetPaise
+      : undefined;
+
   return {
     best,
     alternatives,
     why,
     substituted,
+    overBudgetPaise,
     pickReason: reasonForPriority(priority),
     trace: {
       priority,
