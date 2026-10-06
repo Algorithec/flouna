@@ -205,7 +205,7 @@ const routeQuery = z.object({
 ridesRouter.get("/route", async (req, res, next) => {
   try {
     const { fromLat, fromLng, toLat, toLng } = routeQuery.parse(req.query);
-    const route = await fetchRoute(fromLat, fromLng, toLat, toLng, env.ORS_KEY);
+    const route = await fetchRoute(fromLat, fromLng, toLat, toLng, env.ORS_KEY, env.GOOGLE_MAPS_API_KEY);
     res.json(route);
   } catch (err) {
     next(err);

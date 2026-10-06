@@ -76,6 +76,10 @@ const envSchema = z.object({
   MAPTILER_KEY: z.string().optional(),
   GEOAPIFY_KEY: z.string().optional(),
   ORS_KEY: z.string().optional(),
+  // Google Maps Platform, server side: Routes and Places. Restrict this key
+  // to those APIs. Google's terms forbid showing its routes or places on a
+  // non-Google map, so set it only alongside the web's Google map key.
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
   // Weather (context engine). Open-Meteo is keyless, so weather-aware advice
   // works without this; the key only switches to a paid provider if set later.
   WEATHER_API_KEY: z.string().optional(),

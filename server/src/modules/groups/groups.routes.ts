@@ -318,6 +318,7 @@ groupsRouter.post(
           body.ride.dropLat,
           body.ride.dropLng,
           env.ORS_KEY,
+          env.GOOGLE_MAPS_API_KEY,
         );
         const quote = quoteRides({
           distanceKm: route.distanceKm,
@@ -724,6 +725,7 @@ groupsRouter.post(
           ride.dropLat,
           ride.dropLng,
           env.ORS_KEY,
+          env.GOOGLE_MAPS_API_KEY,
         );
         const quotes = quoteRides({
           distanceKm: route.distanceKm,

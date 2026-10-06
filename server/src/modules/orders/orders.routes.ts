@@ -513,6 +513,7 @@ ordersRouter.post(
         body.dropLat,
         body.dropLng,
         env.ORS_KEY,
+        env.GOOGLE_MAPS_API_KEY,
       );
       const { distanceKm, rideMinutes } = route;
       const quotes = quoteRides({ distanceKm, rideMinutes });

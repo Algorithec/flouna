@@ -1,6 +1,7 @@
 // Simulated ride-provider quotes (Uber/Ola/Rapido/ONDC). Same adapter shape
 // real provider/ONDC-mobility integrations will implement later.
 import { qualityOf, type CommunityRating } from "../ratings/blend.js";
+import { googleRoute } from "../maps/googleRoutes.js";
 import {
   scoreOptions,
   appliedWeights,
@@ -64,7 +65,19 @@ export async function fetchRoute(
   toLat: number,
   toLng: number,
   orsKey?: string,
+  googleKey?: string,
 ): Promise<RouteResult> {
+  // Google first when it is configured: real roads, live traffic, and the
+  // shortest of its alternatives, so the line both people see is the one the
+  // fare is priced on. Any failure falls through to the providers below.
+  if (googleKey) {
+    const g = await googleRoute(
+      googleKey,
+      { latitude: fromLat, longitude: fromLng },
+      { latitude: toLat, longitude: toLng },
+    );
+    if (g) return g;
+  }
   if (orsKey) {
     try {
       // Hard timeout: if ORS is slow or down (it 502s intermittently), don't
