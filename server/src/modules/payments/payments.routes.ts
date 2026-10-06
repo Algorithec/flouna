@@ -15,7 +15,7 @@ import { sendPushToUser } from "../notifications/push.service.js";
 import { checkSavingsMilestone } from "../notifications/outbox.service.js";
 import { sendReceiptEmail } from "../../lib/mailer.js";
 import { emitOrderConfirmation } from "../backoffice/ondc.service.js";
-import { spendFromWallet, walletBalance } from "../users/wallet.service.js";
+import { refundToWallet, spendFromWallet, walletBalance } from "../users/wallet.service.js";
 
 export const paymentsRouter = Router();
 
@@ -357,6 +357,22 @@ paymentsRouter.post(
           description: `Applied to ${order.title}`,
         });
         if (took > 0) {
+          // The order was read as awaiting payment before the credit was taken.
+          // If it was cancelled in between, the cancellation has already run
+          // and refunded nothing, so the credit goes straight back here.
+          const still = await prisma.order.findUnique({
+            where: { id: orderId },
+            select: { status: true },
+          });
+          if (still?.status !== "pending_payment") {
+            await refundToWallet({
+              userId: req.userId!,
+              orderId,
+              amountPaise: took,
+              description: `Returned from ${order.title}`,
+            });
+            throw new ApiError(409, "This order is not awaiting payment");
+          }
           const details = JSON.parse(order.details) as Record<string, unknown>;
           details.walletAppliedPaise = took;
           await prisma.order.update({

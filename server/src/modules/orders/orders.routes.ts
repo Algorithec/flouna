@@ -1053,8 +1053,17 @@ ordersRouter.post(
       // Flouna, so there is nothing to wait on a gateway for. Best-effort: the
       // ledger's unique index rejects a second refund for the same order, and
       // a cancellation must not fail because the credit was already returned.
-      const walletApplied =
-        typeof details.walletAppliedPaise === "number" ? details.walletAppliedPaise : 0;
+      // Read from the ledger, not from the order's details. A payment with
+      // credit landing at the same moment wrote its record into details after
+      // this request had read them, and the copy written back above erased it,
+      // so the credit was never returned. The ledger's debit is the fact.
+      const spend = await prisma.walletEntry.findUnique({
+        where: {
+          userId_orderId_reason: { userId: order.userId, orderId: order.id, reason: "spend" },
+        },
+        select: { amountPaise: true },
+      });
+      const walletApplied = spend ? -spend.amountPaise : 0;
       if (walletApplied > 0) {
         await refundToWallet({
           userId: order.userId,
