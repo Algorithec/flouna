@@ -42,10 +42,12 @@ const envSchema = z.object({
 
   // LLM providers — hybrid setup (Claude / Gemini / DeepSeek). Chat falls back
   // to a scripted demo mode if the selected provider's key is unset.
-  LLM_PROVIDER: z.enum(["anthropic", "google", "deepseek", "nvidia", "demo"]).default("demo"),
+  LLM_PROVIDER: z.enum(["anthropic", "google", "deepseek", "nvidia", "ollama", "demo"]).default("demo"),
   ANTHROPIC_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   NVIDIA_API_KEY: z.string().optional(),
+  OLLAMA_URL: z.string().url().optional(),
+  OLLAMA_MODEL: z.string().optional(),
   // Google AI Studio (Gemini). Free-tier friendly; model is overridable.
   GOOGLE_AI_API_KEY: z.string().optional(),
   GOOGLE_AI_MODEL: z.string().default("gemini-2.0-flash"),
