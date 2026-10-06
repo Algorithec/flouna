@@ -62,6 +62,9 @@ const envSchema = z.object({
   NVIDIA_API_KEY: z.string().optional(),
   OLLAMA_URL: z.string().url().optional(),
   OLLAMA_MODEL: z.string().optional(),
+  // Sent as a Bearer token. Ollama checks nothing itself, so a model server
+  // on the internet sits behind a reverse proxy (Caddy) that checks this.
+  OLLAMA_API_KEY: z.string().optional(),
   // Google AI Studio (Gemini). Free-tier friendly; model is overridable.
   GOOGLE_AI_API_KEY: z.string().optional(),
   GOOGLE_AI_MODEL: z.string().default("gemini-2.0-flash"),
@@ -209,11 +212,29 @@ if (isProd) {
   if (env.CASHFREE_ENV === "sandbox") {
     warnings.push("CASHFREE_ENV=sandbox, payments are not real money");
   }
+  // A token sent over plain http to another machine is readable by anyone on
+  // the path, which is the whole of the internet between Railway and the VM.
+  if (env.OLLAMA_API_KEY && env.OLLAMA_URL && isPlainHttpRemote(env.OLLAMA_URL)) {
+    warnings.push(
+      "OLLAMA_URL is plain http to a remote host, so OLLAMA_API_KEY travels unencrypted. " +
+        "Serve the model through HTTPS (Caddy does this automatically).",
+    );
+  }
   if (!env.VAPID_PUBLIC_KEY) {
     warnings.push("VAPID_PUBLIC_KEY unset, web push notifications are disabled");
   }
   if (warnings.length > 0) {
     console.warn("Starting with reduced functionality:");
     for (const w of warnings) console.warn(`  - ${w}`);
+  }
+}
+
+/** True for http:// to anything other than this machine. */
+export function isPlainHttpRemote(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" && !["localhost", "127.0.0.1", "[::1]", "::1"].includes(u.hostname);
+  } catch {
+    return false;
   }
 }

@@ -8,13 +8,20 @@ export class OllamaProvider implements LlmProvider {
   name = "ollama";
 
   async extractIntent(userMessage: string): Promise<Intent> {
-    const base = env.OLLAMA_URL ?? "http://localhost:11434";
+    // Trailing slashes trimmed: "https://llm.example.com/" would otherwise
+    // request "//v1/..." and get a 404 from most proxies.
+    const base = (env.OLLAMA_URL ?? "http://localhost:11434").replace(/\/+$/, "");
     const model = env.OLLAMA_MODEL ?? "flouna";
 
     const res = await fetch(`${base}/v1/chat/completions`, {
       method: "POST",
       signal: AbortSignal.timeout(10_000),
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Ollama has no authentication of its own, so a server reachable from
+        // the internet sits behind a reverse proxy that checks this token.
+        ...(env.OLLAMA_API_KEY ? { Authorization: `Bearer ${env.OLLAMA_API_KEY}` } : {}),
+      },
       body: JSON.stringify({
         model,
         response_format: { type: "json_object" },

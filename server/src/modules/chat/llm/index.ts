@@ -17,6 +17,20 @@ import { FallbackProvider } from "./fallback.js";
 // when an expired Anthropic key silently sent every request to the rule-based
 // engine.
 
+/**
+ * Whether Ollama belongs in the fallback chain. A model name alone means "the
+ * Ollama on this machine", which is right in development and nowhere in
+ * production: Railway has no localhost model, so every chat would wait out a
+ * failed call before falling back.
+ */
+export function ollamaConfigured(e: {
+  OLLAMA_URL?: string;
+  OLLAMA_MODEL?: string;
+  NODE_ENV: string;
+}): boolean {
+  return Boolean(e.OLLAMA_URL || (e.NODE_ENV !== "production" && e.OLLAMA_MODEL));
+}
+
 type ProviderName = "anthropic" | "google" | "deepseek" | "nvidia" | "ollama" | "self_hosted";
 
 const BUILDERS: Record<ProviderName, { hasKey: () => boolean; make: () => LlmProvider }> = {
@@ -24,7 +38,10 @@ const BUILDERS: Record<ProviderName, { hasKey: () => boolean; make: () => LlmPro
   google: { hasKey: () => Boolean(env.GOOGLE_AI_API_KEY), make: () => new GoogleProvider() },
   deepseek: { hasKey: () => Boolean(env.DEEPSEEK_API_KEY), make: () => new DeepseekProvider() },
   nvidia: { hasKey: () => Boolean(env.NVIDIA_API_KEY), make: () => new NvidiaProvider() },
-  ollama: { hasKey: () => Boolean(env.OLLAMA_URL || env.OLLAMA_MODEL), make: () => new OllamaProvider() },
+  // A model name alone means "the Ollama on this machine", which is right in
+  // development and nowhere in production: Railway has no localhost model, so
+  // every chat would wait out a failed call before falling back.
+  ollama: { hasKey: () => ollamaConfigured(env), make: () => new OllamaProvider() },
   // Ours. "Has a key" means "is actually running somewhere": without a URL
   // there is nothing to call, and including it anyway would put a guaranteed
   // timeout in front of every request the chain makes.
