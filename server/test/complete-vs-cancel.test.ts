@@ -63,3 +63,35 @@ describe("completing an order that was just cancelled", () => {
     expect(await walletBalance(userId)).toBeGreaterThan(0);
   });
 });
+
+// And the other way round: a cancellation must not undo a completion.
+//
+// Cancelling read the order, checked it was not completed, then set it to
+// cancelled unconditionally. An order that completed in between, food already
+// delivered, was cancelled anyway, with its payment flagged for a refund.
+describe("cancelling an order that has just completed", () => {
+  it("refuses, rather than refunding a delivered order", async () => {
+    const { agent, orderId } = await paidOrderWithElapsedTimeline();
+    // Keep the delivery steps ahead, so the out-for-delivery rule cannot be
+    // what refuses this; only the completion that landed in between can.
+    await prisma.trackingEvent.updateMany({
+      where: { orderId },
+      data: { createdAt: new Date(Date.now() + 60 * 60_000) },
+    });
+
+    // The cancel reads the order as confirmed; completion lands before its write.
+    const stale = await prisma.order.findFirst({ where: { id: orderId } });
+    await prisma.order.update({ where: { id: orderId }, data: { status: "completed" } });
+    const spy = vi.spyOn(prisma.order, "findFirst").mockResolvedValueOnce(stale as never);
+    try {
+      await agent.post(`/api/orders/${orderId}/cancel`).send({}).expect(409);
+    } finally {
+      spy.mockRestore();
+    }
+
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+    expect(after.status).toBe("completed");
+    const payment = await prisma.payment.findUniqueOrThrow({ where: { orderId } });
+    expect(payment.status).toBe("success");
+  });
+});

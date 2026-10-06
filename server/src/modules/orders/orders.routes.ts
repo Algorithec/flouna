@@ -1034,10 +1034,20 @@ ordersRouter.post(
       details.cancelledWithinFreeWindow = terms.freeWindow;
       details.cancelledAt = new Date().toISOString();
 
-      const updated = await prisma.order.update({
-        where: { id: order.id },
+      // Only if it is still open. This write used to be unconditional, so an
+      // order that completed between the checks above and here (food already
+      // delivered) was cancelled anyway and its payment flagged for a refund.
+      const cancelled = await prisma.order.updateMany({
+        where: { id: order.id, status: { notIn: ["completed", "cancelled"] } },
         data: { status: "cancelled", details: JSON.stringify(details) },
       });
+      if (cancelled.count === 0) {
+        throw new ApiError(
+          409,
+          isFood ? "This order has just been delivered" : "This trip has just finished",
+        );
+      }
+      const updated = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
 
       // Reward credit spent on this order goes straight back — it never left
       // Flouna, so there is nothing to wait on a gateway for. Best-effort: the
