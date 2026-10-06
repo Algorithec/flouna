@@ -390,10 +390,15 @@ export function recommendFood(
     why += `. Want the highest rated? ${topRated.restaurant} is ${topRated.rating}★`;
   }
 
+  // Measured against the price the customer named, which is what the banner
+  // tells them ("above your stated budget"). That limit is enforced before
+  // ranking, so this is normally absent and stays as a guard should the
+  // enforcement ever be bypassed. It is not measured against budgetPaise: that
+  // is the weekly allowance, which the customer did not state in this message
+  // and which already has its own note.
+  const stated = opts.constraints?.maxPricePaise ?? null;
   const overBudgetPaise =
-    opts.budgetPaise && best.effectivePaise > opts.budgetPaise
-      ? best.effectivePaise - opts.budgetPaise
-      : undefined;
+    stated && best.effectivePaise > stated ? best.effectivePaise - stated : undefined;
 
   return {
     best,
