@@ -52,6 +52,15 @@ ${JSON_SHAPE}`,
     if (!content) throw new Error("Ollama returned no content");
     const raw = JSON.parse(content) as Record<string, unknown>;
 
+    // Small models often fill the parts they did not use with null ("food":
+    // null beside a real ride). The schema rejects a null part, so one such
+    // answer failed whole and chat fell back to another provider, and a key
+    // that is present but empty would also have counted towards the domain.
+    // An empty part is the same as an absent one.
+    for (const part of ["food", "ride", "shop"]) {
+      if (raw[part] === null) delete raw[part];
+    }
+
     // The 0.5B model reliably outputs the right sub-objects but sometimes
     // omits the domain field. Infer it from whichever keys are present.
     if (!raw.domain) {

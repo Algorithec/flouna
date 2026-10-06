@@ -76,3 +76,40 @@ describe("spotting a token sent in the clear", () => {
     expect(isPlainHttpRemote(url)).toBe(expected);
   });
 });
+
+// The 0.5B model sometimes leaves out "domain", and it is inferred from which
+// parts of the answer are present. Present means filled in: small models often
+// send "food": null alongside a real ride, and treating that key as present
+// turned a ride into a food and ride combo.
+describe("inferring a missing domain", () => {
+  function answer(body: Record<string, unknown>) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(body) } }] }), {
+          status: 200,
+        }),
+      ),
+    );
+  }
+
+  it("reads a ride with an empty food part as a ride", async () => {
+    answer({
+      reply: "Booking a cab",
+      food: null,
+      ride: { pickup: null, drop: "Airport", vehicle: "cab", priority: "balanced", scheduleAt: null },
+    });
+    const intent = await new OllamaProvider().extractIntent("cab to the airport");
+    expect(intent.domain).toBe("ride");
+  });
+
+  it("still reads food and ride together as a combo", async () => {
+    answer({
+      reply: "On it",
+      food: { item: "biryani", budgetPaise: null, dietary: "any", priority: "balanced" },
+      ride: { pickup: null, drop: "Home", vehicle: "any", priority: "balanced", scheduleAt: null },
+    });
+    const intent = await new OllamaProvider().extractIntent("biryani and a cab home");
+    expect(intent.domain).toBe("combo");
+  });
+});
