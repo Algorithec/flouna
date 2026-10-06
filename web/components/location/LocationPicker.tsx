@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl, { type Map as MlMap } from "maplibre-gl";
+import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { LocateFixed, Loader2, MapPin } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { baseMapOptions, loadGoogleMaps, useMapEngine } from "@/lib/maps/googleMaps";
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
 const STYLE_URL = MAPTILER_KEY
@@ -43,7 +44,9 @@ export function LocationPicker({
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MlMap | null>(null);
+  // Moves the map under the fixed pin, whichever engine is drawing it.
+  const moveToRef = useRef<((lat: number, lng: number) => void) | null>(null);
+  const engine = useMapEngine();
   const onChangeRef = useRef(onChange);
   const [resolving, setResolving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -80,13 +83,50 @@ export function LocationPicker({
   }, []);
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    // Google loads first when a key is set; nothing is drawn until it decides.
+    if (engine === "loading" || !containerRef.current) return;
     const start = initial ?? { lat: 17.385, lng: 78.4867 }; // Hyderabad
+    const zoom = initial ? 16 : 12;
+    let cancelled = false;
+    let teardown: () => void = () => {};
+
+    if (engine === "google") {
+      void loadGoogleMaps()
+        .then((maps) => {
+          if (cancelled || !containerRef.current) return;
+          const map = new maps.Map(containerRef.current, baseMapOptions(maps, start, zoom));
+          // "idle" is Google's moveend, except that it also fires once the
+          // map first settles. That first one only names the pin when a start
+          // was given, as the MapLibre map does.
+          let first = true;
+          const listener = map.addListener("idle", () => {
+            const skip = first && !initial;
+            first = false;
+            if (skip) return;
+            const c = map.getCenter();
+            if (c) void resolve(c.lat(), c.lng());
+          });
+          moveToRef.current = (lat, lng) => {
+            map.panTo({ lat, lng });
+            map.setZoom(17);
+          };
+          teardown = () => listener.remove();
+        })
+        .catch(() => {
+          // The engine hook sees the same failure and swaps to MapLibre.
+        });
+      return () => {
+        cancelled = true;
+        teardown();
+        moveToRef.current = null;
+      };
+    }
+
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: STYLE_URL,
       center: [start.lng, start.lat],
-      zoom: initial ? 16 : 12,
+      zoom,
       attributionControl: { compact: true },
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
@@ -95,7 +135,8 @@ export function LocationPicker({
       const c = map.getCenter();
       void resolve(c.lat, c.lng);
     });
-    mapRef.current = map;
+    moveToRef.current = (lat, lng) =>
+      map.flyTo({ center: [lng, lat], zoom: 17, duration: 800 });
     // Name the starting pin once the map is ready (an event callback, so this
     // never sets state synchronously during the effect).
     if (initial) {
@@ -103,11 +144,11 @@ export function LocationPicker({
     }
     return () => {
       map.remove();
-      mapRef.current = null;
+      moveToRef.current = null;
     };
-    // Mount once — `initial` is a starting position, not a live binding.
+    // Built once per engine — `initial` is a starting position, not a live binding.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [engine]);
 
   function useMyLocation() {
     if (!navigator.geolocation) {
@@ -121,7 +162,7 @@ export function LocationPicker({
         setLocating(false);
         const { latitude: lat, longitude: lng } = pos.coords;
         // flyTo triggers moveend, which resolves the address.
-        mapRef.current?.flyTo({ center: [lng, lat], zoom: 17, duration: 800 });
+        moveToRef.current?.(lat, lng);
       },
       () => {
         setLocating(false);
