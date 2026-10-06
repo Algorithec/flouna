@@ -2,6 +2,13 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../../middleware/auth.js";
 import { recordDecision } from "../advisor/decisionLog.service.js";
+import { ApiError } from "../../middleware/error.js";
+import {
+  googleAutocomplete,
+  googlePlaceDetails,
+  googleReverse,
+  PLACE_ID,
+} from "../maps/googlePlaces.js";
 import { env } from "../../config/env.js";
 import {
   quoteRides,
@@ -54,6 +61,11 @@ ridesRouter.get("/reverse", async (req, res, next) => {
   try {
     const lat = z.coerce.number().min(-90).max(90).parse(req.query.lat);
     const lng = z.coerce.number().min(-180).max(180).parse(req.query.lng);
+
+    if (env.GOOGLE_MAPS_API_KEY) {
+      const g = await googleReverse(env.GOOGLE_MAPS_API_KEY, lat, lng);
+      if (g) return res.json(g);
+    }
 
     if (env.GEOAPIFY_KEY) {
       const url = new URL("https://api.geoapify.com/v1/geocode/reverse");
@@ -147,6 +159,19 @@ ridesRouter.get("/geocode", async (req, res, next) => {
     const near = z
       .object({ lat: z.coerce.number(), lng: z.coerce.number() })
       .safeParse({ lat: req.query.lat, lng: req.query.lng });
+    // One token per search, from the client, so Google bills the keystrokes
+    // and the final lookup as a single session.
+    const session = z.string().uuid().optional().safeParse(req.query.session);
+
+    if (env.GOOGLE_MAPS_API_KEY) {
+      const g = await googleAutocomplete(env.GOOGLE_MAPS_API_KEY, q, {
+        near: near.success ? near.data : undefined,
+        session: session.success ? session.data : undefined,
+      });
+      // Suggestions carry a place id and no coordinates. The client fetches
+      // coordinates from /place for the one the rider picks.
+      if (g) return res.json({ places: g });
+    }
 
     if (env.GEOAPIFY_KEY) {
       const url = new URL("https://api.geoapify.com/v1/geocode/autocomplete");
@@ -190,6 +215,25 @@ ridesRouter.get("/geocode", async (req, res, next) => {
           p.area.toLowerCase().includes(needle),
       ).slice(0, 6),
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Coordinates for a suggestion the rider picked. Only Google suggestions need
+// this; every other provider returns coordinates with the suggestion itself.
+ridesRouter.get("/place", async (req, res, next) => {
+  try {
+    const { id, session } = z
+      .object({
+        id: z.string().regex(PLACE_ID),
+        session: z.string().uuid().optional(),
+      })
+      .parse(req.query);
+    if (!env.GOOGLE_MAPS_API_KEY) throw new ApiError(404, "Place lookup is not available");
+    const place = await googlePlaceDetails(env.GOOGLE_MAPS_API_KEY, id, { session });
+    if (!place) throw new ApiError(502, "Could not find that place right now");
+    res.json({ place });
   } catch (err) {
     next(err);
   }
