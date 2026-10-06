@@ -713,13 +713,20 @@ ordersRouter.get("/:id", async (req, res, next) => {
       order.trackingEvents.length > 0 &&
       order.trackingEvents.every((e) => e.createdAt <= new Date())
     ) {
-      order = {
-        ...order,
-        ...(await prisma.order.update({
-          where: { id: order.id },
-          data: { status: "completed" },
-        })),
-      };
+      // Only if it is still confirmed. This write used to be unconditional,
+      // so a cancellation landing between the read above and this line was
+      // overwritten: the order showed completed with a refund flagged against
+      // it and cashback paid on it.
+      const completed = await prisma.order.updateMany({
+        where: { id: order.id, status: "confirmed" },
+        data: { status: "completed" },
+      });
+      if (completed.count === 0) {
+        // Something else changed it first; show what it is now.
+        const current = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
+        return res.json({ order: { ...order, ...current, details: JSON.parse(current.details) } });
+      }
+      order = { ...order, status: "completed" };
 
       // Completing the order is what earns the buyer's cashback. The rate is
       // the platform's own configured numbers — the ONDC margin floor, and the
