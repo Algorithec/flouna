@@ -84,6 +84,9 @@ export default function GroupRidePage({
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not book the ride");
+      // A refused booking can mean the fare moved; the server has already
+      // updated it, so show the new total and shares now, not at the next poll.
+      load();
     } finally {
       setBusy(false);
     }

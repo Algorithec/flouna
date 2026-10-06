@@ -736,6 +736,23 @@ groupsRouter.post(
         );
         if (!quote) throw new ApiError(404, "That ride option is no longer available");
 
+        // The group agreed to the fare it was shown. If the trip now prices
+        // differently (later traffic, a different road), nobody is charged a
+        // total they never saw: the new fare replaces the old one, every
+        // member's screen shows it and their share of it, and the host books
+        // again knowing what everyone will pay.
+        if (quote.effectivePaise !== ride.farePaise) {
+          await prisma.groupCart.update({
+            where: { id: cart.id },
+            data: { rideDetails: JSON.stringify({ ...ride, farePaise: quote.effectivePaise }) },
+          });
+          throw new ApiError(
+            409,
+            `The fare has changed to ${rupeesExact(quote.effectivePaise)} since the group was set up. ` +
+              "Everyone's share has been updated, so check it and book again.",
+          );
+        }
+
         const hostName =
           cart.members.find((m) => m.userId === cart.hostId)?.user.name ?? "Host";
         const memberCount = Math.max(1, cart.members.length);
