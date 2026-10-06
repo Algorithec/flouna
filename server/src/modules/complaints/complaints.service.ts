@@ -429,6 +429,17 @@ export async function escalateComplaint(
   }
 
   const level = complaint.escalationLevel + 1;
+  // The level is claimed before anything is written, and only if it is still
+  // the one read above. Two taps at once used to both read level 0, so the
+  // complaint went to the grievance officer twice, with two escalation records
+  // and two timeline entries.
+  const claimed = await prisma.complaint.updateMany({
+    where: { id: complaint.id, escalationLevel: complaint.escalationLevel },
+    data: { escalationLevel: level, issueType: "GRIEVANCE" },
+  });
+  if (claimed.count === 0) {
+    throw new ApiError(409, "This complaint has just been escalated");
+  }
   await prisma.complaintEscalation.create({
     data: {
       complaintId: complaint.id,
@@ -436,10 +447,6 @@ export async function escalateComplaint(
       reason,
       targetActor: level === 1 ? "GRO" : "ONDC",
     },
-  });
-  await prisma.complaint.update({
-    where: { id: complaint.id },
-    data: { escalationLevel: level, issueType: "GRIEVANCE" },
   });
   await recordAction({
     complaintId: complaint.id,
