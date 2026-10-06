@@ -1044,9 +1044,20 @@ ordersRouter.post(
       // ops would otherwise never learn money is owed back. Status-scoped so a
       // payment that isn't actually settled is left alone (cash on delivery
       // sits at "pending" — nothing to return).
+      //
+      // Only money that went through the gateway is owed back through it. An
+      // order the wallet covered in full has a zero rupee payment: its credit
+      // was returned just above, so that payment is simply closed. Flagging it
+      // used to tell the customer a refund was coming that they already had,
+      // and gave ops a queue item asking Cashfree to refund nothing on an
+      // order it never saw, which failed every time and could not be cleared.
       const refundFlagged = await prisma.payment.updateMany({
-        where: { orderId: order.id, status: "success" },
+        where: { orderId: order.id, status: "success", amount: { gt: 0 } },
         data: { status: "refund_pending" },
+      });
+      await prisma.payment.updateMany({
+        where: { orderId: order.id, status: "success", amount: 0 },
+        data: { status: "refunded" },
       });
 
       void sendPushToUser(order.userId, {
