@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import crypto from "node:crypto";
 import { splitFare, rupeesExact } from "./split.js";
 import { Router } from "express";
@@ -280,6 +281,42 @@ async function addMember(cartId: string, userId: string) {
   });
 }
 
+/**
+ * Adds a rider to a shared ride if a seat is free, counting and adding in one
+ * step. Counting first and adding afterwards let two people joining for the
+ * last seat both see it free and both get in: four in a three seat auto, and
+ * the fare split four ways. Serializable, so Postgres refuses one of two
+ * conflicting joins, and the refused one retries and finds the ride full.
+ */
+async function takeSeat(cartId: string, userId: string, seats: number) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await prisma.$transaction(
+        async (tx) => {
+          const members = await tx.groupCartMember.findMany({
+            where: { cartId },
+            select: { userId: true },
+          });
+          if (members.some((m) => m.userId === userId)) return;
+          if (members.length >= seats) throw new ApiError(409, "This ride is full");
+          await tx.groupCartMember.create({ data: { cartId, userId } });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+      return;
+    } catch (err) {
+      const e = err as { code?: string; message?: string };
+      const contended =
+        e?.code === "P2034" ||
+        /database is locked|SQLITE_BUSY|could not serialize/i.test(e?.message ?? "");
+      if (contended && attempt < 5) continue;
+      // Two joins by the same person at once: the other one already added them.
+      if (e?.code === "P2002") return;
+      throw err;
+    }
+  }
+}
+
 // ---------- create ----------
 const createFoodGroup = z.object({
   domain: z.literal("food").default("food"),
@@ -414,12 +451,10 @@ groupsRouter.post(
       // Shared rides have physical seats — don't let a 5th person into a cab.
       if (cart.domain === "ride") {
         const ride = JSON.parse(cart.rideDetails ?? "{}") as RideSnapshot;
-        const alreadyIn = cart.members.some((m) => m.userId === req.userId!);
-        if (!alreadyIn && cart.members.length >= ride.seats) {
-          throw new ApiError(409, "This ride is full");
-        }
+        await takeSeat(cart.id, req.userId!, ride.seats);
+      } else {
+        await addMember(cart.id, req.userId!); // joining establishes membership
       }
-      await addMember(cart.id, req.userId!); // joining establishes membership
       res.json(await summarize(cart.id, req.userId!));
     } catch (err) {
       next(err);
