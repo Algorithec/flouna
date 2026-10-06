@@ -956,6 +956,9 @@ model Payment {
   status          String // "created" | "processing" | "success" | "failed" | "refunded"
   method          String? // "upi" | "card" | "netbanking"
   gatewayResponse String? // JSON: last webhook/verify payload
+  // When the money was taken. createdAt is when checkout began, which can be
+  // long before; the free cancellation window runs from this instead.
+  paidAt          DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

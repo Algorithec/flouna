@@ -161,9 +161,11 @@ async function markPaid(
     // COD money hasn't moved yet, so the payment row must not claim success.
     const paymentStatus = opts.collectOnDelivery ? "pending" : "success";
 
+    // Cash on delivery has taken nothing yet, so it has no payment time.
+    const paidAt = opts.collectOnDelivery ? null : new Date();
     await tx.payment.upsert({
       where: { orderId },
-      update: { status: paymentStatus, method, gatewayResponse: opts.gatewayResponse },
+      update: { status: paymentStatus, method, gatewayResponse: opts.gatewayResponse, paidAt },
       create: {
         orderId,
         userId: order.userId,
@@ -172,6 +174,7 @@ async function markPaid(
         status: paymentStatus,
         method,
         gatewayResponse: opts.gatewayResponse,
+        paidAt,
       },
     });
 
