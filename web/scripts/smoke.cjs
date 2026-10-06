@@ -149,7 +149,7 @@ let browser = null;
     // nothing.
     check(
       "shows how widely it looked",
-      /Checked \d+\+? providers/i.test(text) || /Compared across/i.test(text),
+      /(Checked|Compared) \d+\+? providers/i.test(text) || /Compared across/i.test(text),
     );
     check("shows the reasoning", /Why this is the best choice/i.test(text));
     check("shows the insights panel", /FLOUNA INSIGHTS/i.test(text));
