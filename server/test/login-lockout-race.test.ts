@@ -43,3 +43,18 @@ describe("counting failed logins", () => {
     expect(user.failedLogins).toBe(0);
   });
 });
+
+describe("counting failed logins at the operator console", () => {
+  it("counts a burst of wrong passwords there too", async () => {
+    // The back office has its own login, and it had the same fault.
+    const { email } = await authedAgent();
+    await Promise.all(
+      Array.from({ length: 10 }, () =>
+        request(app).post("/api/auth/console/login").send({ email, password: "wrong-password-1" }),
+      ),
+    );
+    const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+    expect(user.failedLogins).toBe(10);
+    expect(user.lockedUntil).not.toBeNull();
+  });
+});
