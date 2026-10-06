@@ -1,17 +1,8 @@
-import { Zap, Tag, CircleCheck } from "lucide-react";
-import { rupees } from "@/lib/money";
+"use client";
 
-// The insights panel from the design: the review, the cheaper route through the
-// same order, and the offers already applied.
-//
-// Every tile here is derived from the quotes we actually hold. The design also
-// shows a payment-cashback tile and a bundle tile, and neither has any data
-// behind it yet, so neither is invented here. A panel headed "insights" that
-// makes up a ₹40 cashback is worse than one tile shorter, because the whole
-// point of it is that the numbers can be trusted.
-//
-// Rendered at both sizes. It used to be desktop only, which dropped it on the
-// size most people use.
+import { useState } from "react";
+import { Zap } from "lucide-react";
+import { rupees } from "@/lib/money";
 
 export type Hack = { label: string; detail: string };
 
@@ -20,13 +11,15 @@ export function FlounaInsights({
   hacks = [],
   offers = [],
 }: {
-  /** A real review of the winning option, when there is one. */
   quote?: string | null;
-  /** Cheaper or faster ways through the same order, worked out from the quotes. */
   hacks?: Hack[];
   offers?: { label: string; discountPaise: number }[];
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (!quote && hacks.length === 0 && offers.length === 0) return null;
+
+  const visibleOffers = expanded ? offers : offers.slice(0, 2);
+  const hasMore = offers.length > 2 && !expanded;
 
   return (
     <div className="rounded-card border border-accent/30 bg-accent-soft/40 p-4">
@@ -35,9 +28,12 @@ export function FlounaInsights({
       </p>
 
       {quote && (
-        <p className="mt-2 text-[13px] italic leading-relaxed text-ink">
-          “{quote}”
-        </p>
+        <>
+          <p className="mt-2 text-[18px] text-accent/40">{"✦"}</p>
+          <p className="mt-1 text-[13px] italic leading-relaxed text-ink">
+            &ldquo;{quote}&rdquo;
+          </p>
+        </>
       )}
 
       {hacks.length > 0 && (
@@ -47,9 +43,9 @@ export function FlounaInsights({
               key={h.label}
               className="rounded-xl border border-line bg-card px-3 py-2.5"
             >
-              <p className="text-[12px] font-bold text-ink">{h.label}</p>
+              <p className="text-[13px] font-bold text-ink">{h.label}</p>
               <p className="mt-0.5 text-[12px] leading-snug text-cocoa">
-                {h.detail}
+                {"→"} {h.detail}
               </p>
             </div>
           ))}
@@ -58,43 +54,46 @@ export function FlounaInsights({
 
       {offers.length > 0 && (
         <div className="mt-3">
-          <p className="flex items-center gap-1.5 text-[12px] font-bold text-success">
-            <Tag size={13} /> Available offers and coupons
+          <p className="text-[13px] font-bold text-ink">
+            Available offers and coupons
           </p>
           <div className="mt-1.5 flex flex-col gap-1">
-            {offers.map((o) => (
+            {visibleOffers.map((o) => (
               <p
                 key={o.label}
-                className="flex items-center gap-1.5 text-[12px] text-ink"
+                className="flex items-start gap-2 text-[12px] text-ink"
               >
-                <CircleCheck size={13} className="shrink-0 text-success" />
-                {o.label}
-                {o.discountPaise > 0 && (
-                  <span className="text-cocoa">
-                    · saves {rupees(o.discountPaise)}
-                  </span>
-                )}
+                <span className="mt-[5px] size-1.5 shrink-0 rounded-full bg-ink" />
+                <span>
+                  {o.label}
+                  {o.discountPaise > 0 && (
+                    <span className="text-cocoa">
+                      {" "}&middot; saves {rupees(o.discountPaise)}
+                    </span>
+                  )}
+                </span>
               </p>
             ))}
           </div>
+          {hasMore && (
+            <button
+              onClick={() => setExpanded(true)}
+              className="mt-2.5 rounded-lg border border-ink/70 px-3.5 py-1.5 text-[12px] font-semibold text-ink transition-colors hover:bg-card"
+            >
+              MORE
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-/**
- * "Switch to a bike and save ₹10", worked out rather than written.
- *
- * Only offered when the cheaper option is a genuinely different vehicle and the
- * saving is worth a sentence. Suggesting somebody downgrade to save one rupee
- * wastes the one tile they will read.
- */
 export function cheaperVehicleHack(
   best: { vehicle: string; effectivePaise: number },
   alternatives: { vehicle: string; effectivePaise: number; displayName: string }[],
 ): Hack | null {
-  const MIN_WORTH_SAYING = 1000; // ₹10 in paise
+  const MIN_WORTH_SAYING = 1000;
   let cheapest: (typeof alternatives)[number] | null = null;
   for (const a of alternatives) {
     if (a.vehicle === best.vehicle) continue;
@@ -110,13 +109,6 @@ export function cheaperVehicleHack(
   };
 }
 
-/**
- * "Add Raita and save ₹80 on this order", worked out from add-ons the
- * restaurant actually offers, not invented.
- *
- * Returns null when the dish has no add-ons or the discount is zero,
- * so the tile is never shown without real data behind it.
- */
 export function bundleHack(
   addOns: { name: string; pricePaise: number }[],
   bundleDiscountPaise: number,
