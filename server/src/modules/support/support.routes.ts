@@ -214,7 +214,19 @@ supportRouter.post(
       // The assistant handing over is what raises the ticket — the customer
       // never has to fill a form to reach a person.
       let ticketId = chat.ticketId;
-      if (reply.escalate && !ticketId) {
+      // Claimed before the ticket is raised, and only while the chat is not
+      // already escalated. Two requests asking for a person at once both saw
+      // no ticket and both raised one, so the team saw the case twice.
+      const claimedEscalation =
+        reply.escalate && !ticketId
+          ? (
+              await prisma.supportChat.updateMany({
+                where: { id: chat.id, ticketId: null, status: { not: "escalated" } },
+                data: { status: "escalated" },
+              })
+            ).count === 1
+          : false;
+      if (claimedEscalation) {
         const transcript = await prisma.supportMessage.findMany({
           where: { chatId: chat.id },
           orderBy: { createdAt: "asc" },
@@ -299,8 +311,10 @@ supportRouter.post(
       if (chat.ratedAt) throw new ApiError(409, "You've already rated this chat");
       const { stars, comment } = req.body as { stars: number; comment?: string };
 
-      await prisma.supportChat.update({
-        where: { id: chat.id },
+      // Only while still unrated. A second tap at the same moment passed the
+      // check above, overwrote the first rating and raised a second ticket.
+      const rated = await prisma.supportChat.updateMany({
+        where: { id: chat.id, ratedAt: null },
         data: {
           ratingStars: stars,
           ratingComment: comment ?? null,
@@ -310,6 +324,7 @@ supportRouter.post(
           endedAt: chat.endedAt ?? new Date(),
         },
       });
+      if (rated.count === 0) throw new ApiError(409, "You've already rated this chat");
 
       // A poor rating on a conversation the assistant thought it had solved is
       // the clearest signal we have that it didn't. Raise it for a human rather
