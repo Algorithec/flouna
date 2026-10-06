@@ -29,7 +29,7 @@ import {
 } from "../advisor/decisionProfile.service.js";
 import type { Priority } from "../advisor/scoring.js";
 import { buildContext } from "../advisor/context.service.js";
-import { istStartOfDay } from "../../lib/istTime.js";
+import { istStartOfDay, istTimeLabel } from "../../lib/istTime.js";
 
 // Paise → "₹123" for chat copy.
 const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
@@ -173,7 +173,7 @@ async function buildAssistantPayload(
     return t.toISOString();
   };
   const scheduleLabel = (iso: string) =>
-    new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+    istTimeLabel(new Date(iso));
 
   if (intent.domain === "combo" && intent.food && intent.ride) {
     const comboBudget = await weeklyFoodBudget(userId);

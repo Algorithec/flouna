@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { matchTopic, topicBySlug, type SupportTopic } from "./support.kb.js";
+import { istDateLabel } from "../../lib/istTime.js";
 
 /** Integer paise in, display rupees out — the server has no shared helper. */
 const rupeesFromPaise = (paise: number) =>
@@ -71,10 +72,7 @@ function describeOrder(o: {
   amount: number;
   createdAt: Date;
 }) {
-  const when = o.createdAt.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-  });
+  const when = istDateLabel(o.createdAt, { day: "numeric", month: "short" });
   return `${o.title} (${when}, ${rupeesFromPaise(o.amount)}), ${ORDER_STATUS_TEXT[o.status] ?? o.status}`;
 }
 

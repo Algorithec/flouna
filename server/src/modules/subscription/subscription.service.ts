@@ -10,14 +10,11 @@
 import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
 import { enqueueNotification } from "../notifications/outbox.service.js";
+import { istDateLabel } from "../../lib/istTime.js";
 
 // Human-friendly date for emails, e.g. "12 Aug 2026".
 function fmtDate(d: Date): string {
-  return d.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return istDateLabel(d);
 }
 
 export type PlusStatus = {

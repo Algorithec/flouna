@@ -25,6 +25,7 @@ import { sendPushToUser } from "../notifications/push.service.js";
 import { evaluateCoupon, createOrderClaimingCoupon } from "../coupons/coupons.service.js";
 import { enqueueNotification } from "../notifications/outbox.service.js";
 import { emitOrderDiscovery } from "../backoffice/ondc.service.js";
+import { istTimeLabel } from "../../lib/istTime.js";
 
 export const ordersRouter = Router();
 ordersRouter.use(requireAuth);
@@ -890,10 +891,7 @@ ordersRouter.get("/:id/track", async (req, res, next) => {
     // calm "scheduled" placeholder instead of a fake live search.
     const bookedAt = order.trackingEvents[0]?.createdAt ?? order.createdAt;
     if (bookedAt.getTime() > Date.now()) {
-      const when = bookedAt.toLocaleTimeString("en-IN", {
-        hour: "numeric",
-        minute: "2-digit",
-      });
+      const when = istTimeLabel(bookedAt);
       return res.json({
         tracking: {
           providerRef: `SIM-${order.id.slice(0, 8).toUpperCase()}`,
