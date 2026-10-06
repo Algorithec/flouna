@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Crosshair, MapPin, Loader2, Search, Sparkles } from "lucide-react";
-import { api } from "@/lib/api";
+import { newSearchSession, resolvePlace, searchPlaces, type Suggestion } from "@/lib/places";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import { VehicleArt } from "@/components/rides/VehicleArt";
@@ -86,7 +86,9 @@ export function InlineRideBooking({
   // any money moves.
   const [reviewing, setReviewing] = useState(false);
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<{ name: string; area: string; lat: number; lng: number }[]>([]);
+  const [hits, setHits] = useState<Suggestion[]>([]);
+  // One search session per pick; replaced once a place is chosen.
+  const session = useRef(newSearchSession());
   const [searching, setSearching] = useState(false);
   const seq = useRef(0);
 
@@ -104,12 +106,10 @@ export function InlineRideBooking({
       // Moved inside the timer: setting it synchronously would flash the
       // spinner on every keystroke, including ones the debounce discards.
       setSearching(true);
-      api<{ places: { name: string; area: string; lat: number; lng: number }[] }>(
-        `/api/rides/geocode?q=${encodeURIComponent(q)}`,
-      )
-        .then((d) => {
+      searchPlaces(q, { session: session.current })
+        .then((found) => {
           if (mine !== seq.current) return;
-          setHits(d.places.slice(0, 5));
+          setHits(found.slice(0, 5));
         })
         .catch(() => mine === seq.current && setHits([]))
         .finally(() => mine === seq.current && setSearching(false));
@@ -121,12 +121,17 @@ export function InlineRideBooking({
   // simply not shown, rather than being cleared out of state on the way past.
   const visibleHits = b.picking && query.trim().length >= 3 ? hits : [];
 
-  function choose(place: { name: string; area: string; lat: number; lng: number }) {
-    if (b.picking === "pickup") b.setPickup(place);
-    else b.setDrop(place);
-    b.setPicking(null);
+  async function choose(suggestion: Suggestion) {
+    const picking = b.picking;
     setQuery("");
     setHits([]);
+    // A Google suggestion has no coordinates until it is chosen.
+    const place = await resolvePlace(suggestion, session.current);
+    session.current = newSearchSession();
+    if (!place) return;
+    if (picking === "pickup") b.setPickup(place);
+    else b.setDrop(place);
+    b.setPicking(null);
   }
 
   async function confirm() {

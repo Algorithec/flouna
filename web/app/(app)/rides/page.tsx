@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -18,6 +18,7 @@ import {
   CarTaxiFront,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { newSearchSession, resolvePlace, searchPlaces, suggestionKey, type Suggestion } from "@/lib/places";
 import { rupees } from "@/lib/money";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -89,8 +90,10 @@ function PlaceSearch({
   action?: React.ReactNode;
 }) {
   const [text, setText] = useState("");
-  const [places, setPlaces] = useState<Place[]>([]);
+  const [places, setPlaces] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
+  // One search session per use of this box; replaced once a place is chosen.
+  const session = useRef(newSearchSession());
 
   useEffect(() => {
     const short = text.length < 2;
@@ -100,12 +103,9 @@ function PlaceSearch({
           setPlaces([]);
           return;
         }
-        api<{ places: Place[] }>(
-          `/api/rides/geocode?q=${encodeURIComponent(text)}` +
-            (near ? `&lat=${near.lat}&lng=${near.lng}` : ""),
-        )
-          .then((d) => {
-            setPlaces(d.places);
+        searchPlaces(text, { near, session: session.current })
+          .then((found) => {
+            setPlaces(found);
             setOpen(true);
           })
           .catch(() => setPlaces([]));
@@ -137,11 +137,14 @@ function PlaceSearch({
         <div className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-[14px] border border-line bg-card shadow-card">
           {places.map((p) => (
             <button
-              key={`${p.lat}-${p.lng}`}
-              onClick={() => {
-                onSelect(p);
+              key={suggestionKey(p)}
+              onClick={async () => {
                 setOpen(false);
                 setText("");
+                // A Google suggestion has no coordinates until it is chosen.
+                const place = await resolvePlace(p, session.current);
+                session.current = newSearchSession();
+                if (place) onSelect(place);
               }}
               className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] hover:bg-beige/40"
             >
@@ -407,10 +410,9 @@ function RidesInner() {
       }
       // 2) Geocode the (possibly rewritten) query.
       try {
-        const d = await api<{ places: Place[] }>(
-          `/api/rides/geocode?q=${encodeURIComponent(query)}`,
-        );
-        if (!cancelled && d.places[0]) setDrop(d.places[0]);
+        const first = (await searchPlaces(query))[0];
+        const place = first ? await resolvePlace(first) : null;
+        if (!cancelled && place) setDrop(place);
       } catch {
         // leave drop unset; user can search manually
       }

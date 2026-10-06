@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { resolvePlace, searchPlaces } from "@/lib/places";
 import type { RideQuote } from "@/components/chat/types";
 import type { Advice } from "@/components/ui/AdviceBanner";
 
@@ -291,10 +292,9 @@ export function useRideBooking(opts: {
         }
       }
       try {
-        const d = await api<{ places: Place[] }>(
-          `/api/rides/geocode?q=${encodeURIComponent(query)}`,
-        );
-        if (!cancelled && d.places[0]) setDrop((prev) => prev ?? d.places[0]!);
+        const first = (await searchPlaces(query))[0];
+        const place = first ? await resolvePlace(first) : null;
+        if (!cancelled && place) setDrop((prev) => prev ?? place);
       } catch {
         // Leaves drop empty so the person can type it, rather than guessing.
       }
