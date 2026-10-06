@@ -199,7 +199,11 @@ export function recordSelection(input: {
           where: { id: input.decisionId },
           select: { userId: true },
         });
-        if (exists) {
+        // The row can also be this customer's own, written between the update
+        // that missed it and this read. That is not a refusal: it goes round
+        // the same bounded backoff as a row not written yet, and the update
+        // will now find it. Only a row that belongs to someone else is refused.
+        if (exists && exists.userId !== input.userId) {
           console.warn(
             `[decision] refused to pair decision ${input.decisionId} with order ${input.orderId}: it belongs to a different customer`,
           );

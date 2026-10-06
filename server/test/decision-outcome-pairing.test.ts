@@ -529,3 +529,43 @@ describe("what the client is told about the ranking", () => {
     expect(JSON.parse(log!.results)).toBeInstanceOf(Array);
   });
 });
+
+// The decision lands between the update that missed it and the read that
+// explains the miss.
+//
+// The update found nothing because the insert had not landed; by the time the
+// follow-up read ran, it had. That read saw a row and concluded the decision
+// belonged to someone else, without checking whose it was, so a customer's own
+// pairing was refused for good and logged as an ownership violation. Under the
+// full suite this is what the chat-path pairing test kept tripping on, and it
+// got likelier once decision writes began retrying and landing later.
+describe("pairing when the decision lands mid-check", () => {
+  it("pairs a customer's own decision that appeared after the update missed it", async () => {
+    const { vi } = await import("vitest");
+    const { recordSelection } = await import("../src/modules/advisor/decisionLog.service.js");
+    const id = randomUUID();
+
+    // Force the interleaving: the first update runs before the insert, and the
+    // row is written before the existence check.
+    const realUpdate = prisma.decisionLog.updateMany.bind(prisma.decisionLog);
+    let calls = 0;
+    const spy = vi.spyOn(prisma.decisionLog, "updateMany").mockImplementation((async (args: unknown) => {
+      calls++;
+      if (calls === 1) {
+        await writeDecision(id);
+        return { count: 0 };
+      }
+      return realUpdate(args as Parameters<typeof realUpdate>[0]);
+    }) as typeof prisma.decisionLog.updateMany);
+
+    try {
+      const outcome = await recordSelection({ decisionId: id, selectedKey: "mine", orderId: "o-mid", userId: USER });
+      expect(outcome).toBe("paired");
+    } finally {
+      spy.mockRestore();
+    }
+    const row = await prisma.decisionLog.findUnique({ where: { id } });
+    expect(row?.selectedKey).toBe("mine");
+    await prisma.decisionLog.deleteMany({ where: { id } });
+  });
+});
