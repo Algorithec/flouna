@@ -296,17 +296,21 @@ authRouter.post(
       // Single generic error for all failure modes — no account enumeration.
       if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
         if (user) {
-          const failed = user.failedLogins + 1;
-          await prisma.user.update({
+          // Incremented by the database, not written back as the value read
+          // above plus one. Wrong passwords sent at the same moment all wrote
+          // the same number, so a burst of ten counted as one and the lock
+          // never engaged.
+          const { failedLogins } = await prisma.user.update({
             where: { id: user.id },
-            data: {
-              failedLogins: failed,
-              lockedUntil:
-                failed >= MAX_FAILED_LOGINS
-                  ? new Date(Date.now() + LOCKOUT_MS)
-                  : null,
-            },
+            data: { failedLogins: { increment: 1 } },
+            select: { failedLogins: true },
           });
+          if (failedLogins >= MAX_FAILED_LOGINS) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { lockedUntil: new Date(Date.now() + LOCKOUT_MS) },
+            });
+          }
         }
         throw new ApiError(401, "Incorrect email or password");
       }
