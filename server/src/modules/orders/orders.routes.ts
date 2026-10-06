@@ -110,6 +110,10 @@ const createFoodCartOrder = z.object({
 const createRideOrder = z.object({
   domain: z.literal("ride"),
   decisionId: z.string().max(64).optional(),
+  // The fare the app showed. Never used as the price, which the server works
+  // out itself; only compared, so a fare that moved while the rider sat on the
+  // review screen is reported rather than charged.
+  expectedPaise: z.number().int().positive().optional(),
   provider: z.enum(["uber", "ola", "rapido", "ondc"]),
   productName: z.string().max(60),
   pickup: z.string().max(160),
@@ -522,6 +526,12 @@ ordersRouter.post(
         (q) => q.provider === body.provider && q.productName === body.productName,
       );
       if (!quote) throw new ApiError(404, "That ride option is no longer available");
+      if (body.expectedPaise !== undefined && body.expectedPaise !== quote.effectivePaise) {
+        throw new ApiError(
+          409,
+          `The fare has changed to ₹${Math.round(quote.effectivePaise / 100)}. Review it and book again.`,
+        );
+      }
 
       // Savings vs the cheapest other option of the same vehicle type.
       const cheapestOther = Math.min(

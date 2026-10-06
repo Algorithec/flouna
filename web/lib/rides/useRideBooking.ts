@@ -320,6 +320,9 @@ export function useRideBooking(opts: {
     }
   }
 
+  // Bumped to fetch the route again; see the refused booking below.
+  const [routeVersion, setRouteVersion] = useState(0);
+
   // Route, then quotes. Both are derived, so neither is stored by the caller.
   useEffect(() => {
     if (!pickup || !drop) return;
@@ -332,7 +335,7 @@ export function useRideBooking(opts: {
     return () => {
       cancelled = true;
     };
-  }, [pickup, drop]);
+  }, [pickup, drop, routeVersion]);
 
   const { maxFarePaise, maxPickupMinutes } = opts;
   const loadQuotes = useCallback(() => {
@@ -397,6 +400,9 @@ export function useRideBooking(opts: {
             : {}),
           provider: selected.provider,
           productName: selected.productName,
+          // What the rider agreed to. The server still prices the ride; it only
+          // refuses to book if its price no longer matches this.
+          expectedPaise: selected.effectivePaise,
           pickup: pickup.name,
           drop: drop.name,
           pickupLat: pickup.lat,
@@ -411,6 +417,11 @@ export function useRideBooking(opts: {
       return d.order.id;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not book the ride");
+      // A refusal can mean the fare moved. Re-pricing from the route already
+      // held would show the old fare again and the rider would loop, so the
+      // route is fetched afresh; the server now answers with the one it just
+      // priced, and the quotes follow it.
+      setRouteVersion((v) => v + 1);
       return null;
     } finally {
       setBusy(false);
