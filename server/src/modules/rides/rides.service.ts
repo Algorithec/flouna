@@ -59,7 +59,53 @@ export type RouteResult = {
 
 // Server-side route lookup with offline fallback. Used by the /route endpoint
 // and at booking time so the live-tracking marker has real road geometry.
+// The same trip, priced twice, must cost the same.
+//
+// A ride's fare comes from the route distance, looked up once for the screen
+// and again when the order is placed, since a distance from the client is
+// never trusted. Google routes with live traffic, and its shortest
+// alternative can change between the two: the review button said ₹413 and the
+// order charged ₹476. So a route is remembered for ten minutes, long enough to
+// cover choosing and booking, and short enough that it is still today's road.
+// It also spares a billed call when the same trip is asked for again.
+const ROUTE_TTL_MS = 10 * 60_000;
+const ROUTE_CACHE_MAX = 500;
+const routeCache = new Map<string, { at: number; route: RouteResult }>();
+
+/** Five decimals is about a metre: the same pin, not merely a nearby one. */
+function routeKey(fromLat: number, fromLng: number, toLat: number, toLng: number): string {
+  return [fromLat, fromLng, toLat, toLng].map((n) => n.toFixed(5)).join(",");
+}
+
+/** For tests: forget every remembered route. */
+export function clearRouteCache() {
+  routeCache.clear();
+}
+
 export async function fetchRoute(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+  orsKey?: string,
+  googleKey?: string,
+): Promise<RouteResult> {
+  const key = routeKey(fromLat, fromLng, toLat, toLng);
+  const hit = routeCache.get(key);
+  if (hit && Date.now() - hit.at < ROUTE_TTL_MS) return hit.route;
+
+  const route = await lookupRoute(fromLat, fromLng, toLat, toLng, orsKey, googleKey);
+  routeCache.delete(key);
+  routeCache.set(key, { at: Date.now(), route });
+  // Oldest first in a Map, so the first key is the one to drop.
+  if (routeCache.size > ROUTE_CACHE_MAX) {
+    const oldest = routeCache.keys().next().value;
+    if (oldest !== undefined) routeCache.delete(oldest);
+  }
+  return route;
+}
+
+async function lookupRoute(
   fromLat: number,
   fromLng: number,
   toLat: number,

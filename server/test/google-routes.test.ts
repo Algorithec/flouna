@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { decodePolyline } from "../src/modules/maps/polyline.js";
 import { googleRoute } from "../src/modules/maps/googleRoutes.js";
-import { fetchRoute } from "../src/modules/rides/rides.service.js";
+import { clearRouteCache, fetchRoute } from "../src/modules/rides/rides.service.js";
 
 // Google routes, and what happens when Google is not there.
 //
@@ -29,7 +29,11 @@ function fakeGoogle(response: unknown, status = 200) {
   return seen;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  // Routes are remembered for ten minutes; each test fakes its own answer.
+  clearRouteCache();
+});
 
 describe("decoding Google's polylines", () => {
   it("decodes Google's documented example to [lng, lat] pairs", () => {
