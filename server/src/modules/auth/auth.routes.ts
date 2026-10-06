@@ -167,14 +167,30 @@ authRouter.post(
         termsAcceptedAt: new Date(),
         termsVersion: POLICY_VERSION,
       };
+      const updateExisting = (id: string) =>
+        prisma.user.update({
+          where: { id },
+          data: { name, passwordHash, dateOfBirth, ...consent, ...optional },
+        });
       const user = existing
-        ? await prisma.user.update({
-            where: { id: existing.id },
-            data: { name, passwordHash, dateOfBirth, ...consent, ...optional },
-          })
-        : await prisma.user.create({
-            data: { name, email, passwordHash, dateOfBirth, ...consent, ...optional },
-          });
+        ? await updateExisting(existing.id)
+        : await prisma.user
+            .create({
+              data: { name, email, passwordHash, dateOfBirth, ...consent, ...optional },
+            })
+            .catch(async (err: { code?: string }) => {
+              // A second tap created the same account a moment earlier: both
+              // looked, both found nothing, both tried to create it. This one
+              // carries on as the update it would have been, rather than
+              // failing a sign up that worked with a 500.
+              if (err?.code !== "P2002") throw err;
+              const raced = await prisma.user.findUnique({ where: { email } });
+              if (!raced) throw err;
+              if (raced.emailVerified) {
+                throw new ApiError(409, "An account with this email already exists");
+              }
+              return updateExisting(raced.id);
+            });
 
       // The account row carries the current state; the log carries the
       // history, including this being the second time if they signed up,
