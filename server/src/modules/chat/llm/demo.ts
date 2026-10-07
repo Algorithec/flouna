@@ -110,6 +110,9 @@ function extractRide(message: string) {
     vehicle,
     priority: extractPriority(message),
     scheduleAt: extractScheduleAt(message),
+    budgetPaise: null,
+    maxEtaMinutes: null,
+    maxPickupMinutes: null,
   };
 }
 

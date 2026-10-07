@@ -1,9 +1,8 @@
 import { env } from "../../../config/env.js";
 import { intentSchema, type Intent, type LlmProvider } from "./types.js";
-import { SYSTEM_PROMPT } from "./prompt.js";
 
 // Ollama — local fine-tuned Qwen model. Zero API cost, ~200ms latency.
-// Uses the OpenAI-compatible endpoint that Ollama exposes at /v1/chat/completions.
+// The system prompt is baked into the Modelfile, so we only send the user message.
 export class OllamaProvider implements LlmProvider {
   name = "ollama";
 
@@ -13,20 +12,14 @@ export class OllamaProvider implements LlmProvider {
 
     const res = await fetch(`${base}/v1/chat/completions`, {
       method: "POST",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(60_000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
         response_format: { type: "json_object" },
         max_tokens: 512,
         temperature: 0,
-        messages: [
-          {
-            role: "system",
-            content: `${SYSTEM_PROMPT}\n\nRespond ONLY with a JSON object: {"domain": "food"|"ride"|"shop"|"combo"|"greeting"|"out_of_scope", "reply": string, "food"?: {"item": string, "budgetPaise": number|null, "dietary": "veg"|"nonveg"|"any", "priority": "price"|"rating"|"speed"|"balanced"}, "ride"?: {"pickup": string|null, "drop": string, "vehicle": "bike"|"auto"|"cab"|"any", "priority": "price"|"rating"|"speed"|"balanced", "scheduleAt": "HH:mm"|null}, "shop"?: {"item": string, "budgetPaise": number|null, "category": "electronics"|"fashion"|"home"|"appliances"|"any", "priority": "price"|"rating"|"speed"|"balanced"}}. Set priority from the user's words: "rating" for top-rated/best, "price" for cheap/budget, "speed" for fast/quick, else "balanced".`,
-          },
-          { role: "user", content: userMessage },
-        ],
+        messages: [{ role: "user", content: userMessage }],
       }),
     });
     if (!res.ok) {
@@ -39,12 +32,17 @@ export class OllamaProvider implements LlmProvider {
     if (!content) throw new Error("Ollama returned no content");
     const raw = JSON.parse(content) as Record<string, unknown>;
 
-    // The 0.5B model reliably outputs the right sub-objects but sometimes
-    // omits the domain field. Infer it from whichever keys are present.
+    // Normalize domain: the 1.5B model sometimes outputs "out of scope"
+    // (with spaces) instead of "out_of_scope".
+    if (typeof raw.domain === "string") {
+      raw.domain = raw.domain.replace(/\s+/g, "_").toLowerCase();
+    }
+
+    // Infer domain from sub-objects when the model omits it.
     if (!raw.domain) {
-      const hasFood = "food" in raw;
-      const hasRide = "ride" in raw;
-      const hasShop = "shop" in raw;
+      const hasFood = "food" in raw && raw.food != null;
+      const hasRide = "ride" in raw && raw.ride != null;
+      const hasShop = "shop" in raw && raw.shop != null;
       if (hasFood && hasRide) raw.domain = "combo";
       else if (hasFood) raw.domain = "food";
       else if (hasRide) raw.domain = "ride";
@@ -53,6 +51,13 @@ export class OllamaProvider implements LlmProvider {
       else raw.domain = "out_of_scope";
     }
     if (!raw.reply) raw.reply = "";
+
+    // Drop sub-objects that don't match the domain to avoid schema
+    // validation failures on hallucinated fields.
+    const domain = raw.domain as string;
+    if (domain !== "food" && domain !== "combo") delete raw.food;
+    if (domain !== "ride" && domain !== "combo") delete raw.ride;
+    if (domain !== "shop") delete raw.shop;
 
     return intentSchema.parse(raw);
   }

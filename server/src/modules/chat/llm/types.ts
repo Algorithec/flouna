@@ -41,6 +41,9 @@ export const intentSchema = z.object({
         .describe(
           "24h HH:mm if the user asked to book for a later time, else null",
         ),
+      budgetPaise: z.number().int().positive().nullable().default(null),
+      maxEtaMinutes: z.number().int().positive().nullable().default(null),
+      maxPickupMinutes: z.number().int().positive().nullable().default(null),
     })
     .optional(),
   shop: z
