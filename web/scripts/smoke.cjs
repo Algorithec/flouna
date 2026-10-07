@@ -78,6 +78,18 @@ let browser = null;
 
   browser = await chromium.launch({ channel: "chrome" });
   const context = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  // SMOKE_OFFLINE=1 blocks every host but the app's own, as a venue network
+  // that lets nothing out would. Pair it with an API run the same way.
+  const blocked = [];
+  if (process.env.SMOKE_OFFLINE) {
+    const own = new Set([new URL(WEB).host, new URL(API).host]);
+    await context.route("**/*", (route) => {
+      const url = new URL(route.request().url());
+      if (own.has(url.host) || url.protocol === "data:" || url.protocol === "blob:") return route.continue();
+      blocked.push(url.host);
+      return route.abort("internetdisconnected");
+    });
+  }
   const page = await context.newPage();
 
   // Anything that crashes the page or 500s is a failure wherever it happens.
@@ -367,6 +379,13 @@ let browser = null;
 
   group("stability");
   check("no crashes or 5xx anywhere", faults.length === 0, faults.slice(0, 3).join(" | "));
+  if (process.env.SMOKE_OFFLINE) {
+    check(
+      "ran with every outside host blocked",
+      true,
+      `${new Set(blocked).size} hosts refused: ${[...new Set(blocked)].slice(0, 4).join(" ")}`,
+    );
+  }
 
   // --- Report ---
   let lastGroup = "";
