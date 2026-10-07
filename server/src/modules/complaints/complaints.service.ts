@@ -371,14 +371,16 @@ export async function decideResolution(
     where: { id: resolutionId, complaintId: complaint.id },
   });
   if (!resolution) throw new ApiError(404, "Resolution not found");
-  if (resolution.customerDecision) {
-    throw new ApiError(409, "This resolution has already been decided");
-  }
-
-  await prisma.complaintResolution.update({
-    where: { id: resolution.id },
+  // Taken by one conditional write rather than a check and then a write. The
+  // two steps let a double tap on Accept through twice, opening two refunds
+  // for one resolution, and let Accept and Reject pressed together both stand.
+  const claimed = await prisma.complaintResolution.updateMany({
+    where: { id: resolution.id, customerDecision: null },
     data: { customerDecision: decision, decidedAt: new Date() },
   });
+  if (claimed.count === 0) {
+    throw new ApiError(409, "This resolution has already been decided");
+  }
 
   await recordAction({
     complaintId: complaint.id,
