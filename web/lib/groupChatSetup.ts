@@ -83,10 +83,15 @@ export async function publishOwedChains(
       const sealed = await distributionFor(cartId, d as MemberDevice);
       envelopes.push({ recipientId: d.userId, recipientDevice: d.deviceId, ...sealed });
     }
-    await api(`/api/groups/${cartId}/chat/keys`, {
-      method: "POST",
-      json: { senderDevice: me, envelopes },
-    }).catch(() => {});
+    // The server takes at most 60 a request. A group whose members have more
+    // devices than that between them was refused outright, so its chains
+    // never reached anyone.
+    for (let i = 0; i < envelopes.length; i += 60) {
+      await api(`/api/groups/${cartId}/chat/keys`, {
+        method: "POST",
+        json: { senderDevice: me, envelopes: envelopes.slice(i, i + 60) },
+      }).catch(() => {});
+    }
   }
   return keys;
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
+import { registerChatDevice } from "./chatDevices.service.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
@@ -132,23 +133,12 @@ groupChatRouter.post(
         label?: string;
       };
 
-      const existing = await prisma.chatDevice.findUnique({
-        where: { userId_deviceId: { userId: req.userId!, deviceId } },
-        select: { publicKey: true },
+      const { device, rekeyed } = await registerChatDevice(req.userId!, {
+        deviceId,
+        publicKey,
+        signingKey,
+        label,
       });
-      const rekeyed = Boolean(existing && existing.publicKey !== publicKey);
-
-      const device = await prisma.chatDevice.upsert({
-        where: { userId_deviceId: { userId: req.userId!, deviceId } },
-        create: { userId: req.userId!, deviceId, publicKey, signingKey, label },
-        update: { publicKey, signingKey, label, lastSeenAt: new Date() },
-        select: { deviceId: true, publicKey: true, signingKey: true, createdAt: true },
-      });
-
-      if (rekeyed) {
-        await prisma.senderKeyEnvelope.deleteMany({ where: { recipientDevice: deviceId } });
-        await prisma.historySync.deleteMany({ where: { toDevice: deviceId } });
-      }
 
       res.status(201).json({ device, rekeyed });
     } catch (err) {
