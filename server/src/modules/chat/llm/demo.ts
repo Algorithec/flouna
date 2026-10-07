@@ -250,26 +250,21 @@ function extractMaxPickupMinutes(message: string): number | null {
 }
 
 // What the user cares about most, inferred from their words.
+const RATING_WORDS =
+  /\b(top[- ]?rated|best|highest[- ]?rated|good|well[- ]?reviewed|quality|popular)\b/i;
+const SPEED_WORDS =
+  /\b(fast(est)?|quick(ly|est)?|asap|hurry|soon|urgent(ly)?|immediately|right away|in a rush)\b/i;
+const PRICE_WORDS = /\b(cheap(est)?|budget|low(est)?[- ]?price|affordable|save money)\b/i;
+
 function extractPriority(
   message: string,
 ): "price" | "rating" | "speed" | "balanced" {
   // Bare "good" counts. Somebody asking for "a good laptop" or "some good
   // desserts" is asking about quality, and "good morning" never reaches here
   // because the greeting rule answers first.
-  if (
-    /\b(top[- ]?rated|best|highest[- ]?rated|good|well[- ]?reviewed|quality|popular)\b/i.test(
-      message,
-    )
-  )
-    return "rating";
-  if (
-    /\b(fast(est)?|quick(ly|est)?|asap|hurry|soon|urgent(ly)?|immediately|right away|in a rush)\b/i.test(
-      message,
-    )
-  )
-    return "speed";
-  if (/\b(cheap(est)?|budget|low(est)?[- ]?price|affordable|save money)\b/i.test(message))
-    return "price";
+  if (RATING_WORDS.test(message)) return "rating";
+  if (SPEED_WORDS.test(message)) return "speed";
+  if (PRICE_WORDS.test(message)) return "price";
   return "balanced";
 }
 
@@ -462,6 +457,86 @@ export class DemoProvider implements LlmProvider {
   name = "demo";
 
   async extractIntent(original: string): Promise<Intent> {
+    return readWithConfidence(original).intent;
+  }
+}
+
+/**
+ * Why the rules might have misread a message. Each names something the
+ * customer said that the reading does not account for.
+ */
+export type DoubtReason =
+  | "refused"
+  | "typo-repaired"
+  | "unread-number"
+  | "other-language"
+  | "no-destination"
+  | "mixed-priority";
+
+/**
+ * Words of Hindi and Telugu that carry meaning in a request: a limit, a
+ * hurry, a want. The rules read English, so a message that leans on these may
+ * say something the reading missed, such as "300 ke andar" being a budget.
+ */
+const OTHER_LANGUAGE =
+  /\b(chahiye|chaiye|chahie|karo|kar do|jaldi|sasta|saste|sasti|andar|tak|mein|wala|wali|bhai|yaar|accha|achha|kitna|nahi|kaavali|kavali|lopala|lopu|takkuva|tondaraga|twaraga|cheyyi|cheyandi|kosam|ekkada|bagunna|manchi)\b/i;
+
+/** A number written as a count of something, or a clock time. */
+function isCountOrTime(message: string, index: number, raw: string): boolean {
+  const after = message.slice(index + raw.length);
+  const before = message.slice(0, index);
+  if (/^\s*(?::\d|[ap]\.?m\b|o'?clock\b)/i.test(after) || /:\s*$/.test(before)) return true;
+  if (NOT_MONEY.test(after)) return true;
+  const next = after.match(/^\s*([a-z]+)/i)?.[1];
+  return Boolean(next && (FOOD_WORDS.test(next) || SHOP_WORDS.test(next)));
+}
+
+/**
+ * The rules' reading of a message, and whether to trust it.
+ *
+ * Confident means none of the doubts below applies: everything the customer
+ * said that could change the answer was read. Calibrated on the tuned set
+ * only; the held-out set reports how well that holds up, and is never used to
+ * choose a signal.
+ */
+export function readWithConfidence(original: string): {
+  intent: Intent;
+  confident: boolean;
+  reasons: DoubtReason[];
+} {
+  const reasons: DoubtReason[] = [];
+  const intent = readByRules(original, reasons);
+
+  if (intent.domain === "out_of_scope") reasons.push("refused");
+
+  // Every number big enough to be a price or a limit should have become one.
+  const limits = new Set<number>();
+  for (const part of [intent.food, intent.ride, intent.shop]) {
+    if (!part) continue;
+    if (part.budgetPaise) limits.add(part.budgetPaise / 100);
+    if ("maxEtaMinutes" in part && part.maxEtaMinutes) limits.add(part.maxEtaMinutes);
+    if ("maxEtaMinutes" in part && part.maxEtaMinutes) limits.add(part.maxEtaMinutes / 60);
+    if ("maxPickupMinutes" in part && part.maxPickupMinutes) limits.add(part.maxPickupMinutes);
+  }
+  for (const m of original.matchAll(/\d[\d,]*(?:\.\d+)?/g)) {
+    const n = Number(m[0].replace(/,/g, ""));
+    if (n < 10 || limits.has(n) || limits.has(n * 1000)) continue;
+    if (isCountOrTime(original, m.index!, m[0])) continue;
+    reasons.push("unread-number");
+    break;
+  }
+
+  if (OTHER_LANGUAGE.test(original)) reasons.push("other-language");
+  if (intent.ride && intent.ride.drop === "your destination") reasons.push("no-destination");
+
+  const priorities = [RATING_WORDS, SPEED_WORDS, PRICE_WORDS].filter((p) => p.test(original)).length;
+  if (priorities > 1) reasons.push("mixed-priority");
+
+  return { intent, confident: reasons.length === 0, reasons };
+}
+
+function readByRules(original: string, reasons: DoubtReason[]): Intent {
+  {
     const first = classify(original);
     if (first.domain !== "out_of_scope") return first;
 
@@ -477,7 +552,9 @@ export class DemoProvider implements LlmProvider {
     const repaired = repairTypos(original);
     if (repaired === original) return first;
     const second = classify(repaired);
-    return second.domain === "out_of_scope" ? first : second;
+    if (second.domain === "out_of_scope") return first;
+    reasons.push("typo-repaired");
+    return second;
   }
 }
 
