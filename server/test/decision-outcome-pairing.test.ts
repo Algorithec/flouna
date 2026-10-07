@@ -192,8 +192,10 @@ describe("pairing belongs to one customer", () => {
 
     const started = Date.now();
     expect(await recordSelection({ decisionId: id, selectedKey: "k", orderId: "o2", userId: USER })).toBe("not_owned");
-    // Refused on the first look, not after the whole retry window.
-    expect(Date.now() - started).toBeLessThan(1000);
+    // Refused on the first look, not after the retry window, which runs to
+    // about 31 seconds. Five is far from either, so a busy machine cannot
+    // fail it and a refusal that waited out the window still does.
+    expect(Date.now() - started).toBeLessThan(5000);
     const row = await prisma.decisionLog.findUnique({ where: { id } });
     expect(row?.selectedKey).toBeNull();
     expect(row?.orderId).toBeNull();

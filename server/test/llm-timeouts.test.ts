@@ -48,7 +48,9 @@ describe("a provider that never answers", () => {
     hangingUpstream();
     const started = Date.now();
     await expect(make().extractIntent("biryani")).rejects.toBeDefined();
-    expect(Date.now() - started).toBeLessThan(1500);
+    // The limit here is 300ms and the default is 4 seconds. Three seconds
+    // tells the two apart with room for a slow machine.
+    expect(Date.now() - started).toBeLessThan(3000);
   });
 
   it("the Anthropic client makes one bounded attempt, with no hidden retries", () => {

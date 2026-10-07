@@ -117,12 +117,37 @@ describe("watching live chat", () => {
   });
 
   it("does not make the customer wait for it", async () => {
+    // Proved without a stopwatch. The watcher's answer is held back until the
+    // customer's reply has arrived; if the reply waited on the watcher it
+    // would never arrive and the test would time out. The earlier version
+    // timed the reply against a 2.5 second limit, which a busy machine
+    // failed with nothing wrong.
     const { agent } = await authedAgent();
-    watcherAnswers({ domain: "food", reply: "x" }, 3000);
-    const started = Date.now();
-    await agent.post("/api/chat/message").send({ message: `biryani ${Date.now()}` }).expect(200);
-    expect(Date.now() - started).toBeLessThan(2500);
-  });
+    let release: () => void = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    let asked = false;
+    const real = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (!String(input).includes("llm.flouna.test")) return real(input, init);
+        asked = true;
+        await held;
+        return new Response(
+          JSON.stringify({ choices: [{ message: { content: JSON.stringify({ domain: "food", reply: "x" }) } }] }),
+          { status: 200 },
+        );
+      }),
+    );
+
+    const message = `biryani ${Date.now()}`;
+    await agent.post("/api/chat/message").send({ message }).expect(200);
+    // The watcher was asked, and the reply came back while it still had not answered.
+    for (let i = 0; i < 40 && !asked; i++) await new Promise((r) => setTimeout(r, 25));
+    expect(asked).toBe(true);
+    release();
+    expect(await latestWatch(message)).not.toBeNull();
+  }, 15_000);
 
   it("records a failure and carries on when the watcher is down", async () => {
     const { agent } = await authedAgent();
