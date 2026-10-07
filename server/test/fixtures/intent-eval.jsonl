@@ -81,3 +81,25 @@
 {"id":"ride-018","message":"cab to the airport, need to arrive in 30 minutes","expect":{"domain":"ride","ride":{"drop":"the airport","maxPickupMinutes":null}}}
 {"id":"ride-019","message":"bike to madhapur under 150","expect":{"domain":"ride","ride":{"drop":"madhapur","vehicle":"bike","budgetPaise":15000}}}
 {"id":"ride-020","message":"I need to go to HITEC City now. Under ₹300 and I dont want to wait more than 5 minutes","expect":{"domain":"ride","ride":{"drop":"HITEC City","budgetPaise":30000,"maxPickupMinutes":5}}}
+{"id":"mix-001","message":"pizza 250 ke andar","expect":{"domain":"food","food":{"item":"pizza","budgetPaise":25000}}}
+{"id":"mix-002","message":"biryani 400 tak chahiye","expect":{"domain":"food","food":{"item":"biryani","budgetPaise":40000}}}
+{"id":"mix-003","message":"dosa 150 rupaye mein","expect":{"domain":"food","food":{"item":"dosa","budgetPaise":15000}}}
+{"id":"mix-004","message":"200 lopala burger kavali","expect":{"domain":"food","food":{"item":"burger","budgetPaise":20000}}}
+{"id":"mix-005","message":"paneer curry 300 lopu","expect":{"domain":"food","food":{"budgetPaise":30000}}}
+{"id":"mix-006","message":"noodles 180 varaku","expect":{"domain":"food","food":{"item":"noodle","budgetPaise":18000}}}
+{"id":"mix-007","message":"thali 250 se kam","expect":{"domain":"food","food":{"item":"thali","budgetPaise":25000}}}
+{"id":"mix-008","message":"sabse sasta pizza dikhao","expect":{"domain":"food","food":{"item":"pizza","priority":"price"}}}
+{"id":"mix-009","message":"takkuva rate lo biryani","expect":{"domain":"food","food":{"item":"biryani","priority":"price"}}}
+{"id":"mix-010","message":"jaldi se burger bhejo","expect":{"domain":"food","food":{"item":"burger","priority":"speed"}}}
+{"id":"mix-011","message":"tondaraga dosa kavali","expect":{"domain":"food","food":{"item":"dosa","priority":"speed"}}}
+{"id":"mix-012","message":"fatafat momos chahiye","expect":{"domain":"food","food":{"item":"momo","priority":"speed"}}}
+{"id":"mix-013","message":"badhiya biryani batao","expect":{"domain":"food","food":{"item":"biryani","priority":"rating"}}}
+{"id":"mix-014","message":"manchi biryani kavali","expect":{"domain":"food","food":{"item":"biryani","priority":"rating"}}}
+{"id":"mix-015","message":"Ameerpet jana hai auto chahiye","expect":{"domain":"ride","ride":{"drop":"Ameerpet","vehicle":"auto"}}}
+{"id":"mix-016","message":"Gachibowli ki cab kavali","expect":{"domain":"ride","ride":{"drop":"Gachibowli","vehicle":"cab"}}}
+{"id":"mix-017","message":"Kukatpally ke liye bike book karo","expect":{"domain":"ride","ride":{"drop":"Kukatpally","vehicle":"bike"}}}
+{"id":"mix-018","message":"auto to Begumpet 100 tak","expect":{"domain":"ride","ride":{"drop":"Begumpet","budgetPaise":10000}}}
+{"id":"mix-019","message":"sasta cab Charminar tak","expect":{"domain":"ride","ride":{"drop":"Charminar","priority":"price"}}}
+{"id":"mix-020","message":"jaldi cab chahiye airport ke liye","expect":{"domain":"ride","ride":{"drop":"airport","priority":"speed"}}}
+{"id":"mix-021","message":"Secunderabad velali cab book cheyyi","expect":{"domain":"ride","ride":{"drop":"Secunderabad","vehicle":"cab"}}}
+{"id":"mix-022","message":"accha ek pizza order karo","expect":{"domain":"food","food":{"item":"pizza","priority":"balanced"}}}
