@@ -31,6 +31,14 @@ const TRANSLATED = [
   "app/(app)/profile/help/topics/[slug]/page.tsx",
   "components/security/AppLock.tsx",
   "components/chat/inline/InlinePayment.tsx",
+  "components/chat/RecommendationCards.tsx",
+  "components/chat/inline/InlineRideBooking.tsx",
+  "components/rides/TripSummary.tsx",
+  "components/chat/FoodHeroCard.tsx",
+  "components/chat/WhyBest.tsx",
+  "components/chat/DisagreeSheet.tsx",
+  "components/chat/FlounaInsights.tsx",
+  "components/chat/PlatformMark.tsx",
 ];
 
 // Not prose: format examples a person copies the shape of, and identifiers.
@@ -65,6 +73,23 @@ const SINKS = /^(toast|setError|setMessage|setNotice|alert)$/;
 const looksLikeProse = (s) => (/[A-Za-z]{3,}/.test(s) && /\s/.test(s.trim())) || /^[A-Z][a-z]{2,}/.test(s);
 
 function inVisibleSpot(node) {
+  // A value compared against ("BEST PRICE" === badge) is data, not text.
+  const parent = node.parent;
+  if (
+    ts.isBinaryExpression(parent) &&
+    [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(parent.operatorToken.kind)
+  ) {
+    return false;
+  }
+  // Inside an attribute nobody reads (className, href, …) at any depth, such
+  // as the branches of a className ternary.
+  for (let p = node.parent; p; p = p.parent) {
+    if (ts.isJsxAttribute(p)) {
+      if (!ATTRS.has(p.name.getText())) return false;
+      break;
+    }
+    if (ts.isFunctionLike(p) || ts.isSourceFile(p)) break;
+  }
   for (let p = node.parent; p; p = p.parent) {
     if (ts.isJsxAttribute(p)) return ATTRS.has(p.name.getText());
     if (ts.isCallExpression(p)) {
@@ -90,7 +115,8 @@ for (const rel of TRANSLATED) {
     if (ts.isImportDeclaration(n)) return;
     if (ts.isJsxText(n)) {
       const text = n.text.replace(/\s+/g, " ").trim();
-      if (/[A-Za-z]{2,}/.test(text)) report(n, text);
+      // Entities such as &ldquo; and &middot; are punctuation, not words.
+      if (/[A-Za-z]{2,}/.test(text.replace(/&[a-z]+;/gi, ""))) report(n, text);
     } else if (ts.isJsxAttribute(n) && ATTRS.has(n.name.getText()) && n.initializer && ts.isStringLiteral(n.initializer)) {
       if (/[A-Za-z]{3,}/.test(n.initializer.text)) report(n, n.initializer.text);
       return;

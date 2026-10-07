@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/components/i18n/I18nContext";
 import { Star, Heart, Share2, ShoppingCart, Minus, Plus, Store, Check } from "lucide-react";
 import { DishArt } from "@/components/food/DishArt";
 import { useCart } from "@/lib/cart";
@@ -18,6 +19,7 @@ import type { FoodQuote } from "./types";
 // actually know rather than inventing numbers for a screenshot.
 
 export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: string }) {
+  const { t } = useI18n();
   const { add } = useCart();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -68,13 +70,13 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
 
         {discountPct > 0 && (
           <span className="absolute left-0 top-3 rounded-r-full bg-accent px-3 py-1.5 text-[12px] font-bold text-white shadow-sm">
-            {discountPct}% OFF
+            {t("fh.off").replace("{n}", String(discountPct))}
           </span>
         )}
 
         <button
           onClick={() => setSaved((v) => !v)}
-          aria-label={saved ? "Remove from saved" : "Save this dish"}
+          aria-label={saved ? t("fh.unsave") : t("fh.save")}
           className="absolute right-3 top-3 flex size-9 items-center justify-center rounded-full bg-card/95 shadow-sm transition-colors hover:bg-card"
         >
           <Heart
@@ -104,7 +106,7 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
                 catalogue entry has zero today; every new one will. */}
             {q.ratingsCount != null && q.ratingsCount > 0 && (
               <span className="text-[12px] text-cocoa">
-                · {formatCount(q.ratingsCount)} ratings
+                · {formatCount(q.ratingsCount)} {t("fh.ratings")}
               </span>
             )}
           </span>
@@ -112,7 +114,7 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
             {q.tag}
           </span>
           <span className="rounded-full bg-beige px-2 py-0.5 text-[11px] font-medium text-cocoa">
-            {q.dietary === "veg" ? "Veg" : "Non-veg"}
+            {q.dietary === "veg" ? t("fh.veg") : t("fh.nonVeg")}
           </span>
           {q.portion?.map((p) => (
             <span
@@ -136,7 +138,7 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
             </p>
             {savingPaise > 0 && (
               <p className="text-[12px] font-semibold text-success">
-                {rupees(savingPaise)} off with current offers
+                {t("fh.offWithOffers").replace("{amount}", rupees(savingPaise))}
               </p>
             )}
           </div>
@@ -145,7 +147,7 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
             <button
               onClick={() => setQty((n) => Math.max(1, n - 1))}
               disabled={qty === 1}
-              aria-label="Reduce quantity"
+              aria-label={t("fh.less")}
               className="text-cocoa disabled:opacity-30"
             >
               <Minus size={15} />
@@ -153,7 +155,7 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
             <span className="min-w-4 text-center text-[14px] font-bold text-ink">{qty}</span>
             <button
               onClick={() => setQty((n) => Math.min(20, n + 1))}
-              aria-label="Increase quantity"
+              aria-label={t("fh.more")}
               className="text-accent"
             >
               <Plus size={15} />
@@ -167,14 +169,14 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
             className="flex flex-1 items-center justify-center gap-2 rounded-pill border border-line py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-beige/50"
           >
             {shared ? <Check size={16} className="text-success" /> : <Share2 size={16} />}
-            {shared ? "Copied" : "Share"}
+            {shared ? t("grp.copied") : t("fh.share")}
           </button>
           <button
             onClick={onAdd}
             className="flex flex-[1.4] items-center justify-center gap-2 rounded-pill bg-accent py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#d4570f]"
           >
             {added ? <Check size={16} /> : <ShoppingCart size={16} />}
-            {added ? "Added to Cart" : "Add to Cart"}
+            {added ? t("fh.addedToCart") : t("fh.addToCart")}
           </button>
         </div>
       </div>

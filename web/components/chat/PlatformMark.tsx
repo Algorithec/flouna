@@ -1,3 +1,6 @@
+"use client";
+
+import { useI18n } from "@/components/i18n/I18nContext";
 // Marks for the platforms the engine searched.
 //
 // Drawn as inline SVG stand-ins rather than shipped as real logo files, for the
@@ -88,6 +91,7 @@ export function SearchedPlatforms({
   max?: number;
   copy?: "compared" | "checked-count";
 }) {
+  const { t } = useI18n();
   // Deduplicated in place so the order follows the ranking rather than an
   // alphabet: the first mark is the platform that won.
   const seen: string[] = [];
@@ -113,13 +117,13 @@ export function SearchedPlatforms({
           // show which. Exactly how many, with no "+": the cap is about how
           // many marks fit on a phone, so "8+" for eight claimed more than
           // had been looked at.
-          <>Compared {seen.length} providers</>
+          <>{t("pm.comparedN").replace("{n}", String(seen.length))}</>
         ) : (
           // Default: names every platform as evidence for the claim above.
           // Screen readers get the names here since the marks are aria-hidden.
           <>
-            Compared across {shown.map(platformLabel).join(", ")}
-            {rest > 0 ? ` and ${rest} more` : ""}
+            {t("pm.comparedAcross").replace("{names}", shown.map(platformLabel).join(", "))}
+            {rest > 0 ? t("pm.andMore").replace("{n}", String(rest)) : ""}
           </>
         )}
       </span>

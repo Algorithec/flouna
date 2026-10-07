@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "@/components/i18n/I18nContext";
 import dynamic from "next/dynamic";
 import { Crosshair, MapPin, Loader2, Search, Sparkles } from "lucide-react";
 import { newSearchSession, resolvePlace, searchPlaces, type Suggestion } from "@/lib/places";
@@ -72,6 +73,7 @@ export function InlineRideBooking({
   fareLimitPaise?: number;
   pickupLimitMinutes?: number;
 }) {
+  const { t } = useI18n();
   const b = useRideBooking({
     initialDrop: drop ?? null,
     initialVehicle: vehicle ?? "any",
@@ -163,7 +165,7 @@ export function InlineRideBooking({
         />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium text-ink">
-            {place?.name ?? (which === "pickup" ? "Pickup" : "Where to?")}
+            {place?.name ?? (which === "pickup" ? t("bill.pickup") : t("ib.whereTo"))}
           </span>
           {place?.area && (
             <span className="block truncate text-[11px] text-cocoa">{place.area}</span>
@@ -173,7 +175,7 @@ export function InlineRideBooking({
             person to discover that the map became interactive. */}
         {active && (
           <span className="shrink-0 text-[11px] font-semibold text-accent">
-            tap the map
+            {t("ib.tapMap")}
           </span>
         )}
       </button>
@@ -230,7 +232,7 @@ export function InlineRideBooking({
           type="button"
           onClick={() => b.detectPickup()}
           disabled={b.locating}
-          aria-label="Use my current location"
+          aria-label={t("ib.useLocation")}
           className="tap-target absolute bottom-2.5 right-2.5 z-10 flex size-10 items-center justify-center rounded-full bg-card text-ink shadow-md transition-transform hover:scale-105 disabled:opacity-60"
         >
           {b.locating ? (
@@ -258,7 +260,7 @@ export function InlineRideBooking({
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
               placeholder={
-                b.picking === "pickup" ? "Search for a pickup point" : "Search for a destination"
+                b.picking === "pickup" ? t("ib.searchPickup") : t("ib.searchDrop")
               }
               className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-cocoa/60"
             />
@@ -329,7 +331,9 @@ export function InlineRideBooking({
 
       {b.route && (
         <p className="mt-2.5 text-[12px] text-cocoa">
-          {b.route.distanceKm.toFixed(1)} km · about {b.route.rideMinutes} min
+          {t("ib.routeLine")
+            .replace("{km}", b.route.distanceKm.toFixed(1))
+            .replace("{min}", String(b.route.rideMinutes))}
         </p>
       )}
 
@@ -347,10 +351,12 @@ export function InlineRideBooking({
           })()}
 
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[15px] font-bold text-ink">Available providers</p>
+            <p className="text-[15px] font-bold text-ink">{t("rc.availableProviders")}</p>
             <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent">
               <Sparkles size={11} />
-              {b.quotes.length} option{b.quotes.length === 1 ? "" : "s"} found
+              {b.quotes.length === 1
+                ? t("rc.oneOptionFound")
+                : t("rc.optionsFound").replace("{n}", String(b.quotes.length))}
             </span>
           </div>
 
@@ -369,7 +375,7 @@ export function InlineRideBooking({
           {b.quotes.length > 1 && (
             <>
               <p className="mt-0.5 text-[14px] font-bold text-ink">
-                Options we think you&apos;ll like
+                {t("ib.youllLike")}
               </p>
               {b.quotes.slice(1).map((q) => (
                 <RideOptionRow
@@ -410,14 +416,16 @@ export function InlineRideBooking({
         className="tap-target mt-3 w-full rounded-pill bg-accent px-4 py-3 text-[14px] font-bold text-white transition-opacity disabled:opacity-50"
       >
         {confirming
-          ? "Booking…"
+          ? t("rides.booking")
           : b.selected
-            ? `Review ${b.selected.displayName} · ${rupees(b.selected.effectivePaise)}`
+            ? t("ib.review")
+                .replace("{name}", b.selected.displayName)
+                .replace("{price}", rupees(b.selected.effectivePaise))
             : b.unmetNote
-              ? "Nothing fits that limit"
+              ? t("ib.nothingFits")
               : b.pickup && b.drop
-                ? "Getting prices…"
-                : "Set pickup and destination"}
+                ? t("ib.gettingPrices")
+                : t("ib.setBoth")}
       </button>
     </div>
   );

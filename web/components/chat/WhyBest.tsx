@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/components/i18n/I18nContext";
 import { Sparkles } from "lucide-react";
 import { DisagreeSheet } from "./DisagreeSheet";
 import { rupees } from "@/lib/money";
@@ -20,6 +21,7 @@ export function WhyBest({
   best: FoodQuote;
   alternatives: FoodQuote[];
 }) {
+  const { t } = useI18n();
   const [disagreeing, setDisagreeing] = useState(false);
   const reasons: string[] = [];
 
@@ -27,20 +29,25 @@ export function WhyBest({
     const slower = alternatives.filter((a) => a.etaMinutes > best.etaMinutes).length;
     if (slower > 0) {
       reasons.push(
-        `Arrives in ${best.etaMinutes} min, sooner than ${slower} of the ${alternatives.length} alternatives`,
+        t("wb.sooner")
+          .replace("{min}", String(best.etaMinutes))
+          .replace("{n}", String(slower))
+          .replace("{total}", String(alternatives.length)),
       );
     }
 
     const lowerRated = alternatives.filter((a) => a.rating < best.rating).length;
     if (lowerRated > 0) {
-      reasons.push(`Rated ${best.rating}★, higher than ${lowerRated} of the other options`);
+      reasons.push(
+        t("wb.rated").replace("{rating}", String(best.rating)).replace("{n}", String(lowerRated)),
+      );
     }
 
     const dearer = alternatives.filter((a) => a.effectivePaise > best.effectivePaise);
     if (dearer.length > 0) {
       const cheapestAlt = Math.min(...dearer.map((a) => a.effectivePaise));
       reasons.push(
-        `Costs ${rupees(cheapestAlt - best.effectivePaise)} less than the next comparable option`,
+        t("wb.cheaper").replace("{amount}", rupees(cheapestAlt - best.effectivePaise)),
       );
     }
   }
@@ -48,19 +55,19 @@ export function WhyBest({
   const discount = best.offers.reduce((s, o) => s + o.discountPaise, 0);
   if (discount > 0) {
     reasons.push(
-      `Better value after applying every offer available, ${rupees(discount)} off this order`,
+      t("wb.value").replace("{amount}", rupees(discount)),
     );
   }
 
   if (reasons.length === 0) {
-    reasons.push("Balanced choice across price, rating and delivery time");
+    reasons.push(t("wb.balanced"));
   }
 
   return (
     <div className="flex flex-col gap-2">
       <p className="flex items-center gap-1.5 text-[14px] font-bold text-ink">
         <Sparkles size={14} className="text-accent" />
-        Why this is the best choice
+        {t("wb.title")}
       </p>
       <ul className="flex flex-col gap-1.5">
         {reasons.map((r) => (
@@ -80,7 +87,7 @@ export function WhyBest({
         onClick={() => setDisagreeing(true)}
         className="tap-target self-start text-[13px] font-medium text-accent underline underline-offset-2"
       >
-        I disagree with this pick
+        {t("wb.disagree")}
       </button>
 
       {disagreeing && <DisagreeSheet onClose={() => setDisagreeing(false)} />}
