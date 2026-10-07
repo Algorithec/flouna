@@ -407,16 +407,25 @@ paymentsRouter.post(
       }
       const payable = Math.max(0, order.amount - walletApplied);
 
-      await prisma.payment.upsert({
-        where: { orderId },
-        create: {
-          orderId,
-          userId: req.userId!,
-          amount: payable,
-          status: "created",
-        },
-        update: { status: "created", amount: payable },
+      // Only a payment that has not gone through is reset for another try.
+      // This used to overwrite whatever was there, so a payment confirmed
+      // while a second checkout was running was turned back into an unpaid
+      // one on a confirmed order, and cancelling it refunded nothing.
+      const reset = await prisma.payment.updateMany({
+        where: { orderId, status: { in: ["created", "processing", "failed"] } },
+        data: { status: "created", amount: payable },
       });
+      if (reset.count === 0) {
+        const existing = await prisma.payment.findUnique({ where: { orderId } });
+        if (existing) throw new ApiError(409, "This order is already paid");
+        // Two first checkouts at once both find no row; the second create
+        // meets the unique order id, and that row is just as unpaid.
+        await prisma.payment
+          .create({ data: { orderId, userId: req.userId!, amount: payable, status: "created" } })
+          .catch((err: { code?: string }) => {
+            if (err?.code !== "P2002") throw err;
+          });
+      }
 
       // ---- fully covered by rewards: there is nothing to collect ----
       // Sending a zero-rupee order to a gateway is rejected by every one of
