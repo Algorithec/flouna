@@ -1,5 +1,5 @@
 import { env } from "../../../config/env.js";
-import { intentSchema, type Intent, type LlmProvider } from "./types.js";
+import { parseIntent, type Intent, type LlmProvider } from "./types.js";
 import { SYSTEM_PROMPT, JSON_SHAPE } from "./prompt.js";
 
 // DeepSeek exposes an OpenAI-compatible chat API with JSON mode.
@@ -38,6 +38,6 @@ export class DeepseekProvider implements LlmProvider {
     };
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("DeepSeek returned no content");
-    return intentSchema.parse(JSON.parse(content));
+    return parseIntent(JSON.parse(content));
   }
 }

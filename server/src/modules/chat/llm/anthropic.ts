@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../../../config/env.js";
-import { intentSchema, type Intent, type LlmProvider } from "./types.js";
+import { parseIntent, type Intent, type LlmProvider } from "./types.js";
 import { JSON_SCHEMA, SYSTEM_PROMPT } from "./prompt.js";
 
 export class AnthropicProvider implements LlmProvider {
@@ -28,6 +28,6 @@ export class AnthropicProvider implements LlmProvider {
     }
     // Validate against our schema even though the API enforces shape —
     // belt and suspenders before anything reaches business logic.
-    return intentSchema.parse(JSON.parse(text.text));
+    return parseIntent(JSON.parse(text.text));
   }
 }

@@ -86,6 +86,26 @@ export const intentSchema = z.object({
 
 export type Intent = z.infer<typeof intentSchema>;
 
+/**
+ * Validates a model's answer as an intent.
+ *
+ * JSON mode models often fill the parts they did not use with null, answering
+ * a cab request with "food": null beside a real ride. The schema rejects a null
+ * part, so the whole answer failed and chat fell back to another provider,
+ * throwing away a correct reading. An empty part is the same as an absent
+ * one, so it is dropped first. Every provider parses through here.
+ */
+export function parseIntent(raw: unknown): Intent {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const obj = { ...(raw as Record<string, unknown>) };
+    for (const part of ["food", "ride", "shop"]) {
+      if (obj[part] === null) delete obj[part];
+    }
+    return intentSchema.parse(obj);
+  }
+  return intentSchema.parse(raw);
+}
+
 export interface LlmProvider {
   name: string;
   extractIntent(userMessage: string): Promise<Intent>;

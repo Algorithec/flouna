@@ -117,3 +117,30 @@ describe("the model can return every field the recommender reads", () => {
     expect(intent.food?.priority).toBe("balanced");
   });
 });
+
+// JSON mode models often fill the parts they did not use with null. Every
+// provider parses through parseIntent, so an empty part is read as absent
+// instead of failing the whole answer and falling back to another provider.
+describe("an answer with empty parts", () => {
+  it("is read, not rejected", async () => {
+    const { parseIntent } = await import("../src/modules/chat/llm/types.js");
+    const intent = parseIntent({
+      domain: "ride",
+      reply: "Booking a cab",
+      food: null,
+      shop: null,
+      ride: { pickup: null, drop: "Airport", vehicle: "cab", budgetPaise: null, maxPickupMinutes: null, priority: "balanced", scheduleAt: null },
+    });
+    expect(intent.domain).toBe("ride");
+    expect(intent.food).toBeUndefined();
+  });
+
+  it("is what every provider parses with", async () => {
+    const { readFileSync } = await import("node:fs");
+    for (const f of ["anthropic", "deepseek", "google", "nvidia", "ollama", "selfHosted"]) {
+      const src = readFileSync(`src/modules/chat/llm/${f}.ts`, "utf8");
+      expect(src, `${f}.ts`).toContain("parseIntent(");
+      expect(src, `${f}.ts`).not.toContain("intentSchema.parse(");
+    }
+  });
+});

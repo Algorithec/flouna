@@ -1,5 +1,5 @@
 import { env } from "../../../config/env.js";
-import { intentSchema, type Intent, type LlmProvider } from "./types.js";
+import { parseIntent, type Intent, type LlmProvider } from "./types.js";
 import { SYSTEM_PROMPT, JSON_SHAPE } from "./prompt.js";
 
 // NVIDIA NIM — DeepSeek V4.1 Flash via the OpenAI-compatible NIM endpoint.
@@ -49,6 +49,6 @@ ${JSON_SHAPE}`,
     };
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("NVIDIA NIM returned no content");
-    return intentSchema.parse(JSON.parse(content));
+    return parseIntent(JSON.parse(content));
   }
 }

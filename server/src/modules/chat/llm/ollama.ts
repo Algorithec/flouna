@@ -1,5 +1,5 @@
 import { env } from "../../../config/env.js";
-import { intentSchema, type Intent, type LlmProvider } from "./types.js";
+import { parseIntent, type Intent, type LlmProvider } from "./types.js";
 import { SYSTEM_PROMPT, JSON_SHAPE } from "./prompt.js";
 
 // Ollama — local fine-tuned Qwen model. Zero API cost, ~200ms latency.
@@ -76,6 +76,6 @@ ${JSON_SHAPE}`,
     }
     if (!raw.reply) raw.reply = "";
 
-    return intentSchema.parse(raw);
+    return parseIntent(raw);
   }
 }

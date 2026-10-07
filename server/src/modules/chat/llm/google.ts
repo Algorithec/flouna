@@ -1,5 +1,5 @@
 import { env } from "../../../config/env.js";
-import { intentSchema, type Intent, type LlmProvider } from "./types.js";
+import { parseIntent, type Intent, type LlmProvider } from "./types.js";
 import { SYSTEM_PROMPT, JSON_SHAPE } from "./prompt.js";
 
 // The JSON contract appended to the system prompt — identical shape to the
@@ -51,6 +51,6 @@ export class GoogleProvider implements LlmProvider {
     };
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!content) throw new Error("Google AI returned no content");
-    return intentSchema.parse(JSON.parse(content));
+    return parseIntent(JSON.parse(content));
   }
 }

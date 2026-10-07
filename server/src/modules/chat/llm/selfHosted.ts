@@ -1,5 +1,5 @@
 import { env } from "../../../config/env.js";
-import { intentSchema, type Intent, type LlmProvider } from "./types.js";
+import { parseIntent, type Intent, type LlmProvider } from "./types.js";
 import { SYSTEM_PROMPT, JSON_SCHEMA } from "./prompt.js";
 
 // A model we run ourselves, reached over an OpenAI-compatible endpoint.
@@ -101,6 +101,6 @@ export class SelfHostedProvider implements LlmProvider {
     }
     // Validated regardless. Guided decoding constrains the shape, not the
     // meaning, and this is the boundary the rest of the product trusts.
-    return intentSchema.parse(parsed);
+    return parseIntent(parsed);
   }
 }
