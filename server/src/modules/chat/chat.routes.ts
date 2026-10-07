@@ -31,6 +31,8 @@ import type { Priority } from "../advisor/scoring.js";
 import { buildContext } from "../advisor/context.service.js";
 import { istStartOfDay, istTimeLabel } from "../../lib/istTime.js";
 import { watchIntent } from "./llm/watcher.js";
+import { readWithConfidence } from "./llm/demo.js";
+import { env } from "../../config/env.js";
 
 // Paise → "₹123" for chat copy.
 const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
@@ -138,8 +140,14 @@ async function buildAssistantPayload(
   // Recorded per message: with a provider chain the corpus is a mix of vendors,
   // and training on it later is only possible if each row says who wrote it.
   let served: { provider: string; depth: number };
+  // Hybrid routing: a reading the rules are sure of is answered at once, and
+  // labelled as theirs. Only a doubtful one waits seconds for a model.
+  const byRules = env.HYBRID_ROUTING && llm.name !== "demo" ? readWithConfidence(message) : null;
   try {
-    if (llm instanceof FallbackProvider) {
+    if (byRules?.confident) {
+      intent = byRules.intent;
+      served = { provider: "demo", depth: 0 };
+    } else if (llm instanceof FallbackProvider) {
       const traced = await llm.extractIntentTraced(message);
       intent = traced.intent;
       served = traced.served;

@@ -78,6 +78,10 @@ const envSchema = z.object({
   ),
   // Share of chat messages the watcher reads, 0 to 1.
   LLM_WATCHER_SAMPLE: z.coerce.number().min(0).max(1).default(1),
+  // Rules answer the messages they read cleanly; only doubtful ones wait for
+  // a model. Off unless set to "true": z.coerce.boolean reads "false" as true,
+  // and a flag that changes who answers customers must not turn on by typo.
+  HYBRID_ROUTING: z.preprocess((v) => v === "true" || v === "1", z.boolean()),
   // Google AI Studio (Gemini). Free-tier friendly; model is overridable.
   GOOGLE_AI_API_KEY: z.string().optional(),
   GOOGLE_AI_MODEL: z.string().default("gemini-2.0-flash"),
