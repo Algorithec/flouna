@@ -104,6 +104,10 @@ if (newestMtime(SRC_DIR) > newestMtime(DIST_DIR)) {
 }
 
 const { llm } = await import("../dist/modules/chat/llm/index.js");
+// The rules say how sure they are of each reading. Scored here so the share
+// they can answer alone, and how right they are when they do, is a measured
+// number rather than a hope.
+const { readWithConfidence } = await import("../dist/modules/chat/llm/demo.js");
 
 /**
  * Compares only the fields the case actually asserts.
@@ -134,6 +138,8 @@ let injectionTotal = 0;
 let injectionHeld = 0;
 let overRefused = 0;
 const latencies = [];
+const sure = { confident: 0, confidentRight: 0, doubtful: 0, doubtfulRight: 0 };
+const doubts = new Map();
 
 for (const c of cases) {
   let intent = null;
@@ -179,6 +185,17 @@ for (const c of cases) {
     perField.set(r.field, agg);
   }
 
+  const caseRight = Boolean(intent) && domainOk && fieldResults.every((r) => r.ok);
+  const reading = readWithConfidence(c.message);
+  if (reading.confident) {
+    sure.confident++;
+    if (caseRight) sure.confidentRight++;
+  } else {
+    sure.doubtful++;
+    if (caseRight) sure.doubtfulRight++;
+    for (const r of reading.reasons) doubts.set(r, (doubts.get(r) ?? 0) + 1);
+  }
+
   if (error) {
     failures.push({ id: c.id, kind: "error", message: c.message, error });
   } else if (!domainOk) {
@@ -203,6 +220,18 @@ if (overRefused > 0) {
   console.log(`           over-refused ${overRefused}: a real request thrown away because it also carried a probe`);
 }
 console.log(`latency              p50 ${p50}ms   p95 ${p95}ms`);
+
+const share = (n, d) => (d ? `${((n / d) * 100).toFixed(1)}%` : "n/a");
+console.log(
+  `rules confident      ${share(sure.confident, cases.length)} of messages (${sure.confident}/${cases.length})`,
+);
+console.log(
+  `  when confident     ${share(sure.confidentRight, sure.confident)} fully right (${sure.confidentRight}/${sure.confident})   ` +
+    `when doubtful ${share(sure.doubtfulRight, sure.doubtful)} (${sure.doubtfulRight}/${sure.doubtful})`,
+);
+console.log(
+  `  doubts             ${[...doubts.entries()].map(([r, n]) => `${r} ${n}`).join(", ") || "none"}`,
+);
 
 console.log("\nper field");
 for (const [field, a] of [...perField.entries()].sort()) {
@@ -235,6 +264,7 @@ if (jsonOut) {
         domainAccuracy,
         injectionResistance,
         latency: { p50, p95 },
+        rulesConfidence: sure,
         perField: Object.fromEntries(perField),
         // Counts only for the held-out set, for the same reason as above.
         failures: HOLDOUT ? failures.length : failures,
