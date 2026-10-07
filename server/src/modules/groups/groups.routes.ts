@@ -1,9 +1,9 @@
-import { Prisma } from "@prisma/client";
 import crypto from "node:crypto";
 import { splitFare, rupeesExact } from "./split.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
+import { CONTENDED_TX, withTxRetry } from "../../lib/txRetry.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
@@ -289,9 +289,9 @@ async function addMember(cartId: string, userId: string) {
  * conflicting joins, and the refused one retries and finds the ride full.
  */
 async function takeSeat(cartId: string, userId: string, seats: number) {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      await prisma.$transaction(
+  try {
+    await withTxRetry(() =>
+      prisma.$transaction(
         async (tx) => {
           const members = await tx.groupCartMember.findMany({
             where: { cartId },
@@ -301,19 +301,13 @@ async function takeSeat(cartId: string, userId: string, seats: number) {
           if (members.length >= seats) throw new ApiError(409, "This ride is full");
           await tx.groupCartMember.create({ data: { cartId, userId } });
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-      return;
-    } catch (err) {
-      const e = err as { code?: string; message?: string };
-      const contended =
-        e?.code === "P2034" ||
-        /database is locked|SQLITE_BUSY|could not serialize/i.test(e?.message ?? "");
-      if (contended && attempt < 5) continue;
-      // Two joins by the same person at once: the other one already added them.
-      if (e?.code === "P2002") return;
-      throw err;
-    }
+        CONTENDED_TX,
+      ),
+    );
+  } catch (err) {
+    // Two joins by the same person at once: the other one already added them.
+    if ((err as { code?: string }).code === "P2002") return;
+    throw err;
   }
 }
 

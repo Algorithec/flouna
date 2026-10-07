@@ -1,5 +1,5 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { CONTENDED_TX, withTxRetry } from "../../lib/txRetry.js";
 import { ApiError } from "../../middleware/error.js";
 import { getConfig } from "../backoffice/config.service.js";
 
@@ -105,7 +105,6 @@ export async function creditCashback(opts: {
  * before recording the debit on the order, then finds the money it already
  * took instead of erroring for ever.
  */
-const SPEND_ATTEMPTS = 5;
 
 export async function spendFromWallet(opts: {
   userId: string;
@@ -116,50 +115,46 @@ export async function spendFromWallet(opts: {
 }) {
   if (opts.maxPaise <= 0) return 0;
 
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await prisma.$transaction(
-        async (tx) => {
-          const already = await tx.walletEntry.findUnique({
-            where: {
-              userId_orderId_reason: {
-                userId: opts.userId,
-                orderId: opts.orderId,
-                reason: "spend",
-              },
-            },
-            select: { amountPaise: true },
-          });
-          if (already) return -already.amountPaise;
-
-          const agg = await tx.walletEntry.aggregate({
-            where: { userId: opts.userId },
-            _sum: { amountPaise: true },
-          });
-          const balance = agg._sum.amountPaise ?? 0;
-          const take = Math.min(balance, opts.maxPaise);
-          if (take <= 0) return 0;
-
-          await tx.walletEntry.create({
-            data: {
+  return withTxRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        const already = await tx.walletEntry.findUnique({
+          where: {
+            userId_orderId_reason: {
               userId: opts.userId,
               orderId: opts.orderId,
-              amountPaise: -take,
               reason: "spend",
-              description: opts.description ?? "Applied to your order",
             },
-          });
-          return take;
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (err) {
-      // P2034: the database aborted this transaction to keep the two apart.
-      // Nothing was written, so running it again is safe.
-      if ((err as { code?: string }).code === "P2034" && attempt < SPEND_ATTEMPTS) continue;
-      throw err;
-    }
-  }
+          },
+          select: { amountPaise: true },
+        });
+        if (already) return -already.amountPaise;
+
+        const agg = await tx.walletEntry.aggregate({
+          where: { userId: opts.userId },
+          _sum: { amountPaise: true },
+        });
+        const balance = agg._sum.amountPaise ?? 0;
+        const take = Math.min(balance, opts.maxPaise);
+        if (take <= 0) return 0;
+
+        await tx.walletEntry.create({
+          data: {
+            userId: opts.userId,
+            orderId: opts.orderId,
+            amountPaise: -take,
+            reason: "spend",
+            description: opts.description ?? "Applied to your order",
+          },
+        });
+        return take;
+      },
+      // The database aborts one of two spends that overlap, by refusing
+      // it or by letting it time out. Nothing was written either way, so
+      // withTxRetry runs it again.
+      CONTENDED_TX,
+    ),
+  );
 }
 
 /** Returns credit to the wallet when an order it paid for is cancelled. */

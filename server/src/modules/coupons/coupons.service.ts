@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { CONTENDED_TX, withTxRetry } from "../../lib/txRetry.js";
 import { ApiError } from "../../middleware/error.js";
 
 // Promo codes. The client only ever sends a code string — every rupee of
@@ -113,56 +114,43 @@ export async function evaluateCoupon(opts: {
  * With no code there is nothing to claim, and the order is created exactly as
  * it always was.
  */
-const CLAIM_ATTEMPTS = 5;
-
-/** A write the database refused only because another one got there first. */
-function isContention(err: unknown): boolean {
-  const e = err as { code?: string; message?: string };
-  if (e?.code === "P2034") return true;
-  return /database is locked|SQLITE_BUSY|could not serialize/i.test(e?.message ?? "");
-}
-
 export async function createOrderClaimingCoupon<T extends { id: string }>(
   claim: { couponId: string; userId: string; discountPaise: number } | null,
   create: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
   if (!claim) return create(prisma);
 
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await prisma.$transaction(
-        async (tx) => {
-          const claimed = await tx.$executeRaw`
-            UPDATE "Coupon" SET "usedCount" = "usedCount" + 1
-            WHERE "id" = ${claim.couponId}
-              AND ("usageLimit" IS NULL OR "usedCount" < "usageLimit")`;
-          if (claimed === 0) throw new ApiError(400, "This code has been fully claimed");
+  return withTxRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        const claimed = await tx.$executeRaw`
+          UPDATE "Coupon" SET "usedCount" = "usedCount" + 1
+          WHERE "id" = ${claim.couponId}
+            AND ("usageLimit" IS NULL OR "usedCount" < "usageLimit")`;
+        if (claimed === 0) throw new ApiError(400, "This code has been fully claimed");
 
-          const already = await tx.couponRedemption.findFirst({
-            where: { couponId: claim.couponId, userId: claim.userId },
-            select: { id: true },
-          });
-          if (already) throw new ApiError(400, "You've already used this code");
+        const already = await tx.couponRedemption.findFirst({
+          where: { couponId: claim.couponId, userId: claim.userId },
+          select: { id: true },
+        });
+        if (already) throw new ApiError(400, "You've already used this code");
 
-          const order = await create(tx);
-          await tx.couponRedemption.create({
-            data: {
-              couponId: claim.couponId,
-              userId: claim.userId,
-              orderId: order.id,
-              discountPaise: claim.discountPaise,
-            },
-          });
-          return order;
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (err) {
-      // Nothing was committed, so running the whole thing again is safe.
-      if (isContention(err) && attempt < CLAIM_ATTEMPTS) continue;
-      throw err;
-    }
-  }
+        const order = await create(tx);
+        await tx.couponRedemption.create({
+          data: {
+            couponId: claim.couponId,
+            userId: claim.userId,
+            orderId: order.id,
+            discountPaise: claim.discountPaise,
+          },
+        });
+        return order;
+      },
+      // Nothing is committed when the database refuses or times out a
+      // claim, so withTxRetry runs the whole thing again.
+      CONTENDED_TX,
+    ),
+  );
 }
 
 // Codes worth showing on the checkout screen — active, unexpired, not
