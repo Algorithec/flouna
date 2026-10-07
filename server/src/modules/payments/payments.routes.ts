@@ -553,7 +553,14 @@ paymentsRouter.post(
         if (err instanceof Error && /\(404\)/.test(err.message)) {
           return res.json({ orderStatus: order.status, gatewayStatus: "NOT_CREATED" });
         }
-        throw err;
+        // Cashfree unreachable or failing. Whether this customer paid is
+        // unknown, not failed, so the order stays as it is and the webhook
+        // settles it when the gateway is back. This used to answer 500 to a
+        // customer who may just have paid.
+        console.warn(
+          `[payments] could not reach the gateway to verify ${orderId}: ${err instanceof Error ? err.message : err}`,
+        );
+        return res.json({ orderStatus: order.status, gatewayStatus: "UNREACHABLE" });
       }
 
       if (cf.order_status === "PAID") {
