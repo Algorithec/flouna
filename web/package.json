@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint && node scripts/check-i18n.cjs",
     "smoke": "node scripts/smoke.cjs"
   },
   "dependencies": {
