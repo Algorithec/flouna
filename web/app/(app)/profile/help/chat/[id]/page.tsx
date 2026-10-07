@@ -78,7 +78,7 @@ export default function SupportChatPage() {
       setChat(d.chat);
       if (d.escalated) toast(t("pp.chat.passedToTeam"));
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Message didn't send");
+      toast(err instanceof Error ? err.message : t("pp.chat.sendFailed"));
     } finally {
       setBusy(false);
     }
@@ -98,7 +98,7 @@ export default function SupportChatPage() {
       // The conversation is over, so it should not be re-enterable by back.
       setTimeout(() => router.replace("/profile/help"), 1200);
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Could not save that rating");
+      toast(err instanceof Error ? err.message : t("pp.chat.rateFailed"));
     } finally {
       setBusy(false);
     }
@@ -259,8 +259,8 @@ export default function SupportChatPage() {
                   rows={2}
                   placeholder={
                     stars <= 2
-                      ? "What went wrong? This goes straight to a person."
-                      : "Anything to add? (optional)"
+                      ? t("pp.chat.whatWrong")
+                      : t("pp.chat.anythingToAdd")
                   }
                   className="mt-4 w-full resize-none rounded-[12px] border border-line bg-acct-bg p-3 text-[14px] text-acct-ink outline-none focus:border-acct-accent"
                 />
@@ -283,7 +283,7 @@ export default function SupportChatPage() {
         ) : ended ? (
           <div className="rounded-[18px] bg-card p-5 text-center shadow-soft">
             <p className="text-[15px] font-bold text-acct-ink">
-              Thanks, you rated this {chat.ratingStars} out of 5
+              {t("pp.chat.youRated").replace("{n}", String(chat.ratingStars))}
             </p>
             <Link
               href="/profile/help"

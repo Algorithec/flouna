@@ -105,7 +105,7 @@ export default function PaymentMethodsPage() {
       setVpa("");
       toast(t("pp.pay.added"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add that method");
+      setError(err instanceof Error ? err.message : t("pp.pay.addFailed"));
     } finally {
       setBusy(false);
     }
@@ -335,9 +335,9 @@ export default function PaymentMethodsPage() {
             <div className="mt-4 flex gap-2">
               {(
                 [
-                  ["card", "Card", CreditCard],
+                  ["card", t("pp.pay.card"), CreditCard],
                   ["upi", "UPI", Smartphone],
-                  ["wallet", "Wallet", Wallet],
+                  ["wallet", t("pp.pay.wallet"), Wallet],
                 ] as const
               ).map(([value, label, Icon]) => (
                 <button
