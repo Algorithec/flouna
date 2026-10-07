@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { Check, IndianRupee, Clock, XCircle } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api";
 
@@ -47,6 +48,7 @@ export function CancelOrderSheet({
   const [step, setStep] = useState<Step>("confirm");
   const [reason, setReason] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  useEscapeToClose(!busy, onClose);
   const [error, setError] = useState("");
   const [terms, setTerms] = useState<Terms | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);

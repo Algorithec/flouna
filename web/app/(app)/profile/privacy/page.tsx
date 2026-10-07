@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import Link from "next/link";
 import { useBackTo } from "@/lib/navHistory";
 import {
@@ -151,6 +152,7 @@ function Sheet({
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
+  useEscapeToClose(true, onClose);
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:items-center"

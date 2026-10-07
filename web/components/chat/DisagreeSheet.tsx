@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -40,6 +41,7 @@ export function DisagreeSheet({
   const [reason, setReason] = useState("");
   const [human, setHuman] = useState(false);
   const [busy, setBusy] = useState(false);
+  useEscapeToClose(!busy, onClose);
   const [done, setDone] = useState<{ dueBy: string } | null>(null);
 
   async function submit() {

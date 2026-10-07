@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { useBackTo } from "@/lib/navHistory";
 import {
   ArrowLeft,
@@ -66,6 +67,8 @@ export default function PaymentMethodsPage() {
   const [expiry, setExpiry] = useState(""); // MM/YY
   const [vpa, setVpa] = useState("");
   const [busy, setBusy] = useState(false);
+  useEscapeToClose(Boolean(acting), () => setActing(null));
+  useEscapeToClose(adding && !busy, () => setAdding(false));
   const [error, setError] = useState("");
 
   function load() {
