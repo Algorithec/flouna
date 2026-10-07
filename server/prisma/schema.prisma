@@ -1382,3 +1382,24 @@ model RideMessage {
   @@unique([orderId, scriptKey])
   @@index([orderId, createdAt])
 }
+
+// A second model reading the same chat message beside the one that answers,
+// to measure it on real traffic before it is trusted with customers. Never
+// shown to anyone and never changes a reply. No user id: what is measured is
+// the reading, not the person, and rows are pruned with the decision log.
+model IntentWatch {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  watcher         String // provider being measured, e.g. "ollama"
+  primaryProvider String // provider whose reading the customer got
+  message         String
+  agreed          Boolean // every compared field matched
+  fields          String // JSON: field name -> true when the two agree
+  primaryIntent   String // JSON
+  watcherIntent   String? // JSON; null when the watcher failed
+  latencyMs       Int
+  error           String?
+
+  @@index([createdAt])
+}
+

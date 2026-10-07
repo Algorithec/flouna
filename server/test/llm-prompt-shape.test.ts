@@ -23,7 +23,7 @@ const LLM_DIR = join(dirname(fileURLToPath(import.meta.url)), "../src/modules/ch
 const PROVIDERS = readdirSync(LLM_DIR).filter(
   (f) =>
     f.endsWith(".ts") &&
-    !["prompt.ts", "types.ts", "index.ts", "fallback.ts", "demo.ts"].includes(f),
+    !["prompt.ts", "types.ts", "index.ts", "fallback.ts", "demo.ts", "watcher.ts"].includes(f),
 );
 
 /**

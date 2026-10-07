@@ -31,7 +31,7 @@ export function ollamaConfigured(e: {
   return Boolean(e.OLLAMA_URL || (e.NODE_ENV !== "production" && e.OLLAMA_MODEL));
 }
 
-type ProviderName = "anthropic" | "google" | "deepseek" | "nvidia" | "ollama" | "self_hosted";
+export type ProviderName = "anthropic" | "google" | "deepseek" | "nvidia" | "ollama" | "self_hosted";
 
 const BUILDERS: Record<ProviderName, { hasKey: () => boolean; make: () => LlmProvider }> = {
   anthropic: { hasKey: () => Boolean(env.ANTHROPIC_API_KEY), make: () => new AnthropicProvider() },
@@ -51,23 +51,37 @@ const BUILDERS: Record<ProviderName, { hasKey: () => boolean; make: () => LlmPro
   },
 };
 
+/**
+ * The providers that may answer customers, in the order they are tried:
+ * the preferred one first, then every other configured one.
+ *
+ * The watcher is left out. A model under evaluation would otherwise join this
+ * chain the moment its URL is set, and answer customers whenever the
+ * preferred provider failed, before anyone had measured it.
+ */
+export function providerOrder(
+  preferred: ProviderName,
+  configured: (name: ProviderName) => boolean,
+  watcherName?: string,
+): ProviderName[] {
+  return [
+    preferred,
+    ...(Object.keys(BUILDERS) as ProviderName[]).filter((n) => n !== preferred),
+  ].filter((n) => n !== watcherName && configured(n));
+}
+
 /** Preferred provider first, then every other configured one, then demo. */
 function buildProvider(): LlmProvider {
   const preferred = env.LLM_PROVIDER;
   if (preferred === "demo") return new DemoProvider();
 
-  const order: ProviderName[] = [
-    preferred,
-    ...(Object.keys(BUILDERS) as ProviderName[]).filter((n) => n !== preferred),
-  ];
-
-  const usable = order.filter((n) => BUILDERS[n].hasKey());
+  const usable = providerOrder(preferred, (n) => BUILDERS[n].hasKey(), env.LLM_WATCHER);
 
   if (usable.length === 0) {
     console.warn(`[llm] LLM_PROVIDER=${preferred} but no provider has a key, using demo mode`);
     return new DemoProvider();
   }
-  if (!BUILDERS[preferred].hasKey()) {
+  if (!usable.includes(preferred)) {
     console.warn(
       `[llm] LLM_PROVIDER=${preferred} has no key, leading with ${usable[0]} instead`,
     );
@@ -81,4 +95,11 @@ function buildProvider(): LlmProvider {
 }
 
 export const llm: LlmProvider = buildProvider();
+
+/** The model being measured beside the one that answers, when one is set up. */
+export const watcherProvider: LlmProvider | null =
+  env.LLM_WATCHER && BUILDERS[env.LLM_WATCHER].hasKey() ? BUILDERS[env.LLM_WATCHER].make() : null;
+if (env.LLM_WATCHER && !watcherProvider) {
+  console.warn(`[llm] LLM_WATCHER=${env.LLM_WATCHER} is not configured, so nothing is being watched`);
+}
 export const demoFallback = new DemoProvider();

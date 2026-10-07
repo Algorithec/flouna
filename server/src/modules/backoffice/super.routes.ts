@@ -30,6 +30,7 @@ import {
   revokeApiKey,
 } from "./apikey.service.js";
 import { getConfig, updateConfig } from "./config.service.js";
+import { watcherSummary } from "../chat/llm/watcher.js";
 
 export const superRouter = Router();
 superRouter.use(requireRole("super_admin"));
@@ -118,6 +119,17 @@ superRouter.patch(
 superRouter.get("/revenue", async (_req, res, next) => {
   try {
     res.json(await revenueDashboard());
+  } catch (err) {
+    next(err);
+  }
+});
+
+// How the model under evaluation compares with the one answering customers,
+// overall and field by field. The go or no go for promoting it.
+superRouter.get("/llm-watcher", async (req, res, next) => {
+  try {
+    const days = z.coerce.number().int().min(1).max(90).default(7).parse(req.query.days);
+    res.json(await watcherSummary(days));
   } catch (err) {
     next(err);
   }

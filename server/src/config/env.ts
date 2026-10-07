@@ -65,6 +65,16 @@ const envSchema = z.object({
   // Sent as a Bearer token. Ollama checks nothing itself, so a model server
   // on the internet sits behind a reverse proxy (Caddy) that checks this.
   OLLAMA_API_KEY: z.string().optional(),
+  // A model run beside the one that answers, measured and never shown (see
+  // chat/llm/watcher.ts). Off unless set. It is kept out of the customer
+  // facing chain, so a model under evaluation can never answer anyone.
+  // Empty means off, so a copied .env.example with "LLM_WATCHER=" still boots.
+  LLM_WATCHER: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.enum(["anthropic", "google", "deepseek", "nvidia", "ollama", "self_hosted"]).optional(),
+  ),
+  // Share of chat messages the watcher reads, 0 to 1.
+  LLM_WATCHER_SAMPLE: z.coerce.number().min(0).max(1).default(1),
   // Google AI Studio (Gemini). Free-tier friendly; model is overridable.
   GOOGLE_AI_API_KEY: z.string().optional(),
   GOOGLE_AI_MODEL: z.string().default("gemini-2.0-flash"),

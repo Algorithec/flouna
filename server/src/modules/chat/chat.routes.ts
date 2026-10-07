@@ -30,6 +30,7 @@ import {
 import type { Priority } from "../advisor/scoring.js";
 import { buildContext } from "../advisor/context.service.js";
 import { istStartOfDay, istTimeLabel } from "../../lib/istTime.js";
+import { watchIntent } from "./llm/watcher.js";
 
 // Paise → "₹123" for chat copy.
 const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
@@ -153,6 +154,11 @@ async function buildAssistantPayload(
     intent = await demoFallback.extractIntent(message);
     served = { provider: "demo", depth: -1 };
   }
+
+  // The watcher reads the same message beside the answer and is measured
+  // against it. Not awaited: the customer's reply never waits for it, and
+  // nothing it returns reaches them.
+  void watchIntent(message, intent, served.provider);
 
   // Faculty 3: the situation this decision is made in (time + weather). Built
   // once and layered onto food/ride advice. Never blocks — degrades offline.
