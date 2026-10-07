@@ -809,6 +809,11 @@ model PushSubscription {
   endpoint  String   @unique
   p256dh    String // client public key
   auth      String // client auth secret
+  // The VAPID public key this subscription was created with. A subscription
+  // only accepts pushes signed by that key, so after a rotation the older
+  // ones are removed rather than tried. Null for rows from before this was
+  // recorded, which are tried as before.
+  vapidKey  String?
   createdAt DateTime @default(now())
 
   @@index([userId])

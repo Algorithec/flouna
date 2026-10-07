@@ -27,6 +27,22 @@ function initPush(): boolean {
 
 export const pushConfigured = initPush();
 
+/**
+ * Subscriptions made with a key other than the current one cannot receive
+ * anything: the push service refuses them with a 403 the cleanup below did
+ * not recognise, so they used to stay forever and fail on every send. They
+ * are removed here instead. Rows with no recorded key are kept and tried.
+ */
+async function dropStale<T extends { id: string; vapidKey: string | null }>(subs: T[]): Promise<{ live: T[]; stale: number }> {
+  const stale = subs.filter((s) => s.vapidKey !== null && s.vapidKey !== env.VAPID_PUBLIC_KEY);
+  if (stale.length) {
+    await prisma.pushSubscription
+      .deleteMany({ where: { id: { in: stale.map((s) => s.id) } } })
+      .catch(() => {});
+  }
+  return { live: subs.filter((s) => !stale.includes(s)), stale: stale.length };
+}
+
 export type PushPayload = {
   title: string;
   body: string;
@@ -42,10 +58,11 @@ export async function sendPushToAll(
 ): Promise<{ configured: boolean; sent: number; failed: number; devices: number }> {
   if (!pushConfigured) return { configured: false, sent: 0, failed: 0, devices: 0 };
 
-  const subs = await prisma.pushSubscription.findMany();
+  const all = await prisma.pushSubscription.findMany();
+  const { live: subs, stale } = await dropStale(all);
   const body = JSON.stringify(payload);
   let sent = 0;
-  let failed = 0;
+  let failed = stale;
   // Send in bounded batches rather than one unbounded Promise.all — keeps
   // sockets/memory flat and stays under push-provider rate limits as the
   // subscriber list grows.
@@ -69,7 +86,7 @@ export async function sendPushToAll(
       }),
     );
   }
-  return { configured: true, sent, failed, devices: subs.length };
+  return { configured: true, sent, failed, devices: all.length };
 }
 
 // Sends a notification to every device a user has registered. Dead
@@ -77,7 +94,9 @@ export async function sendPushToAll(
 export async function sendPushToUser(userId: string, payload: PushPayload) {
   if (!pushConfigured) return;
 
-  const subs = await prisma.pushSubscription.findMany({ where: { userId } });
+  const { live: subs } = await dropStale(
+    await prisma.pushSubscription.findMany({ where: { userId } }),
+  );
   if (subs.length === 0) return;
 
   const body = JSON.stringify(payload);
