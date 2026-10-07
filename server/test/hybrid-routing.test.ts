@@ -62,7 +62,7 @@ describe("hybrid routing", () => {
   it("sends a message the rules doubt to the model", async () => {
     const calls = model();
     const { agent } = await authedAgent();
-    const message = "biryani 300 ke andar chahiye";
+    const message = "biryani 300 only, spicy nahi";
     const res = await agent.post("/api/chat/message").send({ message }).expect(200);
     expect(calls).toHaveLength(1);
     // The model's reading is the one acted on: it found the ₹300 budget.

@@ -190,8 +190,15 @@ function parseBudget(message: string): number | null {
     if (NOT_MONEY.test(after)) continue;
 
     const markedBefore = /(?:₹|\brs\.?|\binr)\s*$/i.test(before);
-    const markedAfter = /^\s*(?:rupees?\b|rs\b\.?|inr\b|\/-)/i.test(after);
+    const markedAfter = /^\s*(?:rupees?\b|rupa(?:y|ye|yi|iye|ya|yalu)\b|rs\b\.?|inr\b|\/-)/i.test(after);
     if (markedBefore || markedAfter) return n * 100;
+
+    // Hindi and Telugu put the ceiling after the number: "300 ke andar",
+    // "400 tak", "200 lopala", "180 varaku" all mean "up to". Without these
+    // the number was dropped and a stated budget was never enforced.
+    if (/^\s*(?:ke andar|ke under|tak|se kam|lopala|lopu|loga|varaku)\b/i.test(after)) {
+      return n * 100;
+    }
 
     // Words that only ever introduce a ceiling.
     if (/\b(?:under|below|less than|max(?:imum)?|up\s?to|budget(?:\s+of)?)\s*$/i.test(before)) {
@@ -250,11 +257,16 @@ function extractMaxPickupMinutes(message: string): number | null {
 }
 
 // What the user cares about most, inferred from their words.
+//
+// Hindi and Telugu words for the same three wishes are read too. Bare
+// "accha" is not: it opens "accha, ek pizza" as often as it praises a dish,
+// so only "accha wala" (the good one) counts.
 const RATING_WORDS =
-  /\b(top[- ]?rated|best|highest[- ]?rated|good|well[- ]?reviewed|quality|popular)\b/i;
+  /\b(top[- ]?rated|best|highest[- ]?rated|good|well[- ]?reviewed|quality|popular|badhiya|bdiya|ac+ha wala|achha wala|manchi)\b/i;
 const SPEED_WORDS =
-  /\b(fast(est)?|quick(ly|est)?|asap|hurry|soon|urgent(ly)?|immediately|right away|in a rush)\b/i;
-const PRICE_WORDS = /\b(cheap(est)?|budget|low(est)?[- ]?price|affordable|save money)\b/i;
+  /\b(fast(est)?|quick(ly|est)?|asap|hurry|soon|urgent(ly)?|immediately|right away|in a rush|jaldi|fatafat|turant|tondaraga|twaraga|tvaraga)\b/i;
+const PRICE_WORDS =
+  /\b(cheap(est)?|budget|low(est)?[- ]?price|affordable|save money|sasta|saste|sasti|kam daam|takkuva)\b/i;
 
 function extractPriority(
   message: string,
@@ -417,6 +429,28 @@ function withoutConstraints(place: string): string {
   );
 }
 
+/** Words that sit near a place without being part of it. */
+const NOT_PLACE =
+  /^(?:cab|taxi|auto|rickshaw|bike|car|ride|book|karo|kar|do|chahiye|chaiye|kavali|kaavali|mujhe|naaku|ek|oka|please|pls|jaldi|sasta|tondaraga|takkuva|now|the|a|me|i|need|want|abhi|ippudu|\d+)$/i;
+
+/**
+ * The place in "Ameerpet jana hai" or "Gachibowli ki cab": up to three words
+ * read backwards from the marker, stopping at the first that is not a place.
+ */
+function placeBeforeMarker(message: string): string {
+  const m = message.match(
+    /^(.*?)\s+(?:jana hai|jaana hai|jana|jaana|ke liye|ki|ku|tak|velali|vellali|vellaali|veltha|veltanu)\b/i,
+  );
+  if (!m?.[1]) return "";
+  const words = m[1].trim().split(/\s+/);
+  const kept: string[] = [];
+  for (let i = words.length - 1; i >= 0 && kept.length < 3; i--) {
+    if (NOT_PLACE.test(words[i]!)) break;
+    kept.unshift(words[i]!);
+  }
+  return kept.join(" ");
+}
+
 function extractRide(message: string) {
   const dropMatch = message.match(
     /(?:\bto|towards|till|drop (?:me )?(?:at|to))\s+([a-z0-9 ,.'-]{3,60})/i,
@@ -427,6 +461,10 @@ function extractRide(message: string) {
     /(?:\bfrom|pick (?:me )?up (?:from|at))\s+([a-z0-9 ,.'-]{3,60}?)(?=\s+(?:to|and|towards|till)\b|$)/i,
   );
   let drop = dropMatch?.[1] ? withoutTime(withoutConstraints(dropMatch[1])) : "";
+  // Hindi and Telugu name the place first and mark it after: "Ameerpet jana
+  // hai", "Gachibowli ki cab", "Kukatpally ke liye", "Charminar tak",
+  // "Secunderabad velali".
+  if (!drop) drop = placeBeforeMarker(message);
   // Hinglish word order puts the destination last with no preposition at all
   // ("cab book karo Hitech City"), which the "to" pattern cannot see.
   if (!drop) {
@@ -474,12 +512,13 @@ export type DoubtReason =
   | "mixed-priority";
 
 /**
- * Words of Hindi and Telugu that carry meaning in a request: a limit, a
- * hurry, a want. The rules read English, so a message that leans on these may
- * say something the reading missed, such as "300 ke andar" being a budget.
+ * Hindi and Telugu words the rules do not read but that can change a request:
+ * a negation ("spicy nahi"), a "how much", a "which one". The words the rules
+ * do read, such as "tak", "lopala", "sasta" and "jaldi", are not here, because
+ * a word that was read is not a reason for doubt.
  */
 const OTHER_LANGUAGE =
-  /\b(chahiye|chaiye|chahie|karo|kar do|jaldi|sasta|saste|sasti|andar|tak|mein|wala|wali|bhai|yaar|accha|achha|kitna|nahi|kaavali|kavali|lopala|lopu|takkuva|tondaraga|twaraga|cheyyi|cheyandi|kosam|ekkada|bagunna|manchi)\b/i;
+  /\b(mein|wala|wali|bhai|yaar|accha|achha|kitna|kitne|nahi|nahin|kosam|ekkada|bagunna|vaddu|ledu|kaadu|enta)\b/i;
 
 /** A number written as a count of something, or a clock time. */
 function isCountOrTime(message: string, index: number, raw: string): boolean {

@@ -28,7 +28,7 @@ describe("messages the rules read cleanly", () => {
 
 describe("messages the rules may have misread", () => {
   it("doubts a number that became no limit", () => {
-    const r = readWithConfidence("biryani 300 tak");
+    const r = readWithConfidence("biryani 300 only");
     expect(r.confident).toBe(false);
     expect(r.reasons).toContain("unread-number");
   });
@@ -39,7 +39,7 @@ describe("messages the rules may have misread", () => {
   });
 
   it("doubts words the rules do not speak", () => {
-    const r = readWithConfidence("biryani chahiye jaldi");
+    const r = readWithConfidence("biryani spicy nahi chahiye");
     expect(r.confident).toBe(false);
     expect(r.reasons).toContain("other-language");
   });
@@ -68,7 +68,7 @@ describe("messages the rules may have misread", () => {
 
   it("returns the same reading the provider gives", async () => {
     const { DemoProvider } = await import("../src/modules/chat/llm/demo.js");
-    for (const m of ["biryani 300 tak", "I want biriyani", "hi", "cab to Ameerpet"]) {
+    for (const m of ["biryani 300 only", "pizza 250 ke andar", "I want biriyani", "hi", "cab to Ameerpet"]) {
       expect(readWithConfidence(m).intent).toEqual(await new DemoProvider().extractIntent(m));
     }
   });
