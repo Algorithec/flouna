@@ -1,62 +1,46 @@
 #!/usr/bin/env node
 // Nightly database backup for Flouna. Detects the engine from DATABASE_URL:
-//   - SQLite  (file:...)        → copies the .db file (with WAL checkpoint)
-//   - Postgres (postgresql://)  → runs pg_dump to a timestamped .sql.gz
+//   - SQLite  (file:...)        → a consistent snapshot via VACUUM INTO
+//   - Postgres (postgresql://)  → pg_dump in its compressed custom format
 //
 // Usage (cron, e.g. 2am daily):
 //   0 2 * * *  cd /srv/flouna/server && node scripts/backup-db.mjs >> backup.log 2>&1
 //
-// Backups are written to ./backups (override with BACKUP_DIR). Old backups
-// beyond RETENTION_DAYS (default 14) are pruned.
+// Restore a Postgres backup with:
+//   pg_restore --clean --no-owner --dbname="$DATABASE_URL" backups/flouna-<stamp>.dump
+//
+// Backups are written to ./backups (override with BACKUP_DIR). Backups older
+// than RETENTION_DAYS (default 14) are pruned. Exits non-zero on any failure,
+// so the scheduler that runs it can alert. The logic lives in backup-lib.mjs,
+// where it is tested.
 
-import { execSync } from "node:child_process";
-import { copyFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { backup } from "./backup-lib.mjs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const serverDir = join(__dirname, "..");
-const backupDir = process.env.BACKUP_DIR || join(serverDir, "backups");
-const retentionDays = Number(process.env.RETENTION_DAYS || 14);
-
+const serverDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const url = process.env.DATABASE_URL;
-if (!url) {
-  console.error("DATABASE_URL not set — cannot back up.");
-  process.exit(1);
-}
 
-mkdirSync(backupDir, { recursive: true });
-const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+async function snapshotSqlite(file) {
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  try {
+    await prisma.$executeRawUnsafe(`VACUUM INTO '${file.replace(/'/g, "''")}'`);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
 
 try {
-  if (url.startsWith("file:")) {
-    // SQLite — checkpoint WAL then copy the file.
-    const dbPath = join(serverDir, "prisma", url.replace(/^file:/, ""));
-    const dest = join(backupDir, `flouna-${stamp}.db`);
-    copyFileSync(dbPath, dest);
-    console.log(`SQLite backup written: ${dest}`);
-  } else if (url.startsWith("postgres")) {
-    // PostgreSQL — pg_dump, gzipped.
-    const dest = join(backupDir, `flouna-${stamp}.sql.gz`);
-    execSync(`pg_dump "${url}" | gzip > "${dest}"`, { stdio: "inherit", shell: "/bin/sh" });
-    console.log(`PostgreSQL backup written: ${dest}`);
-  } else {
-    console.error(`Unrecognised DATABASE_URL scheme: ${url.split(":")[0]}`);
-    process.exit(1);
-  }
+  const { file, pruned } = await backup({
+    url,
+    dir: process.env.BACKUP_DIR || join(serverDir, "backups"),
+    retentionDays: Number(process.env.RETENTION_DAYS || 14),
+    snapshotSqlite,
+  });
+  console.log(`Backup written: ${file}`);
+  if (pruned) console.log(`Pruned ${pruned} backup(s) past retention.`);
 } catch (err) {
-  console.error("Backup failed:", err.message);
+  console.error(`Backup failed: ${err instanceof Error ? err.message : err}`);
   process.exit(1);
 }
-
-// Prune old backups.
-const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-let pruned = 0;
-for (const f of readdirSync(backupDir)) {
-  const p = join(backupDir, f);
-  if (statSync(p).mtimeMs < cutoff) {
-    unlinkSync(p);
-    pruned++;
-  }
-}
-if (pruned) console.log(`Pruned ${pruned} backup(s) older than ${retentionDays} days.`);
