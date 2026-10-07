@@ -57,6 +57,53 @@ const RIDE_EVENTS = [
   { status: "in_ride", message: "Ride started, enjoy the trip" },
 ];
 
+/**
+ * The gateway took money for an order that is cancelled: record it as owed
+ * back. Status-scoped, because webhooks repeat: a refund already flagged, or
+ * already paid out, must not be reopened.
+ */
+async function owePaymentBack(
+  order: { id: string; userId: string },
+  method: string,
+  paidPaise: number,
+  gatewayResponse: string | undefined,
+) {
+  const orderId = order.id;
+  const opts = { paidPaise, gatewayResponse };
+  const existing = await prisma.payment.findUnique({ where: { orderId } });
+  const flagged = existing
+    ? (
+        await prisma.payment.updateMany({
+          where: { orderId, status: { in: ["created", "processing", "pending", "failed"] } },
+          data: {
+            status: "refund_pending",
+            amount: opts.paidPaise,
+            method,
+            gatewayResponse: opts.gatewayResponse,
+          },
+        })
+      ).count
+    : (
+        await prisma.payment.create({
+          data: {
+            orderId,
+            userId: order.userId,
+            amount: opts.paidPaise,
+            currency: "INR",
+            status: "refund_pending",
+            method,
+            gatewayResponse: opts.gatewayResponse,
+          },
+        }),
+        1
+      );
+  if (flagged > 0) {
+    console.warn(
+      `[payments] ${orderId} was paid after it was cancelled: ${opts.paidPaise} paise flagged for refund`,
+    );
+  }
+}
+
 async function markPaid(
   orderId: string,
   method: string,
@@ -81,38 +128,7 @@ async function markPaid(
   // Status-scoped, because webhooks repeat: a refund already flagged, or
   // already paid out, must not be reopened.
   if (order.status === "cancelled" && opts.paidPaise !== undefined) {
-    const existing = await prisma.payment.findUnique({ where: { orderId } });
-    const flagged = existing
-      ? (
-          await prisma.payment.updateMany({
-            where: { orderId, status: { in: ["created", "processing", "pending", "failed"] } },
-            data: {
-              status: "refund_pending",
-              amount: opts.paidPaise,
-              method,
-              gatewayResponse: opts.gatewayResponse,
-            },
-          })
-        ).count
-      : (
-          await prisma.payment.create({
-            data: {
-              orderId,
-              userId: order.userId,
-              amount: opts.paidPaise,
-              currency: "INR",
-              status: "refund_pending",
-              method,
-              gatewayResponse: opts.gatewayResponse,
-            },
-          }),
-          1
-        );
-    if (flagged > 0) {
-      console.warn(
-        `[payments] ${orderId} was paid after it was cancelled: ${opts.paidPaise} paise flagged for refund`,
-      );
-    }
+    await owePaymentBack(order, method, opts.paidPaise, opts.gatewayResponse);
     return order;
   }
   if (order.status !== "pending_payment") return order;
@@ -191,7 +207,13 @@ async function markPaid(
   });
 
   if (!claimed) {
-    return prisma.order.findUnique({ where: { id: orderId } });
+    const now = await prisma.order.findUnique({ where: { id: orderId } });
+    // Cancelled between the read above and the claim. The money was still
+    // taken, and without this it was owed back nowhere.
+    if (now?.status === "cancelled" && opts.paidPaise !== undefined) {
+      await owePaymentBack(now, method, opts.paidPaise, opts.gatewayResponse);
+    }
+    return now;
   }
 
   const updated = await prisma.order.findUnique({ where: { id: orderId } });
