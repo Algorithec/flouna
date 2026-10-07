@@ -11,7 +11,7 @@ export class NvidiaProvider implements LlmProvider {
       "https://integrate.api.nvidia.com/v1/chat/completions",
       {
         method: "POST",
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(env.LLM_TIMEOUT_MS),
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${env.NVIDIA_API_KEY}`,

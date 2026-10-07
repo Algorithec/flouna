@@ -15,7 +15,7 @@ export class OllamaProvider implements LlmProvider {
 
     const res = await fetch(`${base}/v1/chat/completions`, {
       method: "POST",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(env.LLM_TIMEOUT_MS),
       headers: {
         "Content-Type": "application/json",
         // Ollama has no authentication of its own, so a server reachable from

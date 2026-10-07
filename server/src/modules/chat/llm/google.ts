@@ -25,7 +25,7 @@ export class GoogleProvider implements LlmProvider {
     // FallbackProvider never gets a failure to fall through on.
     const res = await fetch(url, {
       method: "POST",
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(env.LLM_TIMEOUT_MS),
       headers: {
         "Content-Type": "application/json",
         "x-goog-api-key": env.GOOGLE_AI_API_KEY ?? "",

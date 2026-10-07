@@ -12,7 +12,7 @@ export class DeepseekProvider implements LlmProvider {
     // FallbackProvider never gets a failure to fall through on.
     const res = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(env.LLM_TIMEOUT_MS),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,

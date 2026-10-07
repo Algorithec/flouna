@@ -57,6 +57,9 @@ const envSchema = z.object({
   // and a first request that arrives while weights are still loading is worth
   // waiting a little longer for than a warm API is.
   SELF_HOSTED_LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  // How long one hosted model attempt may take before chat falls through to
+  // the next provider. A customer is waiting on it, so seconds, not tens.
+  LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
   ANTHROPIC_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   NVIDIA_API_KEY: z.string().optional(),
