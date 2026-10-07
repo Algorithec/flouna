@@ -70,7 +70,10 @@ export function cancellationTerms(
   now = new Date(),
 ): CancellationTerms {
   const terminal = order.status === "completed" || order.status === "cancelled";
-  const paid = payment?.status === "success" || payment?.status === "refund_pending";
+  const paid =
+    payment?.status === "success" ||
+    payment?.status === "refund_pending" ||
+    payment?.status === "refund_processing";
 
   if (terminal) {
     return {

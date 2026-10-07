@@ -359,34 +359,49 @@ export async function approveRefund(paymentId: string): Promise<RefundResult> {
 
   if (cashfreeConfigured) {
     // Real money: the gateway moves it first; we mark refunded only after it
-    // accepts. refund_id = our payment id, so Cashfree rejects a duplicate —
-    // two racing approvals can never refund twice.
+    // accepts.
+    //
+    // The payment is claimed before the gateway is called. It used to stay
+    // awaiting review while Cashfree answered, so a reject pressed in those
+    // seconds won: the customer was refunded and the books said the charge
+    // was kept. Claimed, a reject or a second approval finds nothing to
+    // decide. refund_id is still our payment id, so Cashfree would refuse a
+    // duplicate even if one got through.
+    const claim = await prisma.payment.updateMany({
+      where: { id: paymentId, status: "refund_pending" },
+      data: { status: "refund_processing" },
+    });
+    if (claim.count === 0) return { ok: false, reason: "not_pending" };
     try {
       const refund = await createCashfreeRefund({
         orderId: payment.orderId,
         refundId: payment.id,
         amountRupees: payment.amount / 100,
       });
-      const settled = await settleRefund(paymentId, "refunded");
-      if (settled.ok) {
-        await prisma.payment.update({
-          where: { id: paymentId },
-          data: {
-            gatewayResponse: JSON.stringify({
-              refund: {
-                cf_refund_id: refund.cf_refund_id,
-                refund_status: refund.refund_status,
-                refund_amount: refund.refund_amount,
-              },
-            }),
-          },
-        });
-        void notifyRefundApproved(payment);
-      }
-      return settled;
+      await prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: "refunded",
+          gatewayResponse: JSON.stringify({
+            refund: {
+              cf_refund_id: refund.cf_refund_id,
+              refund_status: refund.refund_status,
+              refund_amount: refund.refund_amount,
+            },
+          }),
+        },
+      });
+      void notifyRefundApproved(payment);
+      return { ok: true };
     } catch (err) {
-      // Surface the gateway error to the console instead of settling — ops
-      // must never believe money moved when it didn't.
+      // Nothing moved, so it goes back in the queue for a person to decide
+      // again, and ops sees why rather than believing money moved.
+      await prisma.payment
+        .updateMany({
+          where: { id: paymentId, status: "refund_processing" },
+          data: { status: "refund_pending" },
+        })
+        .catch(() => {});
       return {
         ok: false,
         reason: "gateway_failed",

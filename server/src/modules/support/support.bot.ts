@@ -151,7 +151,7 @@ async function answerWithContext(
             ? `Your most recent refund of ${rupeesFromPaise(refund.amountPaise)} is marked completed on our side. If your bank hasn't posted it, that's the 3 to 5 working day window.`
             : `Your most recent refund of ${rupeesFromPaise(refund.amountPaise)} is ${refund.status}. Once it's released, the bank takes 3 to 5 working days.`,
         );
-      } else if (payment?.status === "refund_pending") {
+      } else if (payment?.status === "refund_pending" || payment?.status === "refund_processing") {
         lines.push(
           "A refund has been started for that order and hasn't settled yet. Banks take 3 to 5 working days once it's released.",
         );
