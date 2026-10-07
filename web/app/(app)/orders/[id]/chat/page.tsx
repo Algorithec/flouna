@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
@@ -55,25 +56,37 @@ export default function DriverChatPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // A ride waiting for payment is not booked: nobody is looking for a captain
+  // and the server refuses messages for it. The screen used to say "Finding
+  // your captain" over a working message box whose every message failed.
+  const [unpaid, setUnpaid] = useState(false);
 
   const threadRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async (): Promise<{ ended: boolean } | null> => {
-    const [chat, track, order] = await Promise.all([
-      api<{ messages: Message[]; simulated: boolean }>(
+    const order = await api<{
+      order: { status: string; details: string | { pickup?: string; drop?: string } };
+    }>(`/api/orders/${id}`).catch(() => null);
+    const awaitingPayment = order
+      ? ["created", "pending_payment"].includes(order.order.status)
+      : false;
+    setUnpaid(awaitingPayment);
+    const [chat, track] = await Promise.all([
+      awaitingPayment
+        ? null
+        : api<{ messages: Message[]; simulated: boolean }>(
         `/api/orders/${id}/messages`,
-      ).catch(() => null),
-      api<{
-        tracking: {
-          otp: string;
-          driver: Driver;
-          pickupEtaMinutes: number;
-          state: string;
-        };
-      }>(`/api/orders/${id}/track`).catch(() => null),
-      api<{
-        order: { status: string; details: string | { pickup?: string; drop?: string } };
-      }>(`/api/orders/${id}`).catch(() => null),
+          ).catch(() => null),
+      awaitingPayment
+        ? null
+        : api<{
+            tracking: {
+              otp: string;
+              driver: Driver;
+              pickupEtaMinutes: number;
+              state: string;
+            };
+          }>(`/api/orders/${id}/track`).catch(() => null),
     ]);
     if (chat) {
       setMessages(chat.messages);
@@ -165,13 +178,15 @@ export default function DriverChatPage() {
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1 truncate text-[14px] font-bold text-ink">
-            {driver?.name ?? "Finding your captain"}
+            {driver?.name ?? (unpaid ? "Ride not booked yet" : "Finding your captain")}
             {driver && <BadgeCheck size={13} className="shrink-0 text-success" />}
           </p>
           <p className="truncate text-[11px] text-cocoa">
             {driver
               ? `${driver.vehicle.color} ${driver.vehicle.model} · ${driver.vehicle.plate}`
-              : "Not assigned yet"}
+              : unpaid
+                ? "Pay to book it"
+                : "Not assigned yet"}
           </p>
         </div>
         {driver && (
@@ -214,7 +229,21 @@ export default function DriverChatPage() {
         ref={threadRef}
         className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3.5 py-3"
       >
-        {loaded && messages.length === 0 && (
+        {loaded && messages.length === 0 && unpaid && !ended && (
+          <div className="mt-8 text-center">
+            <p className="text-[13px] text-cocoa">
+              This ride is booked once it is paid for. Your captain can message
+              you here after that.
+            </p>
+            <Link
+              href={`/pay/${id}`}
+              className="tap-target mt-3 inline-flex rounded-pill bg-accent px-5 py-2.5 text-[13px] font-bold text-white"
+            >
+              Pay to book
+            </Link>
+          </div>
+        )}
+        {loaded && messages.length === 0 && (!unpaid || ended) && (
           <p className="mt-8 text-center text-[13px] text-cocoa">
             {ended
               ? "This ride has ended."
@@ -245,7 +274,7 @@ export default function DriverChatPage() {
         </div>
       )}
 
-      {!ended && (
+      {!ended && !unpaid && (
         <>
           {/* The things a rider actually says while standing at a kerb, so they
               are one tap instead of one-handed typing. */}

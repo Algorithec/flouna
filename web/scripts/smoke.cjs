@@ -259,6 +259,53 @@ let browser = null;
     }
   });
 
+  await guarded("an unpaid ride's chat offers payment", async () => {
+    // The booking above leaves a ride waiting for payment. Its chat used to
+    // say "Finding your captain" over a message box the server refused, and
+    // asked for the driver's messages and the live position of a ride that
+    // was never booked, every fifteen seconds.
+    const list = await page.request.get(`${WEB}/api/orders`);
+    const orders = (await list.json()).orders || [];
+    const unpaid = orders.find((o) => o.domain === "ride" && o.status === "pending_payment");
+    check("an unpaid ride exists to open", !!unpaid);
+    if (!unpaid) return;
+    const refused = [];
+    const onResponse = (r) => {
+      if (r.url().includes(`/api/orders/${unpaid.id}/`) && r.status() >= 400) {
+        refused.push(`${r.status()} ${r.url().split("/api")[1]}`);
+      }
+    };
+    page.on("response", onResponse);
+    await page.goto(`${WEB}/orders/${unpaid.id}/chat`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(800);
+    page.off("response", onResponse);
+    const text = await page.evaluate(() => document.body.innerText);
+    check("it asks for payment instead of a captain", /Pay to book/.test(text) && !/Finding your captain/.test(text));
+    check("it makes no refused requests", refused.length === 0, refused.join(" "));
+    check("it offers no message box", (await page.locator('input[placeholder="Type a message…"]').count()) === 0);
+  });
+
+  group("group order");
+  await guarded("a group order page loads cleanly", async () => {
+    // A member with many old devices owed a chain to more than one upload
+    // may carry; the upload was refused outright on every visit.
+    const created = await page.request.post(`${WEB}/api/groups`, { data: { platform: "ondc" } });
+    const cart = await created.json();
+    check("a group order can be started", created.ok(), `${created.status()}`);
+    if (!created.ok()) return;
+    const refused = [];
+    const onResponse = (r) => {
+      if (r.url().includes("/api/") && r.status() >= 400 && r.status() !== 401) {
+        refused.push(`${r.status()} ${r.url().split("/api")[1]}`);
+      }
+    };
+    page.on("response", onResponse);
+    await page.goto(`${WEB}/food/group/${cart.id}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1500);
+    page.off("response", onResponse);
+    check("the group page makes no refused requests", refused.length === 0, refused.join(" "));
+  });
+
   // --- The rights the privacy policy grants ---
   group("privacy");
   await guarded("your data screen works", async () => {
