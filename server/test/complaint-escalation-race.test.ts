@@ -3,12 +3,15 @@ import request from "supertest";
 import { authedAgent } from "./helpers.js";
 import { prisma } from "../src/lib/prisma.js";
 
-// A complaint escalates one level per request, even when two arrive together.
+// Escalating a complaint with a double tap.
 //
-// Escalating read the current level, wrote an escalation one above it, then
-// raised the level. Two taps at the same moment both read level 0, so the
-// complaint went to the grievance officer twice: two escalation records and
-// two entries in the timeline the customer and the officer both read.
+// Two taps at once both read level 0 and both escalated, which the level
+// claim fixed. CI then found the slower case: the second tap arriving after
+// the first had finished read level 1 and escalated again, so one double tap
+// sent the complaint past the grievance officer straight to ONDC. The app now
+// says which level the customer saw when they tapped, and the server only
+// escalates from that level, so a repeat of the same tap is refused however
+// late it arrives.
 
 async function raise(agent: ReturnType<typeof request.agent>) {
   const res = await agent
@@ -22,19 +25,39 @@ async function raise(agent: ReturnType<typeof request.agent>) {
   return res.body.complaint as { id: string };
 }
 
-describe("escalating a complaint twice at once", () => {
-  it("escalates it once", async () => {
+const tap = (agent: ReturnType<typeof request.agent>, id: string, fromLevel: number) =>
+  agent.post(`/api/complaints/${id}/escalate`).send({ reason: "No response for three days", fromLevel });
+
+async function levelOf(id: string) {
+  return {
+    level: (await prisma.complaint.findUniqueOrThrow({ where: { id } })).escalationLevel,
+    records: await prisma.complaintEscalation.count({ where: { complaintId: id } }),
+  };
+}
+
+describe("escalating a complaint with a double tap", () => {
+  it("escalates once when both taps arrive together", async () => {
     const { agent } = await authedAgent();
     const complaint = await raise(agent);
+    const results = await Promise.all([tap(agent, complaint.id, 0), tap(agent, complaint.id, 0)]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(await levelOf(complaint.id)).toEqual({ level: 1, records: 1 });
+  });
 
-    const results = await Promise.all([
-      agent.post(`/api/complaints/${complaint.id}/escalate`).send({ reason: "No response for three days" }),
-      agent.post(`/api/complaints/${complaint.id}/escalate`).send({ reason: "No response for three days" }),
-    ]);
+  it("escalates once when the second tap arrives after the first finished", async () => {
+    const { agent } = await authedAgent();
+    const complaint = await raise(agent);
+    expect((await tap(agent, complaint.id, 0)).status).toBe(200);
+    expect((await tap(agent, complaint.id, 0)).status).toBe(409);
+    expect(await levelOf(complaint.id)).toEqual({ level: 1, records: 1 });
+  });
 
-    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
-    expect(await prisma.complaintEscalation.count({ where: { complaintId: complaint.id } })).toBe(1);
-    const after = await prisma.complaint.findUniqueOrThrow({ where: { id: complaint.id } });
-    expect(after.escalationLevel).toBe(1);
+  it("still lets the customer escalate on to ONDC from the level they see", async () => {
+    const { agent } = await authedAgent();
+    const complaint = await raise(agent);
+    await tap(agent, complaint.id, 0).expect(200);
+    const res = await tap(agent, complaint.id, 1).expect(200);
+    expect(res.body.level).toBe(2);
+    expect(await levelOf(complaint.id)).toEqual({ level: 2, records: 2 });
   });
 });

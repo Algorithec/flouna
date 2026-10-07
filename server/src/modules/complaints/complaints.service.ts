@@ -417,6 +417,7 @@ export async function escalateComplaint(
   userId: string,
   id: string,
   reason: string,
+  fromLevel?: number,
 ) {
   const complaint = await prisma.complaint.findFirst({
     where: { id, userId },
@@ -430,13 +431,20 @@ export async function escalateComplaint(
     throw new ApiError(400, "This complaint is already at the highest level");
   }
 
-  const level = complaint.escalationLevel + 1;
+  // A tap escalates from the level the customer was looking at. Without
+  // this, the second tap of a double tap that arrived after the first had
+  // finished read the new level and escalated again, straight to ONDC.
+  const from = fromLevel ?? complaint.escalationLevel;
+  if (from !== complaint.escalationLevel) {
+    throw new ApiError(409, "This complaint has just been escalated");
+  }
+  const level = from + 1;
   // The level is claimed before anything is written, and only if it is still
   // the one read above. Two taps at once used to both read level 0, so the
   // complaint went to the grievance officer twice, with two escalation records
   // and two timeline entries.
   const claimed = await prisma.complaint.updateMany({
-    where: { id: complaint.id, escalationLevel: complaint.escalationLevel },
+    where: { id: complaint.id, escalationLevel: from },
     data: { escalationLevel: level, issueType: "GRIEVANCE" },
   });
   if (claimed.count === 0) {
