@@ -137,7 +137,7 @@ export function Sidebar({
         >
           <Link
             href="/home"
-            aria-label="Flouna home"
+            aria-label={t("sb.home")}
             className="tap-target flex min-w-0 items-center gap-2.5"
           >
             <FlounaLogo size={30} className="shrink-0 text-cocoa/70" />
@@ -153,14 +153,14 @@ export function Sidebar({
           <button
             onClick={toggleCollapsed}
             className="hidden size-10 shrink-0 items-center justify-center rounded-[12px] bg-accent-soft text-accent transition-colors hover:bg-accent/15 lg:flex"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? t("sb.expand") : t("sb.collapse")}
           >
             {collapsed ? <PanelLeft size={19} /> : <PanelLeftClose size={19} />}
           </button>
           <button
             onClick={onClose}
             className="tap-target rounded-full p-1.5 text-cocoa hover:bg-beige lg:hidden"
-            aria-label="Close menu"
+            aria-label={t("sb.closeMenu")}
           >
             <X size={20} />
           </button>
@@ -182,7 +182,7 @@ export function Sidebar({
           ) : (
             <>
               <Plus size={19} className="text-ink" />
-              New Conversation
+              {t("sb.newConversation")}
             </>
           )}
         </Link>
@@ -258,7 +258,7 @@ export function Sidebar({
           {recent.length > 0 && (
             <>
               <p className="px-1 text-[13px] font-bold text-muted">
-                Recent Chats
+                {t("sb.recent")}
               </p>
               <div className="mt-2 flex flex-col gap-0.5">
                 {visible.map((s) => (
@@ -269,7 +269,7 @@ export function Sidebar({
                     className="tap-target flex items-center gap-2 truncate rounded-[12px] px-3 py-2 text-[14px] text-ink/80 transition-colors hover:bg-beige/50"
                   >
                     <MessageSquare size={14} className="shrink-0 text-muted" />
-                    <span className="truncate">{s.title ?? "New chat"}</span>
+                    <span className="truncate">{s.title ?? t("sb.newChat")}</span>
                   </Link>
                 ))}
                 {recent.length > 5 && !showAll && (
@@ -277,7 +277,7 @@ export function Sidebar({
                     onClick={() => setShowAll(true)}
                     className="tap-target px-3 py-2 text-left text-[13px] font-semibold text-accent hover:underline"
                   >
-                    Show all
+                    {t("sb.showAll")}
                   </button>
                 )}
               </div>
@@ -310,10 +310,10 @@ export function Sidebar({
               </span>
               <span className={cn("min-w-0 flex-1", collapsed && "lg:hidden")}>
                 <span className="block truncate text-[16px] font-bold text-ink">
-                  {user.name ?? "Your account"}
+                  {user.name ?? t("pf.yourAccount")}
                 </span>
                 <span className="block truncate text-[13px] text-muted">
-                  View profile
+                  {t("sb.viewProfile")}
                 </span>
               </span>
               <ChevronRight
@@ -328,7 +328,7 @@ export function Sidebar({
             <Link
               href="/profile/settings"
               onClick={onClose}
-              aria-label="Language"
+              aria-label={t("settings.language")}
               className={cn(
                 "flex size-11 shrink-0 items-center justify-center rounded-[18px] border border-line bg-card text-[18px] font-bold text-ink shadow-soft transition-colors hover:bg-beige/30",
                 collapsed && "lg:hidden",
@@ -344,12 +344,12 @@ export function Sidebar({
               onClick={onClose}
               className="flex h-[52px] flex-1 items-center justify-center rounded-pill border border-line bg-card text-[15px] font-bold text-ink shadow-soft transition-colors hover:bg-beige/30"
             >
-              <span className={cn(collapsed && "lg:hidden")}>Login or Signup</span>
+              <span className={cn(collapsed && "lg:hidden")}>{t("landing.loginOrSignup")}</span>
             </Link>
             <Link
               href="/profile/settings"
               onClick={onClose}
-              aria-label="Language"
+              aria-label={t("settings.language")}
               className="flex size-[52px] shrink-0 items-center justify-center rounded-[18px] border border-line bg-card text-[20px] font-bold text-ink shadow-soft transition-colors hover:bg-beige/30"
             >
               अ

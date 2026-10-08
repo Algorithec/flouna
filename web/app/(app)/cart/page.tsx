@@ -31,6 +31,24 @@ import { useToast } from "@/components/ui/Toast";
 import { FadeIn, MOTION } from "@/components/ui/motion";
 
 type AppliedCoupon = { code: string; description: string; discountPaise: number };
+
+/**
+ * The bill, priced by the server from the same code the order route uses.
+ *
+ * This screen used to add its own total from the prices stored when each item
+ * was added. Those are per-item effective prices, so two of something counted
+ * the delivery fee twice and took its offer off twice, while the order route
+ * charges one delivery fee and one offer. The screen therefore promised a
+ * total nobody was going to charge. Now it asks.
+ */
+type CartBill = {
+  itemsTotalPaise: number;
+  deliveryFeePaise: number;
+  convenienceFeePaise: number;
+  offersDiscountPaise: number;
+  savedPaise: number;
+  totalPaise: number;
+};
 type OfferedCoupon = { code: string; description: string; minOrderPaise: number };
 
 type AddressLine = {
@@ -56,6 +74,7 @@ export default function CartPage() {
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [offers, setOffers] = useState<OfferedCoupon[]>([]);
+  const [bill, setBill] = useState<CartBill | null>(null);
 
   useEffect(() => {
     api<{ addresses: AddressLine[] }>("/api/users/addresses")
@@ -90,7 +109,38 @@ export default function CartPage() {
     }
   }
 
-  const itemsTotal = lines.reduce((s, l) => s + l.pricePaise * l.qty, 0);
+  // Only a fallback now, for a preview that could not be fetched. It cannot be
+  // the amount charged, because it prices each line as though it were the whole
+  // order.
+  const estimateTotal = lines.reduce((s, l) => s + l.pricePaise * l.qty, 0);
+  const itemsTotal = bill?.itemsTotalPaise ?? estimateTotal;
+  const toPay = Math.max(
+    0,
+    (bill ? bill.totalPaise : estimateTotal) - (coupon?.discountPaise ?? 0),
+  );
+
+  // Re-priced whenever the cart changes, keyed on what actually affects the
+  // bill so editing the cooking instructions does not re-ask.
+  const cartKey = lines.map((l) => `${l.dishId}@${l.platform}x${l.qty}`).join(",");
+  useEffect(() => {
+    // Nothing to price, and nothing to clear either: an empty cart shows the
+    // empty state rather than a summary, and any refill changes the key below
+    // and re-prices.
+    if (lines.length === 0) return;
+    let active = true;
+    api<{ bill: CartBill }>("/api/orders/preview", {
+      method: "POST",
+      json: { items: lines.map((l) => ({ dishId: l.dishId, platform: l.platform, qty: l.qty })) },
+    })
+      .then((d) => active && setBill(d.bill))
+      // No bill rather than a wrong one: the summary falls back to an estimate
+      // and says so.
+      .catch(() => active && setBill(null));
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartKey]);
 
   async function checkout() {
     if (lines.length === 0) return;
@@ -105,6 +155,9 @@ export default function CartPage() {
             dishId: l.dishId,
             platform: l.platform,
             qty: l.qty,
+            // Pairs this line with the ranking it came from, so the engine
+            // learns what was chosen and not only what was offered.
+            ...(l.decisionId ? { decisionId: l.decisionId } : {}),
           })),
           ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
           ...(coupon ? { couponCode: coupon.code } : {}),
@@ -113,7 +166,7 @@ export default function CartPage() {
       clear();
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not place the order");
+      setError(e instanceof Error ? e.message : t("ct.placeFailed"));
       setBusy(false);
     }
   }
@@ -166,7 +219,7 @@ export default function CartPage() {
                   <div className="flex shrink-0 flex-col items-end gap-2">
                     <div className="flex items-center gap-1 rounded-pill border border-accent/50 px-1">
                       <button
-                        aria-label="Decrease quantity"
+                        aria-label={t("fh.less")}
                         onClick={() => setQty(l.dishId, l.platform, l.qty - 1)}
                         className="p-1.5 text-accent"
                       >
@@ -176,7 +229,7 @@ export default function CartPage() {
                         {l.qty}
                       </span>
                       <button
-                        aria-label="Increase quantity"
+                        aria-label={t("fh.more")}
                         onClick={() => setQty(l.dishId, l.platform, l.qty + 1)}
                         className="p-1.5 text-accent"
                       >
@@ -231,10 +284,11 @@ export default function CartPage() {
                 <>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-bold text-success">
-                      {coupon.code} applied
+                      {t("ct.applied").replace("{code}", coupon.code)}
                     </span>
                     <span className="block truncate text-[11px] text-cocoa">
-                      {coupon.description} · saving {rupees(coupon.discountPaise)}
+                      {coupon.description} ·{" "}
+                      {t("ct.saving").replace("{amount}", rupees(coupon.discountPaise))}
                     </span>
                   </span>
                   <button
@@ -245,7 +299,7 @@ export default function CartPage() {
                     }}
                     className="shrink-0 text-[12px] font-semibold text-cocoa hover:text-danger"
                   >
-                    Remove
+                    {t("ct.remove")}
                   </button>
                 </>
               ) : (
@@ -256,7 +310,7 @@ export default function CartPage() {
                       setCodeInput(e.target.value.toUpperCase().slice(0, 24));
                       setCouponError("");
                     }}
-                    placeholder="Enter promo code"
+                    placeholder={t("ct.promoPlaceholder")}
                     className="min-w-0 flex-1 bg-transparent text-[13px] uppercase text-ink outline-none placeholder:normal-case placeholder:text-cocoa/50"
                   />
                   <button
@@ -264,7 +318,7 @@ export default function CartPage() {
                     disabled={couponBusy || codeInput.trim().length < 2}
                     className="shrink-0 text-[12px] font-semibold text-accent hover:underline disabled:opacity-40"
                   >
-                    {couponBusy ? "Checking…" : "Apply"}
+                    {couponBusy ? t("pp.priv.checking") : t("ct.apply")}
                   </button>
                 </>
               )}
@@ -293,7 +347,7 @@ export default function CartPage() {
             <div className="flex items-center gap-2.5">
               <MapPin size={16} className="shrink-0 text-accent" />
               {address === undefined ? (
-                <p className="text-[13px] text-cocoa">Loading address…</p>
+                <p className="text-[13px] text-cocoa">{t("ct.loadingAddress")}</p>
               ) : address ? (
                 <p className="min-w-0 flex-1 truncate text-[13px] text-ink">
                   <span className="font-semibold">{address.label}</span>,{" "}
@@ -301,14 +355,14 @@ export default function CartPage() {
                 </p>
               ) : (
                 <p className="min-w-0 flex-1 text-[13px] text-cocoa">
-                  No delivery address saved
+                  {t("ct.noAddress")}
                 </p>
               )}
               <Link
                 href="/profile/addresses"
                 className="shrink-0 text-[12px] font-semibold text-accent hover:underline"
               >
-                {address ? "Change" : "Add"}
+                {address ? t("ct.change") : t("ct.add")}
               </Link>
             </div>
           </Card>
@@ -319,7 +373,7 @@ export default function CartPage() {
               server-side at checkout, so quoting them now would be a price
               promise this screen can't keep. The line stays honest instead. */}
           <Card className="mt-4">
-            <p className="text-[17px] font-extrabold text-ink">Order Summary</p>
+            <p className="text-[17px] font-extrabold text-ink">{t("ct.summary")}</p>
             <div className="mt-3 flex flex-col gap-2.5 text-[14px]">
               <div className="flex justify-between">
                 <span className="text-cocoa">
@@ -327,23 +381,57 @@ export default function CartPage() {
                 </span>
                 <span className="font-medium text-ink">{rupees(itemsTotal)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-cocoa">{t("cart.deliveryFees")}</span>
-                <span className="font-medium text-ink">{t("cart.shownAtPay")}</span>
-              </div>
+              {/* Every fee and offer as the server priced them. The frame
+                  prints a fixed "FREE" and "₹5"; these are the real numbers,
+                  and a free delivery is only stated when the fee is actually
+                  nothing. */}
+              {bill ? (
+                <>
+                  {bill.offersDiscountPaise > 0 && (
+                    <div className="flex justify-between text-success">
+                      <span>{t("bill.offers")}</span>
+                      <span className="font-semibold">
+                        − {rupees(bill.offersDiscountPaise)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-cocoa">{t("cart.deliveryFees")}</span>
+                    <span className="font-medium text-ink">
+                      {bill.deliveryFeePaise === 0 ? "FREE" : rupees(bill.deliveryFeePaise)}
+                    </span>
+                  </div>
+                  {bill.convenienceFeePaise > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-cocoa">{t("bill.convenienceFee")}</span>
+                      <span className="font-medium text-ink">
+                        {rupees(bill.convenienceFeePaise)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex justify-between">
+                  <span className="text-cocoa">{t("cart.deliveryFees")}</span>
+                  <span className="font-medium text-ink">{t("cart.shownAtPay")}</span>
+                </div>
+              )}
               {coupon && (
                 <div className="flex justify-between text-success">
-                  <span>Promo {coupon.code}</span>
+                  <span>{t("ct.promo")}{" "}{coupon.code}</span>
                   <span className="font-semibold">− {rupees(coupon.discountPaise)}</span>
                 </div>
               )}
               <div className="my-1 h-px bg-line" />
               <div className="flex items-center justify-between">
                 <span className="text-[16px] font-extrabold text-ink">
-                  {t("cart.toPay")}
+                  {/* "To pay (est.)" was the honest label while this screen
+                      added the total up itself. With the server's bill it is
+                      the amount charged, so the hedge goes. */}
+                  {bill ? t("pay.toPay") : t("cart.toPay")}
                 </span>
                 <span className="text-[20px] font-extrabold text-ink">
-                  {rupees(Math.max(0, itemsTotal - (coupon?.discountPaise ?? 0)))}
+                  {rupees(toPay)}
                 </span>
               </div>
             </div>
@@ -365,7 +453,7 @@ export default function CartPage() {
                 href="/profile/addresses"
                 className="flex h-[56px] w-full items-center justify-center gap-2 rounded-[22px] bg-accent text-[15px] font-semibold text-white shadow-card transition-colors hover:bg-[#d4570f]"
               >
-                <MapPin size={17} /> Add a delivery address
+                <MapPin size={17} /> {t("ct.addAddress")}
               </Link>
             ) : (
               <Button
@@ -375,7 +463,7 @@ export default function CartPage() {
               >
                 {busy
                   ? t("foodOrder.placing")
-                  : `${t("cart.checkout")} · ${rupees(Math.max(0, itemsTotal - (coupon?.discountPaise ?? 0)))}`}
+                  : `${t("cart.checkout")} · ${rupees(toPay)}`}
               </Button>
             )}
           </div>

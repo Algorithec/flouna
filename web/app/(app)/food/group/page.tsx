@@ -36,7 +36,7 @@ export default function GroupStartPage() {
       });
       router.push(`/food/group/${cart.id}/invite`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start group order");
+      setError(e instanceof Error ? e.message : t("gr.startFailed"));
       setBusy(false);
     }
   }
@@ -54,7 +54,7 @@ export default function GroupStartPage() {
         cart.domain === "ride" ? `/rides/group/${cart.id}` : `/food/group/${cart.id}`,
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not join");
+      setError(e instanceof Error ? e.message : t("gr.joinFailed"));
       setBusy(false);
     }
   }

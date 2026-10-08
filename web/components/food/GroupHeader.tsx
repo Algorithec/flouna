@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { ArrowLeft, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useBackTo } from "@/lib/navHistory";
@@ -26,12 +27,13 @@ export function GroupHeader({
   unread?: number;
   right?: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const goBack = useBackTo(backTo);
   return (
     <div className="flex items-start gap-2 py-4">
       <button
         onClick={goBack}
-        aria-label="Back"
+        aria-label={t("au.back")}
         className="tap-target mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-card shadow-soft transition-colors hover:bg-beige/60"
       >
         <ArrowLeft size={18} className="text-ink" />
@@ -47,7 +49,7 @@ export function GroupHeader({
           (chatHref ? (
             <Link
               href={chatHref}
-              aria-label="Group chat"
+              aria-label={t("chat.groupChat")}
               className={cn(
                 "tap-target relative flex size-9 items-center justify-center rounded-full bg-card shadow-soft transition-colors hover:bg-beige/60",
               )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
@@ -38,6 +39,7 @@ function ChartTooltip({
 }
 
 export function PriceHistoryChart({ dishId }: { dishId: string }) {
+  const { t } = useI18n();
   const [points, setPoints] = useState<Point[] | null>(null);
 
   useEffect(() => {
@@ -64,10 +66,10 @@ export function PriceHistoryChart({ dishId }: { dishId: string }) {
     <Card className="mt-5">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
-          <TrendingDown size={15} className="text-accent" /> Price trend (30 days)
+          <TrendingDown size={15} className="text-accent" /> {t("ph.title")}
         </p>
         <p className="text-[12px] text-cocoa">
-          Low {rupees(low)} · High {rupees(high)}
+          {t("ph.range").replace("{low}", rupees(low)).replace("{high}", rupees(high))}
         </p>
       </div>
 
@@ -105,10 +107,10 @@ export function PriceHistoryChart({ dishId }: { dishId: string }) {
 
       <p className="mt-1 text-[12px] text-cocoa">
         {trend < 0
-          ? `Down ${rupees(Math.abs(trend))} over the period, good time to order.`
+          ? t("ph.down").replace("{amount}", rupees(Math.abs(trend)))
           : trend > 0
-            ? `Up ${rupees(trend)} recently, you might wait for a dip.`
-            : "Holding steady."}
+            ? t("ph.up").replace("{amount}", rupees(trend))
+            : t("ph.steady")}
       </p>
     </Card>
   );

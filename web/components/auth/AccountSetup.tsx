@@ -1,19 +1,18 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { FlounaLogo } from "@/components/brand/FlounaLogo";
 
-const STEPS = [
-  "Verifying your email",
-  "Setting up your account",
-  "Personalizing your picks",
-];
+const STEPS: TranslationKey[] = ["au.stepVerify", "au.settingUp", "au.stepPersonalize"];
 
 const STEP_MS = 850;
 
 // Full-screen branded transition shown after OTP verification succeeds.
 export function AccountSetup({ onDone }: { onDone: () => void }) {
+  const { t } = useI18n();
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -30,7 +29,7 @@ export function AccountSetup({ onDone }: { onDone: () => void }) {
       <FlounaLogo size={110} className="animate-logo-glow text-ink" />
 
       <p className="mt-8 text-[18px] font-bold text-ink">
-        Setting up your account
+        {t("au.settingUp")}
       </p>
 
       <div className="mt-6 flex w-full max-w-[260px] flex-col gap-2.5">
@@ -54,7 +53,7 @@ export function AccountSetup({ onDone }: { onDone: () => void }) {
                   : "text-[13px] text-cocoa/50"
               }
             >
-              {label}
+              {t(label)}
               {i === step && "…"}
             </span>
           </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -31,6 +32,7 @@ export function AppShell({
   children: React.ReactNode;
   title?: string;
 }) {
+  const { t } = useI18n();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
 
@@ -97,7 +99,7 @@ export function AppShell({
             <button
               onClick={() => setSidebarOpen(true)}
               className="tap-target -ml-1 rounded-full p-2 text-ink transition-colors hover:bg-beige"
-              aria-label="Open menu"
+              aria-label={t("as.openMenu")}
             >
               <Menu size={24} />
             </button>
@@ -111,7 +113,7 @@ export function AppShell({
             ) : user ? (
               <Link
                 href="/profile"
-                aria-label="Your profile"
+                aria-label={t("as.profile")}
                 className="tap-target flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[14px] font-bold text-accent"
               >
                 {user.avatarUrl ? (
@@ -130,7 +132,7 @@ export function AppShell({
                 href="/login"
                 className="shrink-0 rounded-pill bg-card px-4 py-1.5 text-[13px] font-bold text-ink shadow-soft transition-colors hover:bg-beige/40"
               >
-                Login
+                {t("as.login")}
               </Link>
             )}
           </header>
@@ -153,6 +155,7 @@ export function AppShell({
  * rather than the same grey icon with a different tooltip.
  */
 function IncognitoToggle() {
+  const { t } = useI18n();
   const { temporary, toggle } = useTemporaryChat();
   return (
     <button
@@ -160,13 +163,13 @@ function IncognitoToggle() {
       aria-pressed={temporary}
       aria-label={
         temporary
-          ? "Temporary chat is on. Nothing in this conversation is saved. Tap to turn it off."
-          : "Turn on temporary chat, so this conversation is not saved"
+          ? t("as.tempOnTitle")
+          : t("as.tempOffTitle")
       }
       title={
         temporary
-          ? "Temporary chat is on, this conversation is not being saved"
-          : "Start a temporary chat that is not saved"
+          ? t("as.tempOnLabel")
+          : t("as.tempOffLabel")
       }
       className={cn(
         "tap-target flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",

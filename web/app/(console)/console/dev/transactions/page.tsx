@@ -34,6 +34,14 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState("");
   const [open, setOpen] = useState<Detail | null>(null);
 
+  // Escape closes the drawer, as it does every other dialog in the app.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   useEffect(() => {
     api<{ transactions: Txn[]; total: number; mode: string; byAction: Record<string, number> }>(
       `/api/console/dev/transactions${filter ? `?action=${filter}` : ""}`,
@@ -111,6 +119,9 @@ export default function TransactionsPage() {
       {open && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={() => setOpen(null)}>
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Transaction detail"
             className="h-full w-full max-w-xl overflow-y-auto border-l border-(--c-border) bg-white p-6"
             onClick={(e) => e.stopPropagation()}
           >
@@ -122,7 +133,11 @@ export default function TransactionsPage() {
                   <p className="font-mono text-[11px] text-(--c-muted)">order {open.orderId}</p>
                 )}
               </div>
-              <button onClick={() => setOpen(null)} className="text-(--c-muted) hover:text-(--c-ink)">
+              <button
+                onClick={() => setOpen(null)}
+                aria-label="Close"
+                className="text-(--c-muted) hover:text-(--c-ink)"
+              >
                 <X size={18} />
               </button>
             </div>

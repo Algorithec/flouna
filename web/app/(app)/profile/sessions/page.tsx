@@ -89,7 +89,7 @@ export default function LoginActivityPage() {
       toast(t("pp.sess.signedOutOne"));
     } catch (err) {
       setSessions(previous ?? null);
-      toast(err instanceof Error ? err.message : "Could not sign that device out");
+      toast(err instanceof Error ? err.message : t("pp.sess.signOutOneFailed"));
     }
   }
 
@@ -102,8 +102,10 @@ export default function LoginActivityPage() {
       load();
       toast(
         d.revoked > 0
-          ? `Signed out ${d.revoked} other session${d.revoked > 1 ? "s" : ""}`
-          : "No other sessions were active",
+          ? d.revoked === 1
+            ? t("pp.sess.signedOutOther")
+            : t("pp.sess.signedOutOthers").replace("{n}", String(d.revoked))
+          : t("pp.sess.noneActive"),
       );
     } catch {
       toast(t("pp.sess.signOutFailed"));

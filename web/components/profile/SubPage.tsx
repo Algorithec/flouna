@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { ArrowLeft } from "lucide-react";
 import { useBackTo } from "@/lib/navHistory";
 
@@ -21,6 +22,7 @@ export function SubPage({
   title: string;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const back = useBackTo("/profile");
   return (
     <div className="min-h-dvh bg-acct-bg">
@@ -36,7 +38,7 @@ export function SubPage({
           <button
             type="button"
             onClick={back}
-            aria-label="Back to profile"
+            aria-label={t("sp.back")}
             className="tap-target rounded-full p-2 text-acct-ink transition-colors hover:bg-black/5"
           >
             <ArrowLeft size={20} />

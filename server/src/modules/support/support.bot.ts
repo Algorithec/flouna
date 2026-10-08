@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { matchTopic, topicBySlug, type SupportTopic } from "./support.kb.js";
+import { istDateLabel } from "../../lib/istTime.js";
 
 /** Integer paise in, display rupees out — the server has no shared helper. */
 const rupeesFromPaise = (paise: number) =>
@@ -71,10 +72,7 @@ function describeOrder(o: {
   amount: number;
   createdAt: Date;
 }) {
-  const when = o.createdAt.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-  });
+  const when = istDateLabel(o.createdAt, { day: "numeric", month: "short" });
   return `${o.title} (${when}, ${rupeesFromPaise(o.amount)}), ${ORDER_STATUS_TEXT[o.status] ?? o.status}`;
 }
 
@@ -153,7 +151,7 @@ async function answerWithContext(
             ? `Your most recent refund of ${rupeesFromPaise(refund.amountPaise)} is marked completed on our side. If your bank hasn't posted it, that's the 3 to 5 working day window.`
             : `Your most recent refund of ${rupeesFromPaise(refund.amountPaise)} is ${refund.status}. Once it's released, the bank takes 3 to 5 working days.`,
         );
-      } else if (payment?.status === "refund_pending") {
+      } else if (payment?.status === "refund_pending" || payment?.status === "refund_processing") {
         lines.push(
           "A refund has been started for that order and hasn't settled yet. Banks take 3 to 5 working days once it's released.",
         );

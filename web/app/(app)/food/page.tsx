@@ -78,12 +78,13 @@ export default function FoodLandingPage() {
   useEffect(() => {
     api<Feed>("/api/food/feed")
       .then(setFeed)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed")));
     // Settings → Smart suggestions toggle; default to shown on any failure.
     api<{ smartSuggestions: boolean }>("/api/users/preferences")
       .then((p) => setShowSuggestions(p.smartSuggestions))
       .catch(() => {});
-  }, []);
+    // t only words the error; a change of language refetches once.
+  }, [t]);
 
   const activeQuery = (category === "All" ? query : `${query} ${category}`).trim();
 
@@ -127,14 +128,14 @@ export default function FoodLandingPage() {
           <span className="flex items-center gap-2">
             <Link
               href="/profile/alerts"
-              aria-label="Notifications"
+              aria-label={t("fp.notifications")}
               className="tap-target flex size-10 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
             >
               <Bell size={20} />
             </Link>
             <Link
               href="/cart"
-              aria-label="Cart"
+              aria-label={t("fp.cart")}
               className="tap-target relative flex size-10 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
             >
               <ShoppingCart size={20} />
@@ -163,14 +164,14 @@ export default function FoodLandingPage() {
           </div>
           <Link
             href="/profile/alerts"
-            aria-label="Notifications"
+            aria-label={t("fp.notifications")}
             className="tap-target flex size-10 shrink-0 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
           >
             <Bell size={20} />
           </Link>
           <Link
             href="/cart"
-            aria-label="Cart"
+            aria-label={t("fp.cart")}
             className="tap-target relative flex size-10 shrink-0 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-beige/50"
           >
             <ShoppingCart size={20} />
@@ -264,13 +265,13 @@ export default function FoodLandingPage() {
           // state rather than a bare line of grey text.
           <StateScreen
             illustration={<StateGlyph icon={Search} />}
-            title="No results found"
+            title={t("fp.noResults")}
             message={`We couldn't find anything matching "${activeQuery}".`}
-            primary={{ label: "Clear search", onClick: () => setQuery("") }}
+            primary={{ label: t("fp.clearSearch"), onClick: () => setQuery("") }}
           />
         ) : (
           <section className="mt-6">
-            <h2 className="text-[17px] font-bold text-ink">Results</h2>
+            <h2 className="text-[17px] font-bold text-ink">{t("fp.results")}</h2>
             <Stagger className="mt-3 flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
               {results.map((q) => (
                 <StaggerItem key={`${q.dishId}-${q.platform}`}>
@@ -295,7 +296,7 @@ export default function FoodLandingPage() {
             {/* AI picks — on desktop this sits inside a white panel (Figma) */}
             <section className="mt-6 lg:mt-0 lg:rounded-card lg:border lg:border-line lg:bg-card lg:p-5 lg:shadow-card">
               <p className="flex items-center gap-1 text-[12px] font-semibold text-accent">
-                AI Recommends ✦
+                {t("fp.recommends")}
               </p>
               <div className="mt-1 flex items-center justify-between">
                 <h2 className="text-[17px] font-bold text-ink lg:text-[19px]">
@@ -305,7 +306,7 @@ export default function FoodLandingPage() {
                   href="/home"
                   className="tap-target rounded-pill border border-accent px-3 py-1 text-[12px] font-semibold text-accent transition-colors hover:bg-accent-soft"
                 >
-                  Ask Flouna
+                  {t("fp.askFlouna")}
                 </Link>
               </div>
               <Stagger className="mt-3 flex flex-col gap-2.5">
@@ -319,26 +320,26 @@ export default function FoodLandingPage() {
 
             {/* Explore more — desktop-only shortcut tiles (Figma desktop) */}
             <section className="mt-5 hidden lg:block lg:rounded-card lg:border lg:border-line lg:bg-card lg:p-5 lg:shadow-card">
-              <h2 className="text-[17px] font-bold text-ink">Explore more</h2>
-              <p className="text-[12px] text-cocoa">More options to satisfy your cravings</p>
+              <h2 className="text-[17px] font-bold text-ink">{t("fp.exploreMore")}</h2>
+              <p className="text-[12px] text-cocoa">{t("fp.moreOptions")}</p>
               <div className="mt-3 grid grid-cols-3 gap-3">
                 <ExploreTile
                   icon={BarChart3}
-                  title="Best Sellers"
+                  title={t("fp.bestSellers")}
                   subtitle="Most ordered right now"
                   active={sort === "best"}
                   onClick={() => setSort(sort === "best" ? "default" : "best")}
                 />
                 <ExploreTile
                   icon={Tag}
-                  title="Offers"
+                  title={t("fp.offers")}
                   subtitle="Great deals & discounts"
                   active={sort === "offers"}
                   onClick={() => setSort(sort === "offers" ? "default" : "offers")}
                 />
                 <ExploreTile
                   icon={Sparkles}
-                  title="New on Flouna"
+                  title={t("fp.newOnFlouna")}
                   subtitle="Fresh & fastest arrivals"
                   active={sort === "new"}
                   onClick={() => setSort(sort === "new" ? "default" : "new")}
@@ -352,14 +353,14 @@ export default function FoodLandingPage() {
             <ScrollReveal className="mt-8 lg:mt-0 lg:rounded-card lg:border lg:border-line lg:bg-card lg:p-5 lg:shadow-card">
               <h2 className="text-[17px] font-bold text-ink">{t("food.smartSuggestions")}</h2>
               <p className="text-[12px] text-cocoa">
-                Recommendations based on speed, distance &amp; ratings
+                {t("fp.basedOn")}
               </p>
               <div className="mt-2 flex flex-col divide-y divide-line">
                 <SuggestionRow
                   icon={Zap}
                   iconBg="bg-accent-soft"
                   iconClass="text-accent"
-                  title="Fastest Delivery"
+                  title={t("fp.fastest")}
                   subtitle="Get your food in the least time possible"
                   value={`From ${feed?.suggestions.fastestDeliveryMinutes ?? " "} min`}
                   onPick={() => setQuery("momos")}
@@ -368,7 +369,7 @@ export default function FoodLandingPage() {
                   icon={MapPin}
                   iconBg="bg-success-soft"
                   iconClass="text-success"
-                  title="Nearest to You"
+                  title={t("fp.nearest")}
                   subtitle="Top restaurants near your location"
                   value={`Within ${feed?.suggestions.nearestKm ?? " "} km`}
                   onPick={() => setQuery("thali")}
@@ -377,7 +378,7 @@ export default function FoodLandingPage() {
                   icon={Star}
                   iconBg="bg-[#efe7fb]"
                   iconClass="text-[#8b5cf6]"
-                  title="Top Rated Near You"
+                  title={t("fp.topRated")}
                   subtitle="Highly rated restaurants you'll love"
                   value="4.0+ rated"
                   onPick={() => setQuery("cake")}
@@ -445,6 +446,7 @@ function ExploreTile({
 // Dish card — Figma layout: tag pill, name, clock · rating, price + Order now,
 // with a dish-art tile standing in until real photography lands.
 function DishRow({ q }: { q: FoodQuote }) {
+  const { t } = useI18n();
   const { add } = useCart();
   const { toast } = useToast();
   const [added, setAdded] = useState(false);
@@ -476,7 +478,7 @@ function DishRow({ q }: { q: FoodQuote }) {
           </span>
           <p className="mt-1 truncate text-[15px] font-bold text-ink">{q.name}</p>
           <p className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-[12px] text-cocoa">
-            <Clock size={11} className="shrink-0" /> {q.etaMinutes} min
+            <Clock size={11} className="shrink-0" /> {q.etaMinutes} {t("u.min")}
             <span className="flex items-center gap-0.5">
               <Star size={11} className="shrink-0 fill-accent text-accent" /> {q.rating}
             </span>
@@ -500,7 +502,7 @@ function DishRow({ q }: { q: FoodQuote }) {
             href={`/food/order/${q.dishId}?platform=${q.platform}`}
             className="tap-target rounded-pill bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#d4570f]"
           >
-            Order now
+            {t("fp.orderNow")}
           </Link>
         </div>
       </div>

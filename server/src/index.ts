@@ -1,6 +1,7 @@
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { pruneDecisionLogs } from "./modules/advisor/decisionLog.service.js";
+import { pruneIntentWatches } from "./modules/chat/llm/watcher.js";
 import { prisma } from "./lib/prisma.js";
 import { processDueDeletions } from "./modules/compliance/privacy.service.js";
 import { initRealtime } from "./realtime/socket.js";
@@ -124,6 +125,8 @@ const cleanup = setInterval(
       // this?" and to satisfy an audit, then dropped — one row per search
       // would otherwise grow without bound.
       await pruneDecisionLogs(DECISION_LOG_RETENTION_DAYS);
+      // The watcher's readings carry message text, so they go on the same clock.
+      await pruneIntentWatches(DECISION_LOG_RETENTION_DAYS);
       // Erasures whose grace period has run out. A deletion that only happens
       // while somebody is watching a screen is not a deletion, and the promise
       // in the privacy policy is measured in days, not in attention.

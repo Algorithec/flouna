@@ -124,11 +124,22 @@ export default function ApiKeysPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <form
             onSubmit={create}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-key-title"
+            onKeyDown={(e) => e.key === "Escape" && setShowNew(false)}
             className="w-full max-w-sm rounded-xl border border-(--c-border) bg-white p-5"
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold text-(--c-ink)">Generate API key</h3>
-              <button type="button" onClick={() => setShowNew(false)} className="text-(--c-muted)">
+              <h3 id="new-key-title" className="text-[15px] font-semibold text-(--c-ink)">
+                Generate API key
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowNew(false)}
+                aria-label="Close"
+                className="text-(--c-muted)"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -175,8 +186,15 @@ export default function ApiKeysPage() {
       {/* Show-once secret */}
       {created && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-[#9fd8bc] bg-white p-5">
-            <h3 className="text-[15px] font-semibold text-(--c-ink)">Copy your API key now</h3>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="key-created-title"
+            className="w-full max-w-md rounded-xl border border-[#9fd8bc] bg-white p-5"
+          >
+            <h3 id="key-created-title" className="text-[15px] font-semibold text-(--c-ink)">
+              Copy your API key now
+            </h3>
             <p className="mt-1 text-[12px] text-(--c-gold)">
               This is the only time the secret is shown. Store it securely.
             </p>
@@ -184,6 +202,7 @@ export default function ApiKeysPage() {
               <code className="flex-1 break-all font-mono text-[12px] text-[#1a7a4a]">{created}</code>
               <button
                 onClick={() => navigator.clipboard?.writeText(created)}
+                aria-label="Copy key"
                 className="shrink-0 text-(--c-muted) hover:text-(--c-ink)"
               >
                 <Copy size={15} />

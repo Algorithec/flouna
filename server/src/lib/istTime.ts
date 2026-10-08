@@ -63,3 +63,32 @@ export function istStartOfWeek(at: Date = new Date()): Date {
   const day = (istWeekday(at) + 6) % 7; // Monday = 0
   return new Date(istStartOfDay(at).getTime() - day * 24 * 60 * 60_000);
 }
+
+/**
+ * A time as a customer in India reads it, e.g. "10:00 pm".
+ *
+ * "en-IN" only decides how a time is written, not which zone it is in. On
+ * Railway's UTC servers, toLocaleTimeString("en-IN") turned a ride booked for
+ * 10 pm into "scheduled for 4:30 pm". The zone has to be stated.
+ */
+export function istTimeLabel(at: Date): string {
+  return at.toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** A date as a customer in India reads it; near midnight UTC it is often the next day there. */
+export function istDateLabel(
+  at: Date,
+  opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" },
+): string {
+  return at.toLocaleDateString("en-IN", { ...opts, timeZone: "Asia/Kolkata" });
+}
+
+/** Year and month (0 = January) in India, for anything keyed by calendar month. */
+export function istYearMonth(at: Date = new Date()): { year: number; month: number } {
+  const shifted = new Date(at.getTime() + IST_OFFSET_MS);
+  return { year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() };
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useId, type InputHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
@@ -125,10 +126,11 @@ export function AuthAltButton({
 
 /** The "OR" rule that separates the primary action from the alternatives. */
 export function AuthOr() {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-4 text-[13px] font-medium text-auth-muted">
       <span className="h-px flex-1 bg-auth-line/30" />
-      OR
+      {t("au.or")}
       <span className="h-px flex-1 bg-auth-line/30" />
     </div>
   );

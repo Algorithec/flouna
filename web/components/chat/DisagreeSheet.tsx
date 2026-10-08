@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -18,14 +21,14 @@ import { cn } from "@/lib/cn";
 // make the request meaningless, and the right is about being able to insist,
 // not about insisting on everyone's behalf.
 
-const WANTED = [
-  { value: "cheaper", label: "I wanted it cheaper" },
-  { value: "faster", label: "I wanted it faster" },
-  { value: "better_rated", label: "Better rated seller" },
-  { value: "different_seller", label: "A different seller" },
-  { value: "wrong_price", label: "The price looks wrong" },
-  { value: "unavailable", label: "This is not available" },
-  { value: "other", label: "Something else" },
+const WANTED: { value: string; label: TranslationKey }[] = [
+  { value: "cheaper", label: "ds.wantCheaper" },
+  { value: "faster", label: "ds.wantFaster" },
+  { value: "better_rated", label: "ds.wantRated" },
+  { value: "different_seller", label: "ds.wantOther" },
+  { value: "wrong_price", label: "ds.wrongPrice" },
+  { value: "unavailable", label: "ds.unavailable" },
+  { value: "other", label: "ds.somethingElse" },
 ] as const;
 
 export function DisagreeSheet({
@@ -35,11 +38,13 @@ export function DisagreeSheet({
   orderId?: string;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const { toast } = useToast();
   const [wanted, setWanted] = useState<string>("");
   const [reason, setReason] = useState("");
   const [human, setHuman] = useState(false);
   const [busy, setBusy] = useState(false);
+  useEscapeToClose(!busy, onClose);
   const [done, setDone] = useState<{ dueBy: string } | null>(null);
 
   async function submit() {
@@ -56,7 +61,7 @@ export function DisagreeSheet({
       });
       setDone(res);
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Could not send that");
+      toast(err instanceof Error ? err.message : t("ds.sendFailed"));
     } finally {
       setBusy(false);
     }
@@ -73,7 +78,7 @@ export function DisagreeSheet({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Disagree with this recommendation"
+      aria-label={t("ds.label")}
       className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 sm:items-center sm:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) onClose();
@@ -82,30 +87,30 @@ export function DisagreeSheet({
       <div className="w-full max-w-sm rounded-t-[28px] bg-card p-5 shadow-lift sm:rounded-[28px]">
         {done ? (
           <>
-            <p className="text-[18px] font-bold text-ink">Thanks, that is logged</p>
+            <p className="text-[18px] font-bold text-ink">{t("ds.logged")}</p>
             <p className="mt-2 text-[14px] leading-relaxed text-cocoa">
               {human
-                ? `A person will look at this and reply by ${by}.`
-                : `We review this and reply by ${by}.`}
+                ? t("ds.personReplies").replace("{date}", by ?? "")
+                : t("ds.weReply").replace("{date}", by ?? "")}
             </p>
             <button
               type="button"
               onClick={onClose}
               className="tap-target mt-4 w-full rounded-pill bg-accent px-4 py-3 text-[14px] font-bold text-white"
             >
-              Done
+              {t("cx.done")}
             </button>
           </>
         ) : (
           <>
             <div className="flex items-start justify-between gap-3">
               <p className="text-[18px] font-bold text-ink">
-                What should it have picked?
+                {t("ds.whatPick")}
               </p>
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close"
+                aria-label={t("common.close")}
                 className="tap-target -mr-1 -mt-1 rounded-full p-1 text-muted hover:bg-beige"
               >
                 <X size={18} />
@@ -125,7 +130,7 @@ export function DisagreeSheet({
                       : "border-line text-cocoa hover:bg-beige/50",
                   )}
                 >
-                  {w.label}
+                  {t(w.label)}
                 </button>
               ))}
             </div>
@@ -134,7 +139,7 @@ export function DisagreeSheet({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={3}
-              placeholder="Tell us more, if you want to"
+              placeholder={t("ds.tellMore")}
               className="mt-3 w-full resize-none rounded-2xl border border-line bg-cream px-3.5 py-3 text-[16px] text-ink outline-none focus:border-accent"
             />
 
@@ -146,8 +151,7 @@ export function DisagreeSheet({
                 className="mt-0.5 size-[17px] shrink-0 accent-accent"
               />
               <span>
-                I want a person to review this, not the system that made the
-                decision.
+                {t("ds.wantPerson")}
               </span>
             </label>
 
@@ -157,7 +161,7 @@ export function DisagreeSheet({
               disabled={busy || (!wanted && reason.trim().length < 3)}
               className="tap-target mt-4 w-full rounded-pill bg-accent px-4 py-3 text-[14px] font-bold text-white disabled:opacity-50"
             >
-              {busy ? "Sending…" : "Send"}
+              {busy ? t("pp.help.sending") : t("common.send")}
             </button>
           </>
         )}

@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { CONTENDED_TX, withTxRetry } from "../../lib/txRetry.js";
 import { ApiError } from "../../middleware/error.js";
 import { getConfig } from "../backoffice/config.service.js";
 
@@ -84,10 +85,27 @@ export async function creditCashback(opts: {
  * Spends wallet credit. Returns the amount actually taken, which may be less
  * than requested when the balance is short.
  *
- * The balance is re-summed inside the same interactive transaction that writes
- * the debit, so two requests racing to spend the same rupees cannot both win:
- * the second sees the first's row and is capped by it.
+ * Serializable, and retried when the database refuses a conflicting commit.
+ *
+ * The balance is re-summed inside the transaction that writes the debit, and
+ * this used to claim that was enough to stop two spends of the same rupees.
+ * It is on SQLite, which only ever lets one writer in. Production is Postgres
+ * at read committed, where two checkouts for different orders each sum the
+ * same balance, neither sees the other's uncommitted debit, and both commit:
+ * run against a real Postgres, 39 of 40 such pairs spent ₹100 twice and left
+ * the wallet at minus ₹100. The per-order unique index cannot help, because
+ * the two debits belong to different orders.
+ *
+ * Serializable makes Postgres abort one of the pair instead, and the retry
+ * then sees the committed debit and takes only what is left. SQLite supports
+ * only this level, so the same code runs on both.
+ *
+ * A second spend for the same order returns the first rather than failing on
+ * the unique index. A retried checkout, or one that crashed after debiting and
+ * before recording the debit on the order, then finds the money it already
+ * took instead of erroring for ever.
  */
+
 export async function spendFromWallet(opts: {
   userId: string;
   orderId: string;
@@ -97,26 +115,46 @@ export async function spendFromWallet(opts: {
 }) {
   if (opts.maxPaise <= 0) return 0;
 
-  return prisma.$transaction(async (tx) => {
-    const agg = await tx.walletEntry.aggregate({
-      where: { userId: opts.userId },
-      _sum: { amountPaise: true },
-    });
-    const balance = agg._sum.amountPaise ?? 0;
-    const take = Math.min(balance, opts.maxPaise);
-    if (take <= 0) return 0;
+  return withTxRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        const already = await tx.walletEntry.findUnique({
+          where: {
+            userId_orderId_reason: {
+              userId: opts.userId,
+              orderId: opts.orderId,
+              reason: "spend",
+            },
+          },
+          select: { amountPaise: true },
+        });
+        if (already) return -already.amountPaise;
 
-    await tx.walletEntry.create({
-      data: {
-        userId: opts.userId,
-        orderId: opts.orderId,
-        amountPaise: -take,
-        reason: "spend",
-        description: opts.description ?? "Applied to your order",
+        const agg = await tx.walletEntry.aggregate({
+          where: { userId: opts.userId },
+          _sum: { amountPaise: true },
+        });
+        const balance = agg._sum.amountPaise ?? 0;
+        const take = Math.min(balance, opts.maxPaise);
+        if (take <= 0) return 0;
+
+        await tx.walletEntry.create({
+          data: {
+            userId: opts.userId,
+            orderId: opts.orderId,
+            amountPaise: -take,
+            reason: "spend",
+            description: opts.description ?? "Applied to your order",
+          },
+        });
+        return take;
       },
-    });
-    return take;
-  });
+      // The database aborts one of two spends that overlap, by refusing
+      // it or by letting it time out. Nothing was written either way, so
+      // withTxRetry runs it again.
+      CONTENDED_TX,
+    ),
+  );
 }
 
 /** Returns credit to the wallet when an order it paid for is cancelled. */

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Wallet } from "lucide-react";
@@ -25,6 +26,7 @@ export function useBudget() {
 
 // Weekly food budget progress — shown on the food landing.
 export function BudgetBar({ budget }: { budget: Budget }) {
+  const { t } = useI18n();
   if (budget.budgetPaise === null) {
     return (
       <Link
@@ -32,7 +34,7 @@ export function BudgetBar({ budget }: { budget: Budget }) {
         className="mt-4 flex items-center gap-2 rounded-card border border-line bg-card px-3.5 py-2.5 text-[12px] text-cocoa transition-colors hover:bg-beige/30"
       >
         <Wallet size={14} className="text-accent" />
-        Set a weekly food budget and Flouna will keep you under it →
+        {t("bb.setBudget")}
       </Link>
     );
   }
@@ -44,7 +46,7 @@ export function BudgetBar({ budget }: { budget: Budget }) {
     <div className="mt-4 rounded-card border border-line bg-card px-3.5 py-3">
       <div className="flex items-center justify-between text-[12px]">
         <span className="flex items-center gap-1.5 font-semibold text-ink">
-          <Wallet size={13} className="text-accent" /> Weekly food budget
+          <Wallet size={13} className="text-accent" /> {t("settings.budgetTitle")}
         </span>
         <span className={cn("font-bold", over ? "text-danger" : "text-success")}>
           {over
@@ -62,7 +64,9 @@ export function BudgetBar({ budget }: { budget: Budget }) {
         />
       </div>
       <p className="mt-1.5 text-[11px] text-cocoa">
-        {rupees(budget.spentPaise)} of {rupees(budget.budgetPaise)} this week
+        {t("bb.usage")
+          .replace("{spent}", rupees(budget.spentPaise))
+          .replace("{budget}", rupees(budget.budgetPaise))}
       </p>
     </div>
   );

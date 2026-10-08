@@ -39,6 +39,7 @@ export function VoiceButton({
   onTranscript: (text: string) => void;
   onFinal: (text: string) => void;
 }) {
+  const { t } = useI18n();
   const { speechLang } = useI18n();
   // Lazy initializer runs client-side only (component is "use client"),
   // so feature detection is SSR-safe without an effect.
@@ -87,7 +88,7 @@ export function VoiceButton({
   if (!supported) {
     return (
       <span
-        title="Voice input is not supported in this browser"
+        title={t("vb.unsupported")}
         className="flex size-10 shrink-0 items-center justify-center rounded-full text-cocoa/30"
       >
         <MicOff size={16} />
@@ -99,7 +100,7 @@ export function VoiceButton({
     <button
       type="button"
       onClick={toggle}
-      aria-label={listening ? "Stop listening" : "Speak your request"}
+      aria-label={listening ? t("vb.stop") : t("vb.speak")}
       className={cn(
         "tap-target relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
         listening

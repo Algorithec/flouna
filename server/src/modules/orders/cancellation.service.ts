@@ -32,7 +32,13 @@ type OrderLike = {
   createdAt: Date;
 };
 
-type PaymentLike = { status: string; method: string | null; createdAt: Date } | null;
+type PaymentLike = {
+  status: string;
+  method: string | null;
+  createdAt: Date;
+  /** When the money was taken; absent on payments made before it was recorded. */
+  paidAt?: Date | null;
+} | null;
 
 /**
  * Refund wait for a payment method, as the policy publishes it.
@@ -64,7 +70,10 @@ export function cancellationTerms(
   now = new Date(),
 ): CancellationTerms {
   const terminal = order.status === "completed" || order.status === "cancelled";
-  const paid = payment?.status === "success" || payment?.status === "refund_pending";
+  const paid =
+    payment?.status === "success" ||
+    payment?.status === "refund_pending" ||
+    payment?.status === "refund_processing";
 
   if (terminal) {
     return {
@@ -89,7 +98,10 @@ export function cancellationTerms(
     };
   }
 
-  const since = now.getTime() - payment!.createdAt.getTime();
+  // From the moment of payment. The row's createdAt is when checkout began,
+  // so measuring from it took the window away from anyone slow to pay.
+  const paidAt = payment!.paidAt ?? payment!.createdAt;
+  const since = now.getTime() - paidAt.getTime();
   const remaining = Math.max(0, FREE_CANCEL_WINDOW_MS - since);
   const [lo, hi] = refundWindowDays(payment!.method);
 

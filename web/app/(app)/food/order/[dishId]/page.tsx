@@ -91,11 +91,44 @@ export default function FoodOrderPage({
           setPlatform(d.quotes[0]?.platform ?? "");
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dishId]);
 
   const selected = quotes.find((q) => q.platform === platform);
+  // Present when this page was opened from a recommendation card.
+  const decisionId = search.get("decision") ?? undefined;
+
+  // The bill, from the server that charges it.
+  //
+  // This page showed the dish price as the total, and the order adds a
+  // convenience fee on top unless the customer is on Plus, so the button
+  // promised ₹7 less than the card was debited. Whether that fee applies is a
+  // property of the account, which only the server knows.
+  const [bill, setBill] = useState<{
+    convenienceFeePaise: number;
+    totalPaise: number;
+  } | null>(null);
+  const selectedPlatform = selected?.platform;
+  useEffect(() => {
+    if (!selectedPlatform) return;
+    let active = true;
+    api<{ bill: { convenienceFeePaise: number; totalPaise: number } }>(
+      "/api/orders/preview",
+      {
+        method: "POST",
+        json: { items: [{ dishId, platform: selectedPlatform, qty: 1 }] },
+      },
+    )
+      .then((d) => active && setBill(d.bill))
+      .catch(() => active && setBill(null));
+    return () => {
+      active = false;
+    };
+  }, [dishId, selectedPlatform]);
+  // Falls back to the dish price, which is the bill minus a fee we could not
+  // read: lower than the truth, and clearly labelled as the dish total.
+  const payable = bill?.totalPaise ?? selected?.effectivePaise ?? 0;
 
   async function placeOrder() {
     if (!selected) return;
@@ -104,11 +137,18 @@ export default function FoodOrderPage({
     try {
       const d = await api<{ order: { id: string } }>("/api/orders", {
         method: "POST",
-        json: { domain: "food", dishId, platform: selected.platform },
+        json: {
+          domain: "food",
+          dishId,
+          platform: selected.platform,
+          // Carried from the recommendation that linked here, so this order
+          // is paired with the ranking that produced it.
+          ...(decisionId ? { decisionId } : {}),
+        },
       });
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not place order");
+      setError(e instanceof Error ? e.message : t("dp.placeFailed"));
       setBusy(false);
     }
   }
@@ -116,7 +156,7 @@ export default function FoodOrderPage({
   if (!selected) {
     return (
       <div className="mx-auto max-w-xl px-4 py-10">
-        <p className="text-[14px] text-cocoa">{error || "Loading…"}</p>
+        <p className="text-[14px] text-cocoa">{error || t("dp.loading")}</p>
       </div>
     );
   }
@@ -145,7 +185,7 @@ export default function FoodOrderPage({
               <Star size={12} className="fill-accent text-accent" /> {selected.rating}
             </span>
             <span className="flex items-center gap-0.5">
-              <Clock size={12} /> {selected.etaMinutes} min
+              <Clock size={12} /> {selected.etaMinutes} {t("u.min")}
             </span>
           </p>
         </div>
@@ -166,7 +206,7 @@ export default function FoodOrderPage({
               {t("foodOrder.bestDeal")}
             </p>
             <p className="mt-1.5 text-[12px] text-cocoa">
-              {t("foodOrder.delivery")} {rupees(selected.deliveryFeePaise)} · {selected.etaMinutes} min
+              {t("foodOrder.delivery")} {rupees(selected.deliveryFeePaise)} · {selected.etaMinutes} {t("u.min")}
             </p>
             {selected.offers[0] && (
               <p className="flex items-center gap-1 text-[12px] text-success">
@@ -186,17 +226,25 @@ export default function FoodOrderPage({
           const saving = cheapestOther - selected.effectivePaise;
           return (
             <p className="mt-2 text-[12px] text-cocoa">
-              {saving > 0 ? (
-                <>
-                  Compared with {others.length} other app{others.length > 1 ? "s" : ""} (
-                  {others
-                    .map((q) => rupees(q.effectivePaise))
-                    .join(" · ")}
-                  ), <span className="font-semibold text-success">you save {rupees(saving)} here</span>.
-                </>
-              ) : (
-                <>Compared with {others.length} other app{others.length > 1 ? "s" : ""}, picked for the best overall value.</>
-              )}
+              {saving > 0
+                ? (() => {
+                    const line = t(others.length > 1 ? "dp.comparedSave" : "dp.comparedSaveOne")
+                      .replace("{n}", String(others.length))
+                      .replace("{prices}", others.map((q) => rupees(q.effectivePaise)).join(" · "));
+                    // The saving keeps its colour wherever the language puts it.
+                    const [before, after] = line.split("{amount}");
+                    return (
+                      <>
+                        {before}
+                        <span className="font-semibold text-success">{rupees(saving)}</span>
+                        {after}
+                      </>
+                    );
+                  })()
+                : t(others.length > 1 ? "dp.comparedValue" : "dp.comparedValueOne").replace(
+                    "{n}",
+                    String(others.length),
+                  )}
             </p>
           );
         })()}
@@ -233,18 +281,25 @@ export default function FoodOrderPage({
         {discount > 0 && (
           <Row label={t("bill.offers")} value={`− ${rupees(discount)}`} accent />
         )}
+        {bill && bill.convenienceFeePaise > 0 && (
+          <Row
+            label={t("bill.convenienceFee")}
+            value={rupees(bill.convenienceFeePaise)}
+          />
+        )}
         <div className="my-2 h-px bg-line" />
-        <Row label={t("bill.totalAmount")} value={rupees(selected.effectivePaise)} bold />
+        <Row label={t("bill.totalAmount")} value={rupees(payable)} bold />
       </Card>
 
       {/* Budget Guardian check */}
       {budget?.remainingPaise !== null &&
         budget?.remainingPaise !== undefined &&
-        selected.effectivePaise > budget.remainingPaise && (
+        payable > budget.remainingPaise && (
           <p className="mt-4 rounded-card border border-danger/30 bg-danger/5 px-3.5 py-2.5 text-[12px] text-danger">
-            Heads up, this order takes you{" "}
-            {rupees(selected.effectivePaise - Math.max(0, budget.remainingPaise))}{" "}
-            over your weekly food budget.
+            {t("dp.overBudget").replace(
+              "{amount}",
+              rupees(payable - Math.max(0, budget.remainingPaise)),
+            )}
           </p>
         )}
 
@@ -257,7 +312,7 @@ export default function FoodOrderPage({
           href="/profile/addresses"
           className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-pill bg-accent text-[15px] font-semibold text-white transition-colors hover:bg-[#d4570f]"
         >
-          <MapPin size={16} /> {t("foodOrder.add")} delivery address
+          <MapPin size={16} /> {t("dp.addAddress")}
         </Link>
       ) : (
         <Button
@@ -265,7 +320,7 @@ export default function FoodOrderPage({
           disabled={busy || address === undefined}
           className="mt-5 w-full"
         >
-          {busy ? t("foodOrder.placing") : `${t("foodOrder.pay")} ${rupees(selected.effectivePaise)}`}
+          {busy ? t("foodOrder.placing") : `${t("foodOrder.pay")} ${rupees(payable)}`}
         </Button>
       )}
       <Button
@@ -278,13 +333,18 @@ export default function FoodOrderPage({
             restaurant: selected.restaurant,
             image: selected.image,
             pricePaise: selected.effectivePaise,
+            // Carried on the line, so a recommendation added to the cart and
+            // ordered later still pairs with the ranking it came from. Ordering
+            // straight from this page already did; adding to the cart, which is
+            // the likelier path, lost it.
+            decisionId,
           });
           router.push("/cart");
         }}
         disabled={busy}
         className="mt-2.5 w-full"
       >
-        Add to cart
+        {t("dp.addToCart")}
       </Button>
       <p className="mt-3 flex items-center justify-center gap-1 text-[11px] text-cocoa/70">
         <ShieldCheck size={12} /> {t("foodOrder.inApp")}
@@ -297,17 +357,16 @@ export default function FoodOrderPage({
       <Card className="mt-5">
         {alertDone ? (
           <p className="flex items-center gap-2 text-[13px] font-medium text-success">
-            <Check size={15} /> We&apos;ll notify you when {selected.name} drops to
-            your target.
+            <Check size={15} /> {t("dp.willNotify").replace("{name}", selected.name)}
           </p>
         ) : alertOpen ? (
           <div>
             <p className="text-[13px] font-bold text-ink">
-              Notify me when it drops below
+              {t("dp.notifyBelow")}
             </p>
             <div className="mt-2 flex items-end gap-2">
               <Input
-                label="Target price (₹)"
+                label={t("dp.targetPrice")}
                 inputMode="numeric"
                 placeholder={String(Math.max(10, Math.round(selected.effectivePaise / 100) - 20))}
                 value={alertTarget}
@@ -318,7 +377,7 @@ export default function FoodOrderPage({
                 onClick={createAlert}
                 disabled={alertBusy || !alertTarget}
               >
-                Set alert
+                {t("dp.setAlert")}
               </Button>
             </div>
           </div>
@@ -335,7 +394,7 @@ export default function FoodOrderPage({
                 {t("foodOrder.trackPrice")}
               </span>
               <span className="block text-[12px] text-cocoa">
-                Get a live alert if {selected.name} gets cheaper
+                {t("dp.liveAlert").replace("{name}", selected.name)}
               </span>
             </span>
           </button>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JSON_SCHEMA, SYSTEM_PROMPT } from "../src/modules/chat/llm/prompt.js";
+import { JSON_SCHEMA, JSON_SHAPE, SYSTEM_PROMPT } from "../src/modules/chat/llm/prompt.js";
 import { intentSchema } from "../src/modules/chat/llm/types.js";
 
 // The contract between the model and the recommender.
@@ -64,6 +64,29 @@ describe("the model can return every field the recommender reads", () => {
     });
   }
 
+  // The same contract, for the providers asked for JSON in prose rather than
+  // bound to the schema above. The check above never covered them: a field
+  // could be returnable from Claude and silently never requested from
+  // DeepSeek or Gemini, and zod's defaults would hide it exactly as they once
+  // hid "priority".
+  for (const domain of ["food", "ride", "shop"] as const) {
+    it(`${domain}: the prose shape names every field the intent type carries`, () => {
+      const block = JSON_SHAPE.slice(JSON_SHAPE.indexOf(`"${domain}"?:`));
+      const own = block.slice(0, block.indexOf("}") + 1);
+      const missing = zodFields(domain).filter((f) => !own.includes(`"${f}"`));
+      expect(missing, `${domain} fields DeepSeek and Gemini are never asked for`).toEqual([]);
+    });
+  }
+
+  it("the prompt explains how to fill each stated limit", () => {
+    // Returnable is not the same as correct. Without instructions a model
+    // leaves these null, and a pickup limit read from a whole-trip time would
+    // remove rides for a reason the rider never gave.
+    expect(SYSTEM_PROMPT).toMatch(/maxEtaMinutes/);
+    expect(SYSTEM_PROMPT).toMatch(/maxPickupMinutes/);
+    expect(SYSTEM_PROMPT).toMatch(/whole trip/i);
+  });
+
   it("the prompt tells the model how to choose a priority", () => {
     // The schema makes the field returnable; the prompt is what makes it
     // correct. Both providers that had this rule inline worked; the shared
@@ -92,5 +115,32 @@ describe("the model can return every field the recommender reads", () => {
       food: { item: "biryani", budgetPaise: null, dietary: "any" },
     });
     expect(intent.food?.priority).toBe("balanced");
+  });
+});
+
+// JSON mode models often fill the parts they did not use with null. Every
+// provider parses through parseIntent, so an empty part is read as absent
+// instead of failing the whole answer and falling back to another provider.
+describe("an answer with empty parts", () => {
+  it("is read, not rejected", async () => {
+    const { parseIntent } = await import("../src/modules/chat/llm/types.js");
+    const intent = parseIntent({
+      domain: "ride",
+      reply: "Booking a cab",
+      food: null,
+      shop: null,
+      ride: { pickup: null, drop: "Airport", vehicle: "cab", budgetPaise: null, maxPickupMinutes: null, priority: "balanced", scheduleAt: null },
+    });
+    expect(intent.domain).toBe("ride");
+    expect(intent.food).toBeUndefined();
+  });
+
+  it("is what every provider parses with", async () => {
+    const { readFileSync } = await import("node:fs");
+    for (const f of ["anthropic", "deepseek", "google", "nvidia", "ollama", "selfHosted"]) {
+      const src = readFileSync(`src/modules/chat/llm/${f}.ts`, "utf8");
+      expect(src, `${f}.ts`).toContain("parseIntent(");
+      expect(src, `${f}.ts`).not.toContain("intentSchema.parse(");
+    }
   });
 });

@@ -167,19 +167,29 @@ export async function concludeGrievance(id: string, outcome: string) {
     select: { assignedAt: true, contactedAt: true },
   });
   const now = new Date();
-  return prisma.complaint.update({
-    where: { id: existing.id },
-    data: {
-      status: "RESOLVED",
-      resolvedAt: now,
-      resolution: outcome,
-      // Same reasoning as above: concluding a case proves it was assigned and
-      // that somebody spoke to the customer.
-      ...(current?.assignedAt ? {} : { assignedAt: now }),
-      ...(current?.contactedAt ? {} : { contactedAt: now }),
-    },
-    select: QUEUE_SELECT,
-  });
+  // Conditional on still being open: two officers concluding at once used to
+  // both succeed, and the second outcome replaced the first unseen.
+  await claimOnce(
+    prisma.complaint.updateMany({
+      where: { id: existing.id, resolvedAt: null },
+      data: {
+        status: "RESOLVED",
+        resolvedAt: now,
+        resolution: outcome,
+        // Same reasoning as above: concluding a case proves it was assigned and
+        // that somebody spoke to the customer.
+        ...(current?.assignedAt ? {} : { assignedAt: now }),
+        ...(current?.contactedAt ? {} : { contactedAt: now }),
+      },
+    }),
+    "This case is already concluded",
+  );
+  return prisma.complaint.findUniqueOrThrow({ where: { id: existing.id }, select: QUEUE_SELECT });
+}
+
+/** Refuses with a 409 when a conditional write found nothing to change. */
+async function claimOnce(write: Promise<{ count: number }>, refusal: string) {
+  if ((await write).count === 0) throw new ApiError(409, refusal);
 }
 
 /**
@@ -196,15 +206,19 @@ export async function openAppeal(id: string) {
   if (existing.appealedAt) {
     throw new ApiError(409, "This case has already been appealed once");
   }
-  return prisma.complaint.update({
-    where: { id: existing.id },
-    data: {
-      appealedAt: new Date(),
-      appealDueBy: new Date(Date.now() + GRIEVANCE_SLA.appealMs),
-      status: "ESCALATED",
-    },
-    select: QUEUE_SELECT,
-  });
+  // Once only: a second request used to push the appeal's deadline later.
+  await claimOnce(
+    prisma.complaint.updateMany({
+      where: { id: existing.id, appealedAt: null },
+      data: {
+        appealedAt: new Date(),
+        appealDueBy: new Date(Date.now() + GRIEVANCE_SLA.appealMs),
+        status: "ESCALATED",
+      },
+    }),
+    "This case has already been appealed once",
+  );
+  return prisma.complaint.findUniqueOrThrow({ where: { id: existing.id }, select: QUEUE_SELECT });
 }
 
 /** Decides an appeal. */
@@ -212,9 +226,12 @@ export async function decideAppeal(id: string, outcome: string) {
   const existing = await mustExist(id);
   if (!existing.appealedAt) throw new ApiError(400, "This case has not been appealed");
   if (existing.appealOutcome) throw new ApiError(409, "This appeal is already decided");
-  return prisma.complaint.update({
-    where: { id: existing.id },
-    data: { appealOutcome: outcome, status: "CLOSED", closedAt: new Date() },
-    select: QUEUE_SELECT,
-  });
+  await claimOnce(
+    prisma.complaint.updateMany({
+      where: { id: existing.id, appealOutcome: null },
+      data: { appealOutcome: outcome, status: "CLOSED", closedAt: new Date() },
+    }),
+    "This appeal is already decided",
+  );
+  return prisma.complaint.findUniqueOrThrow({ where: { id: existing.id }, select: QUEUE_SELECT });
 }

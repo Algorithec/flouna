@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint, LogOut } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthContext";
+import { useI18n } from "@/components/i18n/I18nContext";
 import {
   hasDeviceLock,
   isUnlocked,
@@ -25,6 +26,7 @@ import {
 // cannot possibly satisfy the prompt.
 export function AppLock({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   // null = still deciding, so nothing flashes before the check runs.
   const [locked, setLocked] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -91,11 +93,11 @@ export function AppLock({ children }: { children: React.ReactNode }) {
       <span className="flex size-20 items-center justify-center rounded-full bg-accent-soft">
         <Fingerprint size={36} className="text-accent" />
       </span>
-      <h1 className="mt-6 text-[22px] font-extrabold text-ink">Flouna is locked</h1>
+      <h1 className="mt-6 text-[22px] font-extrabold text-ink">{t("lock.title")}</h1>
       <p className="mt-2 max-w-[300px] text-[14px] text-cocoa">
         {failed
-          ? "That didn't match. Try again, or sign out to use a password."
-          : "Use your fingerprint or face to unlock."}
+          ? t("lock.failed")
+          : t("lock.prompt")}
       </p>
 
       <button
@@ -103,7 +105,7 @@ export function AppLock({ children }: { children: React.ReactNode }) {
         disabled={busy}
         className="mt-7 h-[52px] w-full max-w-[320px] rounded-pill bg-accent text-[15px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
       >
-        {busy ? "Waiting for your device…" : "Unlock"}
+        {busy ? t("lock.waiting") : t("lock.unlock")}
       </button>
 
       {/* Always reachable: a sensor that stops working must never strand
@@ -117,7 +119,7 @@ export function AppLock({ children }: { children: React.ReactNode }) {
         }}
         className="mt-4 flex items-center gap-2 text-[14px] font-semibold text-cocoa hover:underline"
       >
-        <LogOut size={15} /> Sign out instead
+        <LogOut size={15} /> {t("lock.signOut")}
       </button>
     </div>
   );

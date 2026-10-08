@@ -64,6 +64,14 @@ export type PickReason = "top_rated" | "best_price" | "fastest" | "best_overall"
 
 type FoodRec = {
   type: "food";
+  /**
+   * The ranking this recommendation came from.
+   *
+   * Sent back when the customer orders, which is what pairs the option taken
+   * with the option offered. Without it the decision log records what was
+   * recommended and never what happened next.
+   */
+  decisionId?: string;
   best: FoodQuote;
   alternatives: FoodQuote[];
   why: string;
@@ -79,6 +87,8 @@ type FoodRec = {
 
 type RideRec = {
   type: "ride";
+  /** The ranking this recommendation came from; sent back when booking. */
+  decisionId?: string;
   drop: string;
   pickup: string | null;
   /** What the rider asked for. "any" when they did not say. */
@@ -86,6 +96,16 @@ type RideRec = {
   quotes: RideQuote[];
   // ISO timestamp when the user asked to book for later ("cab at 10pm").
   scheduledAt?: string | null;
+  /**
+   * Limits the rider stated, to be applied where the real trip is priced.
+   *
+   * Chat quotes a placeholder distance, so it cannot honestly hold a fare to a
+   * stated maximum; the booking card re-prices the actual route and applies
+   * them there. Carried rather than dropped, or the reply would promise a
+   * budget nothing enforces.
+   */
+  fareLimitPaise?: number;
+  pickupLimitMinutes?: number;
   why: string;
   advice?: Advice;
 };

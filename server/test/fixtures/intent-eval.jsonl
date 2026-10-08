@@ -70,3 +70,44 @@
 {"id":"edge-006","message":"i want food under ₹1,200","expect":{"domain":"food","food":{"budgetPaise":120000}}}
 {"id":"edge-007","message":"order 2 dosas","expect":{"domain":"food","food":{"item":"dosa"}}}
 {"id":"edge-008","message":"BOOK A CAB TO HITECH CITY","expect":{"domain":"ride","ride":{"drop":"Hitech City"}}}
+{"id":"food-021","message":"chicken biryani within 35 minutes","expect":{"domain":"food","food":{"item":"biryani","budgetPaise":null,"maxEtaMinutes":35}}}
+{"id":"food-022","message":"order 12 samosas","expect":{"domain":"food","food":{"budgetPaise":null}}}
+{"id":"food-023","message":"dinner for 10 people","expect":{"domain":"food","food":{"budgetPaise":null}}}
+{"id":"food-024","message":"biryani within 35 minutes under 300","expect":{"domain":"food","food":{"item":"biryani","budgetPaise":30000,"maxEtaMinutes":35}}}
+{"id":"food-025","message":"pizza delivered in 45 mins","expect":{"domain":"food","food":{"item":"pizza","budgetPaise":null,"maxEtaMinutes":45}}}
+{"id":"food-026","message":"paneer tikka under 250 within half an hour","expect":{"domain":"food","food":{"budgetPaise":25000,"maxEtaMinutes":30}}}
+{"id":"ride-016","message":"cab to hitec city under ₹300, dont want to wait more than 5 minutes","expect":{"domain":"ride","ride":{"drop":"hitec city","vehicle":"cab","budgetPaise":30000,"maxPickupMinutes":5}}}
+{"id":"ride-017","message":"auto to gachibowli, pickup within 4 mins","expect":{"domain":"ride","ride":{"drop":"gachibowli","vehicle":"auto","maxPickupMinutes":4}}}
+{"id":"ride-018","message":"cab to the airport, need to arrive in 30 minutes","expect":{"domain":"ride","ride":{"drop":"the airport","maxPickupMinutes":null}}}
+{"id":"ride-019","message":"bike to madhapur under 150","expect":{"domain":"ride","ride":{"drop":"madhapur","vehicle":"bike","budgetPaise":15000}}}
+{"id":"ride-020","message":"I need to go to HITEC City now. Under ₹300 and I dont want to wait more than 5 minutes","expect":{"domain":"ride","ride":{"drop":"HITEC City","budgetPaise":30000,"maxPickupMinutes":5}}}
+{"id":"mix-001","message":"pizza 250 ke andar","expect":{"domain":"food","food":{"item":"pizza","budgetPaise":25000}}}
+{"id":"mix-002","message":"biryani 400 tak chahiye","expect":{"domain":"food","food":{"item":"biryani","budgetPaise":40000}}}
+{"id":"mix-003","message":"dosa 150 rupaye mein","expect":{"domain":"food","food":{"item":"dosa","budgetPaise":15000}}}
+{"id":"mix-004","message":"200 lopala burger kavali","expect":{"domain":"food","food":{"item":"burger","budgetPaise":20000}}}
+{"id":"mix-005","message":"paneer curry 300 lopu","expect":{"domain":"food","food":{"budgetPaise":30000}}}
+{"id":"mix-006","message":"noodles 180 varaku","expect":{"domain":"food","food":{"item":"noodle","budgetPaise":18000}}}
+{"id":"mix-007","message":"thali 250 se kam","expect":{"domain":"food","food":{"item":"thali","budgetPaise":25000}}}
+{"id":"mix-008","message":"sabse sasta pizza dikhao","expect":{"domain":"food","food":{"item":"pizza","priority":"price"}}}
+{"id":"mix-009","message":"takkuva rate lo biryani","expect":{"domain":"food","food":{"item":"biryani","priority":"price"}}}
+{"id":"mix-010","message":"jaldi se burger bhejo","expect":{"domain":"food","food":{"item":"burger","priority":"speed"}}}
+{"id":"mix-011","message":"tondaraga dosa kavali","expect":{"domain":"food","food":{"item":"dosa","priority":"speed"}}}
+{"id":"mix-012","message":"fatafat momos chahiye","expect":{"domain":"food","food":{"item":"momo","priority":"speed"}}}
+{"id":"mix-013","message":"badhiya biryani batao","expect":{"domain":"food","food":{"item":"biryani","priority":"rating"}}}
+{"id":"mix-014","message":"manchi biryani kavali","expect":{"domain":"food","food":{"item":"biryani","priority":"rating"}}}
+{"id":"mix-015","message":"Ameerpet jana hai auto chahiye","expect":{"domain":"ride","ride":{"drop":"Ameerpet","vehicle":"auto"}}}
+{"id":"mix-016","message":"Gachibowli ki cab kavali","expect":{"domain":"ride","ride":{"drop":"Gachibowli","vehicle":"cab"}}}
+{"id":"mix-017","message":"Kukatpally ke liye bike book karo","expect":{"domain":"ride","ride":{"drop":"Kukatpally","vehicle":"bike"}}}
+{"id":"mix-018","message":"auto to Begumpet 100 tak","expect":{"domain":"ride","ride":{"drop":"Begumpet","budgetPaise":10000}}}
+{"id":"mix-019","message":"sasta cab Charminar tak","expect":{"domain":"ride","ride":{"drop":"Charminar","priority":"price"}}}
+{"id":"mix-020","message":"jaldi cab chahiye airport ke liye","expect":{"domain":"ride","ride":{"drop":"airport","priority":"speed"}}}
+{"id":"mix-021","message":"Secunderabad velali cab book cheyyi","expect":{"domain":"ride","ride":{"drop":"Secunderabad","vehicle":"cab"}}}
+{"id":"mix-022","message":"accha ek pizza order karo","expect":{"domain":"food","food":{"item":"pizza","priority":"balanced"}}}
+{"id":"gap-001","message":"get me an auto to miyapur, 200 lopala","expect":{"domain":"ride","ride":{"drop":"miyapur","vehicle":"auto","budgetPaise":20000}}}
+{"id":"gap-002","message":"cab to Kondapur, 300 ke andar","expect":{"domain":"ride","ride":{"drop":"Kondapur","budgetPaise":30000}}}
+{"id":"gap-003","message":"cheap Charminar jana hai auto chahiye","expect":{"domain":"ride","ride":{"drop":"Charminar","vehicle":"auto","priority":"price"}}}
+{"id":"gap-004","message":"quick Kothapet velali taxi book cheyyi","expect":{"domain":"ride","ride":{"drop":"Kothapet","vehicle":"cab","priority":"speed"}}}
+{"id":"gap-005","message":"affordable Inorbit Mall ki auto kavali 200 lopala","expect":{"domain":"ride","ride":{"drop":"Inorbit Mall","priority":"price","budgetPaise":20000}}}
+{"id":"gap-006","message":"need a taxi to Abids budget 300","expect":{"domain":"ride","ride":{"drop":"Abids","budgetPaise":30000,"priority":"balanced"}}}
+{"id":"gap-007","message":"biryani budget 250","expect":{"domain":"food","food":{"item":"biryani","budgetPaise":25000,"priority":"balanced"}}}
+{"id":"gap-008","message":"budget friendly biryani","expect":{"domain":"food","food":{"item":"biryani","priority":"price"}}}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { useBackTo } from "@/lib/navHistory";
 import { ArrowLeft, UserX, Plus, X } from "lucide-react";
 import { api } from "@/lib/api";
@@ -29,6 +30,7 @@ export default function BlockedUsersPage() {
   const [adding, setAdding] = useState(false);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  useEscapeToClose(adding && !busy, () => setAdding(false));
   const [error, setError] = useState("");
 
   const load = useCallback(() => {

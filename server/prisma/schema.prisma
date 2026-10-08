@@ -809,6 +809,11 @@ model PushSubscription {
   endpoint  String   @unique
   p256dh    String // client public key
   auth      String // client auth secret
+  // The VAPID public key this subscription was created with. A subscription
+  // only accepts pushes signed by that key, so after a rotation the older
+  // ones are removed rather than tried. Null for rows from before this was
+  // recorded, which are tried as before.
+  vapidKey  String?
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -956,6 +961,9 @@ model Payment {
   status          String // "created" | "processing" | "success" | "failed" | "refunded"
   method          String? // "upi" | "card" | "netbanking"
   gatewayResponse String? // JSON: last webhook/verify payload
+  // When the money was taken. createdAt is when checkout began, which can be
+  // long before; the free cancellation window runs from this instead.
+  paidAt          DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -1214,10 +1222,25 @@ model DecisionLog {
   results        String // JSON [{key,pricePaise,rating,etaMinutes,score}], best first
   chosenKey      String // the option presented as the recommendation
 
+  // What the customer did with it.
+  //
+  // Without these the log answers "what did we recommend" and nothing else,
+  // which is half a sentence. A ranker learns from the gap between the option
+  // offered and the option taken, so until this pairing exists there is no
+  // training signal at all and the weights can only ever be hand-set guesses.
+  //
+  // Null is meaningful rather than missing: a search nobody ordered from is
+  // evidence about the recommendation, not an absent row.
+  selectedKey String? // the option actually chosen, in the same key space as results
+  selectedAt  DateTime?
+  orderId     String?   @unique // the order it became, when it became one
+
   createdAt DateTime @default(now())
 
   @@index([domain, createdAt])
   @@index([userId])
+  // Serves the ranker's extract: every decision that produced a choice.
+  @@index([domain, selectedAt])
 }
 
 // An entry in the consent log. Append-only: a consent record is evidence, and
@@ -1364,3 +1387,24 @@ model RideMessage {
   @@unique([orderId, scriptKey])
   @@index([orderId, createdAt])
 }
+
+// A second model reading the same chat message beside the one that answers,
+// to measure it on real traffic before it is trusted with customers. Never
+// shown to anyone and never changes a reply. No user id: what is measured is
+// the reading, not the person, and rows are pruned with the decision log.
+model IntentWatch {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  watcher         String // provider being measured, e.g. "ollama"
+  primaryProvider String // provider whose reading the customer got
+  message         String
+  agreed          Boolean // every compared field matched
+  fields          String // JSON: field name -> true when the two agree
+  primaryIntent   String // JSON
+  watcherIntent   String? // JSON; null when the watcher failed
+  latencyMs       Int
+  error           String?
+
+  @@index([createdAt])
+}
+

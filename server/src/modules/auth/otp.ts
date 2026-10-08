@@ -62,19 +62,34 @@ export async function consumeOtp(opts: {
     (!env.SMTP_HOST || !env.SMTP_PORT) &&
     opts.code === "123456";
 
+  // Each guess claims one of the code's tries before it is checked, in a
+  // single conditional write. The count used to be read, the guess checked,
+  // and the count raised afterwards, so guesses sent at the same moment all
+  // read "fewer than five" and were all checked: 30 together were 30 tries at
+  // a code that allows five. On a password reset code that is a route to
+  // taking over the account.
   for (const candidate of candidates) {
-    const ok = isDevFallback || (await bcrypt.compare(opts.code, candidate.codeHash));
-    if (ok) {
-      await prisma.otpCode.update({
-        where: { id: candidate.id },
-        data: { consumedAt: new Date() },
-      });
-      return true;
-    }
-    await prisma.otpCode.update({
-      where: { id: candidate.id },
+    const claimed = await prisma.otpCode.updateMany({
+      where: {
+        id: candidate.id,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+        attempts: { lt: MAX_ATTEMPTS },
+      },
       data: { attempts: { increment: 1 } },
     });
+    if (claimed.count === 0) continue;
+
+    const ok = isDevFallback || (await bcrypt.compare(opts.code, candidate.codeHash));
+    if (!ok) continue;
+
+    // Consumed only if still unconsumed, so two requests with the right code
+    // at the same moment cannot both succeed.
+    const consumed = await prisma.otpCode.updateMany({
+      where: { id: candidate.id, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+    if (consumed.count === 1) return true;
   }
   return false;
 }

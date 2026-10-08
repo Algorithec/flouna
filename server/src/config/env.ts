@@ -42,12 +42,46 @@ const envSchema = z.object({
 
   // LLM providers — hybrid setup (Claude / Gemini / DeepSeek). Chat falls back
   // to a scripted demo mode if the selected provider's key is unset.
-  LLM_PROVIDER: z.enum(["anthropic", "google", "deepseek", "nvidia", "ollama", "demo"]).default("demo"),
+  LLM_PROVIDER: z
+    .enum(["anthropic", "google", "deepseek", "nvidia", "ollama", "self_hosted", "demo"])
+    .default("demo"),
+
+  // A model we run ourselves, over an OpenAI-compatible endpoint. Left unset
+  // everywhere it is not running, which is what keeps it out of the fallback
+  // chain rather than adding a guaranteed timeout to every request.
+  SELF_HOSTED_LLM_URL: z.string().url().optional(),
+  SELF_HOSTED_LLM_MODEL: z.string().default("Qwen/Qwen3.5-9B"),
+  // vLLM enforces a key only when started with --api-key.
+  SELF_HOSTED_LLM_API_KEY: z.string().optional(),
+  // Higher than the hosted providers' 20s: a self-hosted server can be cold,
+  // and a first request that arrives while weights are still loading is worth
+  // waiting a little longer for than a warm API is.
+  SELF_HOSTED_LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  // How long one hosted model attempt may take before chat falls through to
+  // the next provider. A customer is waiting on it, so seconds, not tens.
+  LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
   ANTHROPIC_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   NVIDIA_API_KEY: z.string().optional(),
   OLLAMA_URL: z.string().url().optional(),
   OLLAMA_MODEL: z.string().optional(),
+  // Sent as a Bearer token. Ollama checks nothing itself, so a model server
+  // on the internet sits behind a reverse proxy (Caddy) that checks this.
+  OLLAMA_API_KEY: z.string().optional(),
+  // A model run beside the one that answers, measured and never shown (see
+  // chat/llm/watcher.ts). Off unless set. It is kept out of the customer
+  // facing chain, so a model under evaluation can never answer anyone.
+  // Empty means off, so a copied .env.example with "LLM_WATCHER=" still boots.
+  LLM_WATCHER: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.enum(["anthropic", "google", "deepseek", "nvidia", "ollama", "self_hosted"]).optional(),
+  ),
+  // Share of chat messages the watcher reads, 0 to 1.
+  LLM_WATCHER_SAMPLE: z.coerce.number().min(0).max(1).default(1),
+  // Rules answer the messages they read cleanly; only doubtful ones wait for
+  // a model. Off unless set to "true": z.coerce.boolean reads "false" as true,
+  // and a flag that changes who answers customers must not turn on by typo.
+  HYBRID_ROUTING: z.preprocess((v) => v === "true" || v === "1", z.boolean()),
   // Google AI Studio (Gemini). Free-tier friendly; model is overridable.
   GOOGLE_AI_API_KEY: z.string().optional(),
   GOOGLE_AI_MODEL: z.string().default("gemini-2.0-flash"),
@@ -62,6 +96,10 @@ const envSchema = z.object({
   MAPTILER_KEY: z.string().optional(),
   GEOAPIFY_KEY: z.string().optional(),
   ORS_KEY: z.string().optional(),
+  // Google Maps Platform, server side: Routes and Places. Restrict this key
+  // to those APIs. Google's terms forbid showing its routes or places on a
+  // non-Google map, so set it only alongside the web's Google map key.
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
   // Weather (context engine). Open-Meteo is keyless, so weather-aware advice
   // works without this; the key only switches to a paid provider if set later.
   WEATHER_API_KEY: z.string().optional(),
@@ -191,11 +229,29 @@ if (isProd) {
   if (env.CASHFREE_ENV === "sandbox") {
     warnings.push("CASHFREE_ENV=sandbox, payments are not real money");
   }
+  // A token sent over plain http to another machine is readable by anyone on
+  // the path, which is the whole of the internet between Railway and the VM.
+  if (env.OLLAMA_API_KEY && env.OLLAMA_URL && isPlainHttpRemote(env.OLLAMA_URL)) {
+    warnings.push(
+      "OLLAMA_URL is plain http to a remote host, so OLLAMA_API_KEY travels unencrypted. " +
+        "Serve the model through HTTPS (Caddy does this automatically).",
+    );
+  }
   if (!env.VAPID_PUBLIC_KEY) {
     warnings.push("VAPID_PUBLIC_KEY unset, web push notifications are disabled");
   }
   if (warnings.length > 0) {
     console.warn("Starting with reduced functionality:");
     for (const w of warnings) console.warn(`  - ${w}`);
+  }
+}
+
+/** True for http:// to anything other than this machine. */
+export function isPlainHttpRemote(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" && !["localhost", "127.0.0.1", "[::1]", "::1"].includes(u.hostname);
+  } catch {
+    return false;
   }
 }

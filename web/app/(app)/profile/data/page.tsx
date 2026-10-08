@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { useCallback, useEffect, useState } from "react";
 import { Download, Cookie, Brain, Trash2, ScrollText, AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api";
@@ -39,23 +41,11 @@ type ConsentRow = {
   createdAt: string;
 };
 
-const CATEGORY_COPY: Record<keyof CookieChoice, { label: string; sub: string }> = {
-  analytics: {
-    label: "Analytics",
-    sub: "Which screens are used, so we know what to fix",
-  },
-  advertising: {
-    label: "Advertising",
-    sub: "Measuring whether an ad brought you here",
-  },
-  social: {
-    label: "Social media",
-    sub: "Sharing to other apps from inside Flouna",
-  },
-  performance: {
-    label: "Performance",
-    sub: "Load times and errors, to find what is slow",
-  },
+const CATEGORY_COPY: Record<keyof CookieChoice, { label: TranslationKey; sub: TranslationKey }> = {
+  analytics: { label: "ck.analytics", sub: "ck.analyticsSub" },
+  advertising: { label: "ck.advertising", sub: "ck.advertisingSub" },
+  social: { label: "ck.social", sub: "ck.socialSub" },
+  performance: { label: "ck.performance", sub: "ck.performanceSub" },
 };
 
 function Toggle({
@@ -114,6 +104,7 @@ function Section({
 }
 
 export default function YourDataPage() {
+  const { t } = useI18n();
   const { toast } = useToast();
   const [cookies, setCookies] = useState<CookieInfo | null>(null);
   const [training, setTraining] = useState<boolean | null>(null);
@@ -139,8 +130,8 @@ export default function YourDataPage() {
         setTraining(o.aiTrainingOptOut);
         setDeletion(o.deletion);
       })
-      .catch(() => toast("Could not load your privacy settings"));
-  }, [toast]);
+      .catch(() => toast(t("dt.loadFailed")));
+  }, [toast, t]);
   useEffect(load, [load]);
 
   async function saveCookies(next: CookieChoice) {
@@ -152,7 +143,7 @@ export default function YourDataPage() {
       await api("/api/privacy/cookies", { method: "PUT", json: next });
     } catch {
       setCookies(previous);
-      toast("Could not save that");
+      toast(t("dt.saveFailed"));
     }
   }
 
@@ -161,10 +152,10 @@ export default function YourDataPage() {
     setTraining(optOut);
     try {
       await api("/api/privacy/ai-training", { method: "PUT", json: { optOut } });
-      toast(optOut ? "Your data is excluded from training" : "Training opt-out removed");
+      toast(optOut ? t("dt.excluded") : t("dt.optOutRemoved"));
     } catch {
       setTraining(previous);
-      toast("Could not save that");
+      toast(t("dt.saveFailed"));
     }
   }
 
@@ -185,9 +176,9 @@ export default function YourDataPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast("Your data has been downloaded");
+      toast(t("dt.downloaded"));
     } catch {
-      toast("Could not build your download");
+      toast(t("dt.buildFailed"));
     } finally {
       setExporting(false);
     }
@@ -200,7 +191,7 @@ export default function YourDataPage() {
       const res = await api<{ consents: ConsentRow[] }>("/api/privacy/consents");
       setConsents(res.consents);
     } catch {
-      toast("Could not load your consent history");
+      toast(t("dt.consentFailed"));
     }
   }
 
@@ -214,9 +205,9 @@ export default function YourDataPage() {
       setDeletion({ scheduledFor: res.scheduledFor });
       setConfirming(false);
       setPassword("");
-      toast("Your account is scheduled for deletion");
+      toast(t("dt.scheduled"));
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Could not schedule deletion");
+      toast(err instanceof Error ? err.message : t("dt.scheduleFailed"));
     } finally {
       setBusy(false);
     }
@@ -227,9 +218,9 @@ export default function YourDataPage() {
     try {
       await api("/api/privacy/deletion", { method: "DELETE" });
       setDeletion({ scheduledFor: null });
-      toast("Deletion cancelled. Your account is safe.");
+      toast(t("dt.cancelled"));
     } catch {
-      toast("Could not cancel");
+      toast(t("dt.cancelFailed"));
     } finally {
       setBusy(false);
     }
@@ -244,20 +235,18 @@ export default function YourDataPage() {
     : null;
 
   return (
-    <SubPage title="Your data">
+    <SubPage title={t("dt.title")}>
       <p className="text-[13px] leading-relaxed text-acct-muted">
-        What we hold about you, and what you can make us do with it. These are
-        rights under our privacy policy and the Digital Personal Data Protection
-        Act, not favours.
+        {t("dt.intro")}
       </p>
 
       {/* --- Cookies --- */}
-      <Section icon={<Cookie size={17} />} title="Cookies">
+      <Section icon={<Cookie size={17} />} title={t("dt.cookies")}>
         {cookies && (
           <>
             <div className="rounded-xl bg-acct-bg p-3">
               <p className="text-[12px] font-bold uppercase tracking-wide text-acct-muted">
-                What Flouna sets today
+                {t("dt.whatSets")}
               </p>
               <ul className="mt-2 space-y-1.5">
                 {cookies.inUse.map((c) => (
@@ -271,9 +260,7 @@ export default function YourDataPage() {
                   categories than we currently use, and a preferences screen
                   that implies otherwise is a quiet untruth. */}
               <p className="mt-2.5 text-[12px] leading-snug text-acct-muted">
-                These keep you signed in and cannot be switched off. We do not
-                currently set any analytics, advertising or social cookies. The
-                choices below apply if we ever do.
+                {t("dt.cookieNote")}
               </p>
             </div>
 
@@ -282,15 +269,15 @@ export default function YourDataPage() {
                 <div key={key} className="flex items-center gap-3 py-3">
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14px] font-medium text-acct-ink">
-                      {CATEGORY_COPY[key].label}
+                      {t(CATEGORY_COPY[key].label)}
                     </span>
                     <span className="mt-0.5 block text-[12px] leading-snug text-acct-muted">
-                      {CATEGORY_COPY[key].sub}
+                      {t(CATEGORY_COPY[key].sub)}
                     </span>
                   </span>
                   <Toggle
                     checked={cookies.choice[key]}
-                    label={CATEGORY_COPY[key].label}
+                    label={t(CATEGORY_COPY[key].label)}
                     onChange={(v) => saveCookies({ ...cookies.choice, [key]: v })}
                   />
                 </div>
@@ -301,20 +288,19 @@ export default function YourDataPage() {
       </Section>
 
       {/* --- Training --- */}
-      <Section icon={<Brain size={17} />} title="Improving our recommendations">
+      <Section icon={<Brain size={17} />} title={t("dt.improving")}>
         <div className="flex items-center gap-3">
           <span className="min-w-0 flex-1">
             <span className="block text-[14px] font-medium text-acct-ink">
-              Exclude my data from training
+              {t("dt.exclude")}
             </span>
             <span className="mt-0.5 block text-[12px] leading-snug text-acct-muted">
-              Your orders and chats will not be used to improve our models. This
-              may make your recommendations less accurate over time.
+              {t("dt.excludeNote")}
             </span>
           </span>
           <Toggle
             checked={training === true}
-            label="Exclude my data from training"
+            label={t("dt.exclude")}
             onChange={saveTraining}
             disabled={training === null}
           />
@@ -322,11 +308,9 @@ export default function YourDataPage() {
       </Section>
 
       {/* --- Export --- */}
-      <Section icon={<Download size={17} />} title="Get a copy of your data">
+      <Section icon={<Download size={17} />} title={t("dt.copyTitle")}>
         <p className="text-[13px] leading-relaxed text-acct-muted">
-          Everything we hold about your account, as a file you can read or take
-          to another service. Security details like passwords and session keys
-          are deliberately left out.
+          {t("dt.copyNote")}
         </p>
         <button
           type="button"
@@ -334,36 +318,39 @@ export default function YourDataPage() {
           disabled={exporting}
           className="tap-target mt-3 w-full rounded-xl bg-acct-accent px-4 py-3 text-[14px] font-bold text-white transition-opacity disabled:opacity-60"
         >
-          {exporting ? "Preparing your file…" : "Download my data"}
+          {exporting ? t("dt.preparing") : t("dt.download")}
         </button>
       </Section>
 
       {/* --- Consent history --- */}
-      <Section icon={<ScrollText size={17} />} title="What you have agreed to">
+      <Section icon={<ScrollText size={17} />} title={t("dt.agreed")}>
         {!showLog ? (
           <button
             type="button"
             onClick={loadLog}
             className="tap-target text-[14px] font-bold text-acct-accent"
           >
-            Show my consent history
+            {t("dt.showHistory")}
           </button>
         ) : consents === null ? (
-          <p className="text-[13px] text-acct-muted">Loading…</p>
+          <p className="text-[13px] text-acct-muted">{t("dp.loading")}</p>
         ) : (
           <ul className="divide-y divide-acct-line">
             {consents.map((c) => (
               <li key={c.id} className="flex items-baseline gap-3 py-2.5">
                 <span className="min-w-0 flex-1 text-[13px] text-acct-ink">
                   {c.kind === "terms"
-                    ? "Terms and privacy policy"
+                    ? t("dt.kindTerms")
                     : c.kind === "cookies"
-                      ? "Cookie preferences"
+                      ? t("dt.kindCookies")
                       : c.kind === "ai_training"
-                        ? "Use of my data for training"
-                        : "Marketing"}
+                        ? t("dt.kindTraining")
+                        : t("dt.kindMarketing")}
                   {c.version && (
-                    <span className="text-acct-muted"> · version {c.version}</span>
+                    <span className="text-acct-muted">
+                      {" "}
+                      · {t("dt.version").replace("{v}", c.version)}
+                    </span>
                   )}
                 </span>
                 <span
@@ -372,7 +359,7 @@ export default function YourDataPage() {
                     c.granted ? "text-acct-accent" : "text-acct-muted",
                   )}
                 >
-                  {c.granted ? "Agreed" : "Withdrawn"}
+                  {c.granted ? t("dt.agreedState") : t("dt.withdrawn")}
                 </span>
                 <span className="shrink-0 text-[12px] text-acct-muted">
                   {new Date(c.createdAt).toLocaleDateString("en-IN", {
@@ -388,15 +375,15 @@ export default function YourDataPage() {
       </Section>
 
       {/* --- Deletion --- */}
-      <Section icon={<Trash2 size={17} />} title="Delete my account">
+      <Section icon={<Trash2 size={17} />} title={t("dt.deleteTitle")}>
         {scheduled ? (
           <div className="rounded-xl border border-danger/30 bg-danger/5 p-3.5">
             <p className="flex items-start gap-2 text-[13px] leading-relaxed text-acct-ink">
               <AlertTriangle size={16} className="mt-0.5 shrink-0 text-danger" />
               <span>
-                Your account is scheduled for deletion on <b>{scheduled}</b>.
-                Until then you can still use Flouna, and you can stop this at any
-                time.
+                {t("dt.scheduledOn").split("{date}")[0]}
+                <b>{scheduled}</b>
+                {t("dt.scheduledOn").split("{date}")[1]}
               </span>
             </p>
             <button
@@ -405,37 +392,33 @@ export default function YourDataPage() {
               disabled={busy}
               className="tap-target mt-3 w-full rounded-xl bg-acct-accent px-4 py-3 text-[14px] font-bold text-white disabled:opacity-60"
             >
-              Keep my account
+              {t("dt.keep")}
             </button>
           </div>
         ) : !confirming ? (
           <>
             <p className="text-[13px] leading-relaxed text-acct-muted">
-              We hold your request for 30 days before erasing anything, so you
-              can change your mind. After that your personal details are erased
-              permanently. Past orders are kept without your name on them,
-              because tax law requires us to keep the records for seven years.
+              {t("dt.holdNote")}
             </p>
             <button
               type="button"
               onClick={() => setConfirming(true)}
               className="tap-target mt-3 w-full rounded-xl border border-danger/40 px-4 py-3 text-[14px] font-bold text-danger"
             >
-              Delete my account
+              {t("dt.deleteTitle")}
             </button>
           </>
         ) : (
           <div className="rounded-xl border border-danger/30 bg-danger/5 p-3.5">
             <p className="text-[13px] leading-relaxed text-acct-ink">
-              Enter your password to confirm. Consider downloading your data
-              first, since this cannot be undone once it goes through.
+              {t("dt.confirmNote")}
             </p>
             <input
               type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
+              placeholder={t("dt.yourPassword")}
               className="mt-3 w-full rounded-xl border border-acct-line bg-acct-card px-3.5 py-3 text-[16px] text-acct-ink outline-none focus:border-acct-accent"
             />
             <div className="mt-3 flex gap-2.5">
@@ -447,7 +430,7 @@ export default function YourDataPage() {
                 }}
                 className="tap-target flex-1 rounded-xl border border-acct-line px-4 py-3 text-[14px] font-bold text-acct-ink"
               >
-                Cancel
+                {t("od.cancel")}
               </button>
               <button
                 type="button"
@@ -455,7 +438,7 @@ export default function YourDataPage() {
                 disabled={busy || password.length === 0}
                 className="tap-target flex-1 rounded-xl bg-danger px-4 py-3 text-[14px] font-bold text-white disabled:opacity-50"
               >
-                {busy ? "Working…" : "Confirm"}
+                {busy ? t("dt.working") : t("dt.confirm")}
               </button>
             </div>
           </div>

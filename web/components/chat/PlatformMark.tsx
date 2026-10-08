@@ -1,3 +1,6 @@
+"use client";
+
+import { useI18n } from "@/components/i18n/I18nContext";
 // Marks for the platforms the engine searched.
 //
 // Drawn as inline SVG stand-ins rather than shipped as real logo files, for the
@@ -73,10 +76,11 @@ export function PlatformMark({
  * rather than wrapping to a second line.
  *
  * copy="compared" (default): "Compared across Swiggy, Zomato and 1 more"
- * copy="checked-count": "Checked 5+ providers for you" (+ only when truncated)
- *   The + appears only when rest > 0, i.e. the full list didn't fit — so a
- *   three-provider result never reads "3+", which would claim we checked more
- *   than we did.
+ * copy="checked-count": "Checked 5 providers for you"
+ *   The count is the number checked, exactly, with no "+": the cap is about
+ *   how many marks fit on a phone and says nothing about how many were
+ *   compared. The named variant lists only the ones actually shown, so the
+ *   names and the marks always agree, with the remainder counted after them.
  */
 export function SearchedPlatforms({
   platforms,
@@ -87,6 +91,7 @@ export function SearchedPlatforms({
   max?: number;
   copy?: "compared" | "checked-count";
 }) {
+  const { t } = useI18n();
   // Deduplicated in place so the order follows the ranking rather than an
   // alphabet: the first mark is the platform that won.
   const seen: string[] = [];
@@ -108,16 +113,17 @@ export function SearchedPlatforms({
       </span>
       <span className="text-[11px] text-cocoa">
         {copy === "checked-count" ? (
-          <>
-            Compared {seen.length}
-            {rest > 0 ? "+" : ""} providers
-          </>
+          // Says how many we compared, not which ones — the marks themselves
+          // show which. Exactly how many, with no "+": the cap is about how
+          // many marks fit on a phone, so "8+" for eight claimed more than
+          // had been looked at.
+          <>{t("pm.comparedN").replace("{n}", String(seen.length))}</>
         ) : (
           // Default: names every platform as evidence for the claim above.
           // Screen readers get the names here since the marks are aria-hidden.
           <>
-            Compared across {shown.map(platformLabel).join(", ")}
-            {rest > 0 ? ` and ${rest} more` : ""}
+            {t("pm.comparedAcross").replace("{names}", shown.map(platformLabel).join(", "))}
+            {rest > 0 ? t("pm.andMore").replace("{n}", String(rest)) : ""}
           </>
         )}
       </span>

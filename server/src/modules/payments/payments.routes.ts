@@ -15,7 +15,7 @@ import { sendPushToUser } from "../notifications/push.service.js";
 import { checkSavingsMilestone } from "../notifications/outbox.service.js";
 import { sendReceiptEmail } from "../../lib/mailer.js";
 import { emitOrderConfirmation } from "../backoffice/ondc.service.js";
-import { spendFromWallet, walletBalance } from "../users/wallet.service.js";
+import { refundToWallet, spendFromWallet, walletBalance } from "../users/wallet.service.js";
 
 export const paymentsRouter = Router();
 
@@ -57,6 +57,53 @@ const RIDE_EVENTS = [
   { status: "in_ride", message: "Ride started, enjoy the trip" },
 ];
 
+/**
+ * The gateway took money for an order that is cancelled: record it as owed
+ * back. Status-scoped, because webhooks repeat: a refund already flagged, or
+ * already paid out, must not be reopened.
+ */
+async function owePaymentBack(
+  order: { id: string; userId: string },
+  method: string,
+  paidPaise: number,
+  gatewayResponse: string | undefined,
+) {
+  const orderId = order.id;
+  const opts = { paidPaise, gatewayResponse };
+  const existing = await prisma.payment.findUnique({ where: { orderId } });
+  const flagged = existing
+    ? (
+        await prisma.payment.updateMany({
+          where: { orderId, status: { in: ["created", "processing", "pending", "failed"] } },
+          data: {
+            status: "refund_pending",
+            amount: opts.paidPaise,
+            method,
+            gatewayResponse: opts.gatewayResponse,
+          },
+        })
+      ).count
+    : (
+        await prisma.payment.create({
+          data: {
+            orderId,
+            userId: order.userId,
+            amount: opts.paidPaise,
+            currency: "INR",
+            status: "refund_pending",
+            method,
+            gatewayResponse: opts.gatewayResponse,
+          },
+        }),
+        1
+      );
+  if (flagged > 0) {
+    console.warn(
+      `[payments] ${orderId} was paid after it was cancelled: ${opts.paidPaise} paise flagged for refund`,
+    );
+  }
+}
+
 async function markPaid(
   orderId: string,
   method: string,
@@ -69,7 +116,22 @@ async function markPaid(
   } = {},
 ) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order || order.status !== "pending_payment") return order;
+  if (!order) return order;
+
+  // The gateway took money for an order that was cancelled while its payment
+  // was still in flight. The order stays cancelled, but the money has to be
+  // recorded as owed back. This used to fall through to the return below: the
+  // customer had paid, the payment row still said "processing", and nothing
+  // told ops a refund was due.
+  //
+  // Only the gateway paths report an amount, so only real money reaches this.
+  // Status-scoped, because webhooks repeat: a refund already flagged, or
+  // already paid out, must not be reopened.
+  if (order.status === "cancelled" && opts.paidPaise !== undefined) {
+    await owePaymentBack(order, method, opts.paidPaise, opts.gatewayResponse);
+    return order;
+  }
+  if (order.status !== "pending_payment") return order;
 
   // Amount integrity: never confirm an order for less than it costs. The
   // gateway is the source of truth for what was actually charged — but it was
@@ -115,9 +177,11 @@ async function markPaid(
     // COD money hasn't moved yet, so the payment row must not claim success.
     const paymentStatus = opts.collectOnDelivery ? "pending" : "success";
 
+    // Cash on delivery has taken nothing yet, so it has no payment time.
+    const paidAt = opts.collectOnDelivery ? null : new Date();
     await tx.payment.upsert({
       where: { orderId },
-      update: { status: paymentStatus, method, gatewayResponse: opts.gatewayResponse },
+      update: { status: paymentStatus, method, gatewayResponse: opts.gatewayResponse, paidAt },
       create: {
         orderId,
         userId: order.userId,
@@ -126,6 +190,7 @@ async function markPaid(
         status: paymentStatus,
         method,
         gatewayResponse: opts.gatewayResponse,
+        paidAt,
       },
     });
 
@@ -142,7 +207,13 @@ async function markPaid(
   });
 
   if (!claimed) {
-    return prisma.order.findUnique({ where: { id: orderId } });
+    const now = await prisma.order.findUnique({ where: { id: orderId } });
+    // Cancelled between the read above and the claim. The money was still
+    // taken, and without this it was owed back nowhere.
+    if (now?.status === "cancelled" && opts.paidPaise !== undefined) {
+      await owePaymentBack(now, method, opts.paidPaise, opts.gatewayResponse);
+    }
+    return now;
   }
 
   const updated = await prisma.order.findUnique({ where: { id: orderId } });
@@ -281,6 +352,25 @@ paymentsRouter.post(
       // re-derived, so a second attempt reuses the first attempt's debit
       // instead of adding to it. Cancelling the order returns it.
       let walletApplied = walletAppliedOn(order);
+
+      // Once the gateway has been asked for an amount, that amount is fixed.
+      // Cashfree order ids are unique, so a later checkout cannot create a new
+      // session and reuses the old one, at the price it was created with.
+      // Taking credit now would tell the customer a smaller number while the
+      // session still charged the full one: ₹485 plus ₹300 of credit for a
+      // ₹485 order. Refused, so nothing is debited and the app can say why.
+      if (useWallet && walletApplied === 0) {
+        const started = await prisma.payment.findUnique({
+          where: { orderId },
+          select: { gatewayOrderId: true },
+        });
+        if (started?.gatewayOrderId) {
+          throw new ApiError(
+            409,
+            "Payment for this order has already started, so rewards can't be added to it now",
+          );
+        }
+      }
       if (useWallet && walletApplied === 0) {
         const took = await spendFromWallet({
           userId: req.userId!,
@@ -289,6 +379,22 @@ paymentsRouter.post(
           description: `Applied to ${order.title}`,
         });
         if (took > 0) {
+          // The order was read as awaiting payment before the credit was taken.
+          // If it was cancelled in between, the cancellation has already run
+          // and refunded nothing, so the credit goes straight back here.
+          const still = await prisma.order.findUnique({
+            where: { id: orderId },
+            select: { status: true },
+          });
+          if (still?.status !== "pending_payment") {
+            await refundToWallet({
+              userId: req.userId!,
+              orderId,
+              amountPaise: took,
+              description: `Returned from ${order.title}`,
+            });
+            throw new ApiError(409, "This order is not awaiting payment");
+          }
           const details = JSON.parse(order.details) as Record<string, unknown>;
           details.walletAppliedPaise = took;
           await prisma.order.update({
@@ -301,16 +407,25 @@ paymentsRouter.post(
       }
       const payable = Math.max(0, order.amount - walletApplied);
 
-      await prisma.payment.upsert({
-        where: { orderId },
-        create: {
-          orderId,
-          userId: req.userId!,
-          amount: payable,
-          status: "created",
-        },
-        update: { status: "created", amount: payable },
+      // Only a payment that has not gone through is reset for another try.
+      // This used to overwrite whatever was there, so a payment confirmed
+      // while a second checkout was running was turned back into an unpaid
+      // one on a confirmed order, and cancelling it refunded nothing.
+      const reset = await prisma.payment.updateMany({
+        where: { orderId, status: { in: ["created", "processing", "failed"] } },
+        data: { status: "created", amount: payable },
       });
+      if (reset.count === 0) {
+        const existing = await prisma.payment.findUnique({ where: { orderId } });
+        if (existing) throw new ApiError(409, "This order is already paid");
+        // Two first checkouts at once both find no row; the second create
+        // meets the unique order id, and that row is just as unpaid.
+        await prisma.payment
+          .create({ data: { orderId, userId: req.userId!, amount: payable, status: "created" } })
+          .catch((err: { code?: string }) => {
+            if (err?.code !== "P2002") throw err;
+          });
+      }
 
       // ---- fully covered by rewards: there is nothing to collect ----
       // Sending a zero-rupee order to a gateway is rejected by every one of
@@ -350,6 +465,15 @@ paymentsRouter.post(
           // still-valid payment session instead of failing the retry.
           if ((err as { cfStatus?: number }).cfStatus === 409) {
             cf = await getCashfreeOrder(orderId);
+            // A session is only reusable if it charges what is owed. Whatever
+            // changed the bill after payment started, handing this one out
+            // would charge the customer a number they were not shown.
+            if (Math.round(Number(cf.order_amount) * 100) !== payable) {
+              throw new ApiError(
+                409,
+                "This payment no longer matches the bill. Please place the order again",
+              );
+            }
           } else {
             throw err;
           }
@@ -429,7 +553,14 @@ paymentsRouter.post(
         if (err instanceof Error && /\(404\)/.test(err.message)) {
           return res.json({ orderStatus: order.status, gatewayStatus: "NOT_CREATED" });
         }
-        throw err;
+        // Cashfree unreachable or failing. Whether this customer paid is
+        // unknown, not failed, so the order stays as it is and the webhook
+        // settles it when the gateway is back. This used to answer 500 to a
+        // customer who may just have paid.
+        console.warn(
+          `[payments] could not reach the gateway to verify ${orderId}: ${err instanceof Error ? err.message : err}`,
+        );
+        return res.json({ orderStatus: order.status, gatewayStatus: "UNREACHABLE" });
       }
 
       if (cf.order_status === "PAID") {

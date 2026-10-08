@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
+import { registerChatDevice } from "../groups/chatDevices.service.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
@@ -97,28 +98,14 @@ usersRouter.post(
         label?: string;
       };
 
-      const existing = await prisma.chatDevice.findUnique({
-        where: { userId_deviceId: { userId: req.userId!, deviceId } },
-        select: { publicKey: true },
-      });
-      const rekeyed = Boolean(existing && existing.publicKey !== publicKey);
-
-      const device = await prisma.chatDevice.upsert({
-        where: { userId_deviceId: { userId: req.userId!, deviceId } },
-        create: { userId: req.userId!, deviceId, publicKey, signingKey, label },
-        update: { publicKey, signingKey, label, lastSeenAt: new Date() },
-        select: { deviceId: true, createdAt: true },
+      const { device, rekeyed } = await registerChatDevice(req.userId!, {
+        deviceId,
+        publicKey,
+        signingKey,
+        label,
       });
 
-      // A device whose key changed cannot open anything sealed to the old one,
-      // so those are dropped and senders re-seal rather than leaving it holding
-      // post it will never open.
-      if (rekeyed) {
-        await prisma.senderKeyEnvelope.deleteMany({ where: { recipientDevice: deviceId } });
-        await prisma.historySync.deleteMany({ where: { toDevice: deviceId } });
-      }
-
-      res.status(201).json({ device, rekeyed });
+      res.status(201).json({ device: { deviceId: device.deviceId, createdAt: device.createdAt }, rekeyed });
     } catch (err) {
       next(err);
     }

@@ -61,8 +61,14 @@ notificationsRouter.post(
           endpoint,
           p256dh: keys.p256dh,
           auth: keys.auth,
+          vapidKey: env.VAPID_PUBLIC_KEY ?? null,
         },
-        update: { userId: req.userId!, p256dh: keys.p256dh, auth: keys.auth },
+        update: {
+          userId: req.userId!,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          vapidKey: env.VAPID_PUBLIC_KEY ?? null,
+        },
       });
       res.status(201).json({ ok: true });
     } catch (err) {
