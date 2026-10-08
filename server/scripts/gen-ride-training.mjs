@@ -33,6 +33,10 @@ const arg = (name, fallback) => {
 const N_TRAIN = Number(arg("train", 2400));
 const N_EVAL = Number(arg("eval", 240));
 const OUT = resolve(HERE, arg("out", "../../model"));
+// --disagreements <file>: also write every sentence the rules read differently
+// from its template, which is where to look for rule gaps.
+const DISAGREEMENTS = arg("disagreements", null);
+const disagreements = [];
 const SEED = Number(arg("seed", 7));
 
 const dist = resolve(HERE, "../dist/modules/chat/llm");
@@ -212,11 +216,17 @@ while (rows.length < target && stats.tried < target * 40) {
   if (isFood) {
     const f = r.intent.food;
     ok = r.intent.domain === "food" && f && f.maxEtaMinutes === ex.food.maxEtaMinutes &&
-      f.budgetPaise === ex.food.budgetPaise && f.item.toLowerCase().includes(ex.food.item.split(" ")[0]);
+      f.budgetPaise === ex.food.budgetPaise && f.item.toLowerCase().includes(ex.food.item.split(" ")[0].replace(/s$/, ""));
   } else {
     ok = r.intent.domain === "ride" && rideAgrees(r.intent.ride, ex.want);
   }
-  if (!ok) { stats.disagreed++; continue; }
+  if (!ok) {
+    stats.disagreed++;
+    if (DISAGREEMENTS) {
+      disagreements.push({ text: ex.text, want: isFood ? ex.food : ex.want, got: isFood ? r.intent.food : r.intent.ride, domain: r.intent.domain });
+    }
+    continue;
+  }
   seen.add(key);
   // The label is the rules' reading with the intended place names, which
   // differ only in letter case.
@@ -235,6 +245,10 @@ const trainRows = rows.slice(N_EVAL);
 const write = (name, rs) => writeFileSync(resolve(OUT, name), rs.map((r) => JSON.stringify(r)).join("\n") + "\n");
 write("ride_train.jsonl", trainRows);
 write("ride_eval.jsonl", evalRows);
+if (DISAGREEMENTS) {
+  writeFileSync(resolve(DISAGREEMENTS), disagreements.map((d) => JSON.stringify(d)).join("\n") + "\n");
+  console.log(`wrote ${disagreements.length} disagreements to ${DISAGREEMENTS}`);
+}
 
 // ---- what was written ----
 const fields = { budget: 0, wait: 0, schedule: 0, pickup: 0, priority: 0, food: 0, hinglish: 0, telugu: 0 };
