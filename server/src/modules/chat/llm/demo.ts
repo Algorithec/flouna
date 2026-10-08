@@ -266,7 +266,9 @@ const RATING_WORDS =
 const SPEED_WORDS =
   /\b(fast(est)?|quick(ly|est)?|asap|hurry|soon|urgent(ly)?|immediately|right away|in a rush|jaldi|fatafat|turant|tondaraga|twaraga|tvaraga)\b/i;
 const PRICE_WORDS =
-  /\b(cheap(est)?|budget|low(est)?[- ]?price|affordable|save money|sasta|saste|sasti|kam daam|takkuva)\b/i;
+  // "budget" with an amount after it ("budget 300") states a limit, which is
+  // read as one; only "on a budget" or "budget friendly" asks for the cheapest.
+  /\b(cheap(est)?|budget(?!\s*(?:of\s*)?(?:₹|rs\.?|inr)?\s*\d)|low(est)?[- ]?price|affordable|save money|sasta|saste|sasti|kam daam|takkuva)\b/i;
 
 function extractPriority(
   message: string,
@@ -409,6 +411,12 @@ function withoutConstraints(place: string): string {
         String.raw`\s+(?:now|asap|immediately)\b`,
         String.raw`\s+(?:under|below|less than|within|max(?:imum)?|budget|up\s?to)\b`,
         String.raw`\s*(?:₹|\brs\.?\s*\d|\binr\b)`,
+        // A budget after the place, Hindi or Telugu style or after a comma:
+        // "to Miyapur, 200 lopala", "to Uppal 400 tak", "to Kondapur, 300".
+        String.raw`,?\s+\d[\d,]*\s*(?:tak|ke andar|ke under|se kam|lopala|lopu|loga|varaku)\b`,
+        // A bare amount after a comma, but not an address: "Plot 4, 2nd Cross"
+        // and "Road No. 3, 12th Main" keep their numbers.
+        String.raw`,\s*₹?\d[\d,]*\b(?!\s*(?:st|nd|rd|th|floor|cross|main|block|phase|sector|lane|street)\b)`,
         String.raw`,?\s*\b(?:pick\s?up|picked up|pick me up|don'?t|do not|need to|want to|wait(?:ing)?|arrive|reach by)\b`,
       ].join("|"),
       "i",
@@ -431,7 +439,9 @@ function withoutConstraints(place: string): string {
 
 /** Words that sit near a place without being part of it. */
 const NOT_PLACE =
-  /^(?:cab|taxi|auto|rickshaw|bike|car|ride|book|karo|kar|do|chahiye|chaiye|kavali|kaavali|mujhe|naaku|ek|oka|please|pls|jaldi|sasta|tondaraga|takkuva|now|the|a|me|i|need|want|abhi|ippudu|\d+)$/i;
+  // Priority words included: "cheap Charminar jana hai" is a cheap ride to
+  // Charminar, not a ride to a place called "cheap Charminar".
+  /^(?:cab|taxi|auto|rickshaw|bike|car|ride|book|karo|kar|do|chahiye|chaiye|kavali|kaavali|mujhe|naaku|ek|oka|please|pls|jaldi|sasta|saste|sasti|tondaraga|twaraga|takkuva|fatafat|turant|cheap|cheapest|affordable|quick|quickest|fast|fastest|urgent|best|now|the|a|an|me|i|need|want|abhi|ippudu|\d+)$/i;
 
 /**
  * The place in "Ameerpet jana hai" or "Gachibowli ki cab": up to three words
@@ -442,7 +452,13 @@ function placeBeforeMarker(message: string): string {
     /^(.*?)\s+(?:jana hai|jaana hai|jana|jaana|ke liye|ki|ku|tak|velali|vellali|vellaali|veltha|veltanu)\b/i,
   );
   if (!m?.[1]) return "";
-  const words = m[1].trim().split(/\s+/);
+  // Two-word priorities come off first. Listing "top" as not a place would
+  // also stop "Hill Top" being read as one.
+  const words = m[1]
+    .replace(/\b(?:top|highest)[- ]?rated\b|\bwell[- ]?reviewed\b|\blow(?:est)?[- ]?price\b|\bkam daam\b/gi, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   const kept: string[] = [];
   for (let i = words.length - 1; i >= 0 && kept.length < 3; i--) {
     if (NOT_PLACE.test(words[i]!)) break;
