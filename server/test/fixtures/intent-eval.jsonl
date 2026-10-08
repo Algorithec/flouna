@@ -103,3 +103,11 @@
 {"id":"mix-020","message":"jaldi cab chahiye airport ke liye","expect":{"domain":"ride","ride":{"drop":"airport","priority":"speed"}}}
 {"id":"mix-021","message":"Secunderabad velali cab book cheyyi","expect":{"domain":"ride","ride":{"drop":"Secunderabad","vehicle":"cab"}}}
 {"id":"mix-022","message":"accha ek pizza order karo","expect":{"domain":"food","food":{"item":"pizza","priority":"balanced"}}}
+{"id":"gap-001","message":"get me an auto to miyapur, 200 lopala","expect":{"domain":"ride","ride":{"drop":"miyapur","vehicle":"auto","budgetPaise":20000}}}
+{"id":"gap-002","message":"cab to Kondapur, 300 ke andar","expect":{"domain":"ride","ride":{"drop":"Kondapur","budgetPaise":30000}}}
+{"id":"gap-003","message":"cheap Charminar jana hai auto chahiye","expect":{"domain":"ride","ride":{"drop":"Charminar","vehicle":"auto","priority":"price"}}}
+{"id":"gap-004","message":"quick Kothapet velali taxi book cheyyi","expect":{"domain":"ride","ride":{"drop":"Kothapet","vehicle":"cab","priority":"speed"}}}
+{"id":"gap-005","message":"affordable Inorbit Mall ki auto kavali 200 lopala","expect":{"domain":"ride","ride":{"drop":"Inorbit Mall","priority":"price","budgetPaise":20000}}}
+{"id":"gap-006","message":"need a taxi to Abids budget 300","expect":{"domain":"ride","ride":{"drop":"Abids","budgetPaise":30000,"priority":"balanced"}}}
+{"id":"gap-007","message":"biryani budget 250","expect":{"domain":"food","food":{"item":"biryani","budgetPaise":25000,"priority":"balanced"}}}
+{"id":"gap-008","message":"budget friendly biryani","expect":{"domain":"food","food":{"item":"biryani","priority":"price"}}}
