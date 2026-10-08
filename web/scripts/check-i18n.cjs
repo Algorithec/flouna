@@ -64,6 +64,14 @@ const TRANSLATED = [
   "app/(auth)/verify/page.tsx",
   "components/auth/AccountSetup.tsx",
   "components/auth/AuthField.tsx",
+  "app/(app)/profile/data/page.tsx",
+  "app/(app)/profile/settings/page.tsx",
+  "app/(app)/profile/grievances/page.tsx",
+  "app/(app)/profile/addresses/page.tsx",
+  "app/(app)/profile/alerts/page.tsx",
+  "app/(app)/profile/about/page.tsx",
+  "app/(app)/profile/details/page.tsx",
+  "app/(app)/profile/page.tsx",
 ];
 
 // Not prose: format examples a person copies the shape of, and identifiers.
@@ -116,6 +124,19 @@ function inVisibleSpot(node) {
     [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(parent.operatorToken.kind)
   ) {
     return false;
+  }
+  // Values that are stored or compared rather than shown: an array checked
+  // with .includes, a || fallback written into an object, a request body, a
+  // form state update. Translating those changes data, not text.
+  if (ts.isArrayLiteralExpression(parent) && ts.isPropertyAccessExpression(parent.parent) && parent.parent.name.text === "includes") {
+    return false;
+  }
+  if (ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.BarBarToken && ts.isPropertyAssignment(parent.parent)) {
+    return false;
+  }
+  for (let a = parent; a && !ts.isFunctionLike(a); a = a.parent) {
+    if (ts.isPropertyAssignment(a) && ["json", "body", "data"].includes(a.name.getText())) return false;
+    if (ts.isCallExpression(a) && /^set(Form|Draft)/.test(a.expression.getText())) return false;
   }
   // Inside an attribute nobody reads (className, href, …) at any depth, such
   // as the branches of a className ternary.

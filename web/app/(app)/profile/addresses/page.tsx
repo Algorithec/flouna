@@ -4,7 +4,7 @@
 // receiver contact, flat/building/landmark split, use-current-location
 // capture, and full edit + delete on saved addresses.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MapPin, MapPinOff, Trash2, Plus, Pencil, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { SubPage } from "@/components/profile/SubPage";
@@ -59,10 +59,15 @@ const EMPTY: Form = {
   pincode: "",
 };
 
+// Stored as written here, in English, whatever the screen's language; only
+// what is shown is translated, by labelText below.
 const LABELS = ["Home", "Work", "Other"];
 
 export default function AddressesPage() {
   const { t } = useI18n();
+  // The preset labels in the reader's language; a custom label as typed.
+  const labelText = (l: string) =>
+    l === "Home" ? t("nav.home") : l === "Work" ? t("ad.work") : l === "Other" ? t("ad.other") : l;
   // null = not loaded yet; keeps the empty state from flashing on load.
   const [addresses, setAddresses] = useState<Address[] | null>(null);
   const [form, setForm] = useState<Form>(EMPTY);
@@ -72,14 +77,17 @@ export default function AddressesPage() {
   const [located, setLocated] = useState(false);
   const formOpen = editingId !== null;
 
-  const load = () =>
-    api<{ addresses: Address[] }>("/api/users/addresses")
-      .then((d) => setAddresses(d.addresses))
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+  const load = useCallback(
+    () =>
+      api<{ addresses: Address[] }>("/api/users/addresses")
+        .then((d) => setAddresses(d.addresses))
+        .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed"))),
+    [t],
+  );
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   function openAdd() {
     setForm(EMPTY);
@@ -139,7 +147,7 @@ export default function AddressesPage() {
       setForm(EMPTY);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save address");
+      setError(err instanceof Error ? err.message : t("ad.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -160,7 +168,7 @@ export default function AddressesPage() {
               <MapPin size={16} className="mt-0.5 shrink-0 text-accent" />
               <div className="min-w-0 flex-1">
                 <p className="text-[14px] font-bold text-ink">
-                  {a.label}
+                  {labelText(a.label)}
                   {a.isDefault && (
                     <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">
                       {t("pp.addr.default")}
@@ -179,14 +187,14 @@ export default function AddressesPage() {
               </div>
               <button
                 onClick={() => openEdit(a)}
-                aria-label={`Edit ${a.label}`}
+                aria-label={t("ad.edit").replace("{label}", labelText(a.label))}
                 className="rounded-full p-1.5 text-cocoa/60 transition-colors hover:bg-beige/60 hover:text-ink"
               >
                 <Pencil size={14} />
               </button>
               <button
                 onClick={() => remove(a.id)}
-                aria-label={`Delete ${a.label}`}
+                aria-label={t("ad.delete").replace("{label}", labelText(a.label))}
                 className="rounded-full p-1.5 text-cocoa/60 transition-colors hover:bg-danger/10 hover:text-danger"
               >
                 <Trash2 size={15} />
@@ -246,14 +254,14 @@ export default function AddressesPage() {
                     : "border border-line bg-card text-cocoa hover:bg-beige/40",
                 )}
               >
-                {l}
+                {labelText(l)}
               </button>
             ))}
           </div>
           {!["Home", "Work"].includes(form.label) && (
             <Input
               label={t("pp.addr.label")}
-              placeholder="e.g. Parents' place"
+              placeholder={t("ad.labelExample")}
               value={form.label === "Other" ? "" : form.label}
               onChange={(e) => setForm({ ...form, label: e.target.value || "Other" })}
             />
@@ -283,26 +291,26 @@ export default function AddressesPage() {
 
           <Input
             label={t("pp.addr.flat")}
-            placeholder="Flat No. 402"
+            placeholder={t("ad.flatExample")}
             value={form.line1}
             onChange={(e) => setForm({ ...form, line1: e.target.value })}
             required
           />
           <Input
             label={t("pp.addr.building")}
-            placeholder="Sunrise Apartments, MG Road"
+            placeholder={t("ad.buildingExample")}
             value={form.line2}
             onChange={(e) => setForm({ ...form, line2: e.target.value })}
           />
           <Input
             label={t("pp.addr.landmark")}
-            placeholder="Near the metro station"
+            placeholder={t("ad.landmarkExample")}
             value={form.landmark}
             onChange={(e) => setForm({ ...form, landmark: e.target.value })}
           />
           {located && (
             <p className="-mb-1 flex items-center gap-1.5 text-[11px] font-medium text-success">
-              <Check size={12} /> Filled in from the map, edit if anything looks off
+              <Check size={12} /> {t("ad.fromMap")}
             </p>
           )}
           <div className="grid grid-cols-2 gap-3">

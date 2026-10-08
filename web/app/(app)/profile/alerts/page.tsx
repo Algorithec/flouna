@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bell, BellOff, Trash2, TrendingDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
@@ -26,14 +26,17 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
   const [error, setError] = useState("");
 
-  const load = () =>
-    api<{ alerts: Alert[] }>("/api/alerts")
-      .then((d) => setAlerts(d.alerts))
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+  const load = useCallback(
+    () =>
+      api<{ alerts: Alert[] }>("/api/alerts")
+        .then((d) => setAlerts(d.alerts))
+        .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed"))),
+    [t],
+  );
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   async function remove(id: string) {
     await api(`/api/alerts/${id}`, { method: "DELETE" }).catch(() => {});
@@ -107,7 +110,9 @@ export default function AlertsPage() {
                       {a.itemName}
                     </p>
                     <p className="text-[12px] text-success">
-                      Hit {rupees(a.lastSeenPaise)} (target {rupees(a.targetPaise)})
+                      {t("al.hit")
+                        .replace("{price}", rupees(a.lastSeenPaise))
+                        .replace("{target}", rupees(a.targetPaise))}
                     </p>
                   </div>
                   <button

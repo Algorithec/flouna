@@ -158,7 +158,7 @@ export default function ProfileDetailsPage() {
       setMessage(t("pp.det.saved"));
       setEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save");
+      setError(err instanceof Error ? err.message : t("pd.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -311,7 +311,7 @@ export default function ProfileDetailsPage() {
                   screen — linked rather than duplicated here. */}
               <Row
                 icon={MapPin}
-                label="Address"
+                label={t("pd.address")}
                 value={address}
                 href="/profile/addresses"
               />
