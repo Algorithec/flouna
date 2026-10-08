@@ -39,10 +39,26 @@ const TRANSLATED = [
   "components/chat/DisagreeSheet.tsx",
   "components/chat/FlounaInsights.tsx",
   "components/chat/PlatformMark.tsx",
+  "components/orders/CancelOrderSheet.tsx",
+  "components/orders/RideTracker.tsx",
+  "components/orders/RateOrder.tsx",
+  "components/orders/DecisionReceipt.tsx",
+  "components/orders/TrackingTimeline.tsx",
+  "app/(app)/orders/[id]/page.tsx",
+  "app/(app)/orders/[id]/invoice/page.tsx",
+  "app/(app)/orders/[id]/chat/page.tsx",
 ];
 
 // Not prose: format examples a person copies the shape of, and identifiers.
-const ALLOWED = new Set(["name@example.com", "name@bank", "NotAllowedError"]);
+const ALLOWED = new Set([
+  "name@example.com",
+  "name@bank",
+  "NotAllowedError",
+  // Names, not prose: the brand, the legal entity and the support address.
+  "Flouna",
+  "Algorithec Pvt Ltd",
+  "support@flouna.app",
+]);
 
 const problems = [];
 

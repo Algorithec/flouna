@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
@@ -35,6 +36,7 @@ export function TrackingTimeline({
   now: number;
   title: string;
 }) {
+  const { t } = useI18n();
   if (events.length === 0) return null;
 
   const times = events.map((e) => new Date(e.createdAt).getTime());
@@ -63,9 +65,9 @@ export function TrackingTimeline({
           <h2 className="text-[14px] font-bold text-ink">{title}</h2>
           {!allDone && (
             <p className="mt-0.5 text-[12px] text-cocoa">
-              {isFood ? "Estimated delivery" : "Estimated pickup"} ·{" "}
+              {isFood ? t("tt.estDelivery") : t("tt.estPickup")} ·{" "}
               <span className="font-semibold text-accent">
-                {etaMinutes === 0 ? "any moment" : `~${etaMinutes} min`}
+                {etaMinutes === 0 ? t("tt.anyMoment") : `~${etaMinutes} min`}
               </span>
             </p>
           )}
@@ -73,7 +75,7 @@ export function TrackingTimeline({
         {!allDone && (
           <span className="flex shrink-0 items-center gap-1.5 rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent">
             <Loader2 size={11} className="animate-spin" />
-            Live
+            {t("tt.live")}
           </span>
         )}
       </div>
@@ -134,7 +136,7 @@ export function TrackingTimeline({
                     ? relativeTime(at, now)
                     : isActive
                       ? minutesUntil(at, now) === 0
-                        ? "any moment"
+                        ? t("tt.anyMoment")
                         : `in ~${minutesUntil(at, now)} min`
                       : new Date(at).toLocaleTimeString("en-IN", {
                           hour: "2-digit",

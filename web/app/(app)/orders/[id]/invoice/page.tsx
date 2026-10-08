@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { use, useEffect, useState } from "react";
 import { ChevronLeft, Printer, CheckCircle2 } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api";
@@ -52,6 +53,7 @@ export default function InvoicePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { t } = useI18n();
   const { id } = use(params);
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<{ notFound: boolean; message: string } | null>(null);
@@ -71,20 +73,20 @@ export default function InvoicePage({
         setError({
           notFound,
           message: notFound
-            ? "We couldn't find this order's receipt."
-            : "Something went wrong loading this receipt. Please try again.",
+            ? t("inv.notFoundMsg")
+            : t("inv.errorMsg"),
         });
       });
     return () => {
       ignore = true;
     };
-  }, [id]);
+  }, [id, t]);
 
   if (!order) {
     return error ? (
       <ErrorView
         notFound={error.notFound}
-        title={error.notFound ? "Receipt not found" : "Couldn't load receipt"}
+        title={error.notFound ? t("inv.notFound") : t("inv.loadFailed")}
         message={error.message}
         backHref="/history"
         backLabel="Back to History"
@@ -124,7 +126,7 @@ export default function InvoicePage({
     const fare = order.details.farePaise;
     if (fare != null)
       lines.push({
-        label: `${order.details.displayName ?? "Ride"} · ${order.details.pickup ?? "pickup"} → ${order.details.drop ?? "drop"}`,
+        label: `${order.details.displayName ?? t("cx.ride")} · ${order.details.pickup ?? "pickup"} → ${order.details.drop ?? "drop"}`,
         value: fare,
       });
   }
@@ -150,13 +152,13 @@ export default function InvoicePage({
           onClick={back}
           className="tap-target flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
         >
-          <ChevronLeft size={16} /> Order
+          <ChevronLeft size={16} /> {t("inv.order")}
         </button>
         <button
           onClick={() => window.print()}
           className="flex items-center gap-2 rounded-full bg-cocoa px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-ink"
         >
-          <Printer size={15} /> Download / Print
+          <Printer size={15} /> {t("inv.print")}
         </button>
       </div>
 
@@ -174,7 +176,7 @@ export default function InvoicePage({
           </div>
           <div className="text-right">
             <p className="text-[15px] font-bold uppercase tracking-wide text-accent">
-              Payment Receipt
+              {t("inv.title")}
             </p>
             <p className="mt-1 font-mono text-[12px] text-ink">{receiptRef(order)}</p>
             <p className="text-[11px] text-cocoa">
@@ -182,7 +184,7 @@ export default function InvoicePage({
             </p>
             {paid && (
               <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-bold uppercase text-success">
-                <CheckCircle2 size={12} /> Paid
+                <CheckCircle2 size={12} /> {t("inv.paid")}
               </span>
             )}
           </div>
@@ -191,14 +193,14 @@ export default function InvoicePage({
         {/* Parties */}
         <div className="grid grid-cols-2 gap-4 py-5 text-[12px]">
           <div>
-            <p className="font-semibold uppercase tracking-wide text-cocoa">Fulfilled by</p>
+            <p className="font-semibold uppercase tracking-wide text-cocoa">{t("inv.fulfilledBy")}</p>
             <p className="mt-1 text-ink">{seller}</p>
             <p className="text-cocoa">
-              {order.domain === "food" ? "Food delivery" : "Ride"} · via Flouna
+              {order.domain === "food" ? t("inv.foodDelivery") : t("cx.ride")} {t("inv.viaFlouna")}
             </p>
           </div>
           <div className="min-w-0 text-right">
-            <p className="font-semibold uppercase tracking-wide text-cocoa">Order</p>
+            <p className="font-semibold uppercase tracking-wide text-cocoa">{t("inv.order")}</p>
             {/* break-all + text-right staircases across lines — one truncated
                 line reads as a value instead of a wrapped mess. The receipt
                 reference above is the number a person actually needs; this
@@ -207,7 +209,7 @@ export default function InvoicePage({
               {order.id}
             </p>
             <p className="text-cocoa">
-              {order.payment?.method ? order.payment.method.toUpperCase() : "Not recorded"}
+              {order.payment?.method ? order.payment.method.toUpperCase() : t("od.notRecorded")}
             </p>
           </div>
         </div>
@@ -216,8 +218,8 @@ export default function InvoicePage({
         <table className="w-full border-t border-line text-[13px]">
           <thead>
             <tr className="text-[11px] uppercase tracking-wide text-cocoa">
-              <th className="py-2 text-left font-semibold">Description</th>
-              <th className="py-2 text-right font-semibold">Amount</th>
+              <th className="py-2 text-left font-semibold">{t("inv.description")}</th>
+              <th className="py-2 text-right font-semibold">{t("inv.amount")}</th>
             </tr>
           </thead>
           <tbody>
@@ -229,14 +231,14 @@ export default function InvoicePage({
             ))}
             {discount > 0 && (
               <tr className="border-t border-line/60">
-                <td className="py-2 pr-3 text-success">Offers &amp; discounts</td>
+                <td className="py-2 pr-3 text-success">{t("inv.offers")}</td>
                 <td className="py-2 text-right text-success">− {rupees(discount)}</td>
               </tr>
             )}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-line">
-              <td className="py-3 text-[15px] font-bold text-ink">Total paid</td>
+              <td className="py-3 text-[15px] font-bold text-ink">{t("inv.totalPaid")}</td>
               <td className="py-3 text-right text-[15px] font-bold text-ink">
                 {rupees(order.amount)}
               </td>
@@ -246,18 +248,14 @@ export default function InvoicePage({
 
         {/* Footer note */}
         <p className="mt-6 border-t border-line pt-4 text-[10px] leading-relaxed text-muted">
-          Amounts are inclusive of applicable taxes. This is a computer-generated
-          payment receipt and does not require a signature. Flouna (Algorithec Pvt
-          Ltd) is an aggregator; the goods/services are supplied by the seller named
-          above. For help, contact support@flouna.app.
+          {t("inv.footer")}
         </p>
       </div>
 
       {/* Marketing line — screen only, kept OUT of the printed receipt. */}
       {order.savedPaise > 0 && (
         <div className="mt-3 rounded-card bg-accent-soft/60 px-4 py-2.5 text-[12px] font-medium text-accent print:hidden">
-          You saved {rupees(order.savedPaise)} vs the next-best option. Flouna
-          picked the smartest choice for you.
+          {t("inv.saved").replace("{amount}", rupees(order.savedPaise))}
         </div>
       )}
     </div>
