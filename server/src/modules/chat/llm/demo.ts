@@ -66,6 +66,7 @@ function extractFood(message: string) {
   return {
     item: itemMatch?.[0]?.toLowerCase() ?? "popular dishes",
     budgetPaise: parseBudget(message),
+    maxEtaMinutes: null,
     dietary,
     priority: extractPriority(message),
   };
@@ -111,7 +112,6 @@ function extractRide(message: string) {
     priority: extractPriority(message),
     scheduleAt: extractScheduleAt(message),
     budgetPaise: null,
-    maxEtaMinutes: null,
     maxPickupMinutes: null,
   };
 }
