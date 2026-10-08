@@ -15,6 +15,7 @@ export const intentSchema = z.object({
     .object({
       item: z.string().max(80).describe("The dish or cuisine requested"),
       budgetPaise: z.number().int().positive().nullable(),
+      maxEtaMinutes: z.number().int().positive().nullable().default(null),
       dietary: z.enum(["veg", "nonveg", "any"]).default("any"),
       // What the user cares about most: "rating" for top-rated/best, "price"
       // for cheap/budget, "speed" for fast/quick, else "balanced".
@@ -42,7 +43,6 @@ export const intentSchema = z.object({
           "24h HH:mm if the user asked to book for a later time, else null",
         ),
       budgetPaise: z.number().int().positive().nullable().default(null),
-      maxEtaMinutes: z.number().int().positive().nullable().default(null),
       maxPickupMinutes: z.number().int().positive().nullable().default(null),
     })
     .optional(),
