@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useI18n } from "@/components/i18n/I18nContext";
 import { Loader2, TriangleAlert, SearchX } from "lucide-react";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 
@@ -7,10 +8,11 @@ import { CardSkeleton } from "@/components/ui/Skeleton";
 // "Loading…" forever when a request actually failed.
 
 export function LoadingView({ rows = 4 }: { rows?: number }) {
+  const { t } = useI18n();
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-8 lg:px-6">
       <div className="flex items-center gap-2 text-[13px] text-cocoa">
-        <Loader2 size={15} className="animate-spin text-accent" /> Loading…
+        <Loader2 size={15} className="animate-spin text-accent" /> {t("dp.loading")}
       </div>
       <div className="mt-5 flex flex-col gap-2.5">
         {Array.from({ length: rows }).map((_, i) => (
@@ -22,10 +24,10 @@ export function LoadingView({ rows = 4 }: { rows?: number }) {
 }
 
 export function ErrorView({
-  title = "Something went wrong",
+  title,
   message,
   backHref = "/home",
-  backLabel = "Back to home",
+  backLabel,
   notFound = false,
 }: {
   title?: string;
@@ -34,7 +36,11 @@ export function ErrorView({
   backLabel?: string;
   notFound?: boolean;
 }) {
+  const { t } = useI18n();
   const Icon = notFound ? SearchX : TriangleAlert;
+  // Defaults worded here, where the language is known.
+  title ??= t("common.somethingWrong");
+  backLabel ??= t("sv.home");
   return (
     <div className="mx-auto flex min-h-[60dvh] w-full max-w-xl flex-col items-center justify-center px-6 text-center">
       <span className="flex size-14 items-center justify-center rounded-[18px] bg-accent-soft">

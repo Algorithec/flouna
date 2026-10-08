@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -43,6 +44,7 @@ export function LocationPicker({
   height?: number;
   className?: string;
 }) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   // Moves the map under the fixed pin, whichever engine is drawing it.
   const moveToRef = useRef<((lat: number, lng: number) => void) | null>(null);
@@ -50,7 +52,7 @@ export function LocationPicker({
   const onChangeRef = useRef(onChange);
   const [resolving, setResolving] = useState(false);
   const [locating, setLocating] = useState(false);
-  const [label, setLabel] = useState("Move the map to set your location");
+  const [label, setLabel] = useState(t("lp.move"));
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -66,12 +68,12 @@ export function LocationPicker({
         `/api/rides/reverse?lat=${lat}&lng=${lng}`,
       );
       const address = d.address;
-      setLabel(address.formatted || "Pinned location");
+      setLabel(address.formatted || t("lp.pinned"));
       onChangeRef.current({ lat, lng, address });
     } catch {
       // Keep the coordinates usable even if naming failed — the user can type
       // the address themselves rather than being blocked.
-      setLabel("Couldn't name this spot, you can type it below");
+      setLabel(t("lp.couldntName"));
       onChangeRef.current({
         lat,
         lng,
@@ -80,7 +82,7 @@ export function LocationPicker({
     } finally {
       setResolving(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     // Google loads first when a key is set; nothing is drawn until it decides.
@@ -152,7 +154,7 @@ export function LocationPicker({
 
   function useMyLocation() {
     if (!navigator.geolocation) {
-      setError("Location isn't available in this browser");
+      setError(t("lp.unavailable"));
       return;
     }
     setLocating(true);
@@ -166,7 +168,7 @@ export function LocationPicker({
       },
       () => {
         setLocating(false);
-        setError("Couldn't get your location, check browser permissions");
+        setError(t("lp.denied"));
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     );
@@ -205,7 +207,7 @@ export function LocationPicker({
           ) : (
             <LocateFixed size={14} />
           )}
-          {locating ? "Locating…" : "Use my current location"}
+          {locating ? t("lp.locating") : t("ib.useLocation")}
         </button>
       </div>
 
@@ -218,7 +220,7 @@ export function LocationPicker({
             resolving ? "text-cocoa/60" : "text-cocoa",
           )}
         >
-          {resolving ? "Finding your address…" : label}
+          {resolving ? t("lp.finding") : label}
         </p>
       </div>
       {error && <p className="mt-1 px-0.5 text-[12px] text-danger">{error}</p>}

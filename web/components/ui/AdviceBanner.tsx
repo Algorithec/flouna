@@ -1,4 +1,5 @@
 import { Clock3, TrendingDown, CloudRain } from "lucide-react";
+import { useI18n } from "@/components/i18n/I18nContext";
 import { cn } from "@/lib/cn";
 import { rupeesApprox } from "@/lib/money";
 
@@ -30,6 +31,7 @@ export function AdviceBanner({
   advice: Advice;
   className?: string;
 }) {
+  const { t } = useI18n();
   const wait = advice.action === "wait";
   const Icon = wait ? TrendingDown : Clock3;
 
@@ -81,12 +83,12 @@ export function AdviceBanner({
                 wait ? "text-accent" : "text-success",
               )}
             >
-              {wait ? "Worth waiting" : "Good time to order"}
+              {wait ? t("adv.wait") : t("adv.good")}
             </p>
             {/* The figure the advice turns on, stated rather than implied. */}
             {wait && saving && (
               <p className="text-[15px] font-bold text-ink">
-                Save {saving} more by waiting
+                {t("adv.saveMore").replace("{amount}", saving)}
                 {wallClock && (
                   <span className="ml-1 text-[12px] font-medium text-cocoa">
                     ~{wallClock}

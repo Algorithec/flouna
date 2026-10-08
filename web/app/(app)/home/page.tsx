@@ -267,7 +267,7 @@ function ChatHome() {
           id: `e-${Date.now()}`,
           role: "assistant",
           content:
-            err instanceof Error ? err.message : "Something went wrong, try again.",
+            err instanceof Error ? err.message : t("hm.error"),
         },
       ]);
     } finally {
@@ -507,7 +507,7 @@ function ChatHome() {
           <button
             type="submit"
             disabled={!input.trim() || thinking}
-            aria-label="Send"
+            aria-label={t("common.send")}
             className="flex size-[54px] shrink-0 items-center justify-center rounded-full bg-send text-white transition-colors hover:opacity-90 disabled:opacity-40"
           >
             <Send size={20} />

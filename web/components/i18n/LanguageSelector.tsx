@@ -16,6 +16,7 @@ const LANG_METADATA: Record<Lang, { flag: string; native: string; subtitle: stri
 };
 
 export function LanguageSelector({ className }: { className?: string }) {
+  const { t } = useI18n();
   const { lang, setLang } = useI18n();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -56,8 +57,8 @@ export function LanguageSelector({ className }: { className?: string }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Select language"
-        title="Change application language"
+        aria-label={t("ls.select")}
+        title={t("ls.change")}
         className={cn(
           "group flex items-center gap-1.5 rounded-pill border border-line bg-card/85 px-3 py-1.5 text-[12px] font-semibold text-ink backdrop-blur-md transition-all duration-250 ease-out",
           "shadow-[0_2px_8px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02),inset_0_1px_1px_rgba(255,255,255,0.7)]",
@@ -89,7 +90,7 @@ export function LanguageSelector({ className }: { className?: string }) {
       {/* Floating Glass Dropdown Panel */}
       <div
         role="listbox"
-        aria-label="Languages"
+        aria-label={t("ls.languages")}
         className={cn(
           "absolute right-0 top-full mt-2.5 w-60 z-50 origin-top-right rounded-2xl border border-white/60 dark:border-white/10 bg-card/92 p-1.5 backdrop-blur-xl transition-all duration-250 ease-out",
           "shadow-[0_16px_40px_-6px_rgba(0,0,0,0.14),0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.8)]",
@@ -99,7 +100,7 @@ export function LanguageSelector({ className }: { className?: string }) {
         )}
       >
         <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-cocoa/60 border-b border-line/50 mb-1">
-          Select Language
+          {t("ls.selectTitle")}
         </div>
 
         <div className="flex flex-col gap-0.5">

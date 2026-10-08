@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TrendingDown, X } from "lucide-react";
@@ -17,6 +18,7 @@ type AlertEvent = {
 // Listens for live `price-alert` events and shows a dismissible banner.
 // Mounted once in the app shell so it works on every signed-in screen.
 export function PriceAlertListener() {
+  const { t } = useI18n();
   const [alert, setAlert] = useState<AlertEvent | null>(null);
 
   useEffect(() => {
@@ -37,23 +39,30 @@ export function PriceAlertListener() {
           <TrendingDown size={18} className="text-accent" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-bold text-ink">Price drop!</p>
+          <p className="text-[13px] font-bold text-ink">{t("pa.drop")}</p>
           <p className="text-[12px] text-cocoa">
-            {alert.itemName} is now{" "}
-            <span className="font-semibold text-accent">{rupees(alert.newPaise)}</span>,
-            at or below your target.
+            {(() => {
+              const [before, after] = t("pa.now").replace("{item}", alert.itemName).split("{price}");
+              return (
+                <>
+                  {before}
+                  <span className="font-semibold text-accent">{rupees(alert.newPaise)}</span>
+                  {after}
+                </>
+              );
+            })()}
           </p>
           <Link
             href={alert.domain === "food" ? "/food" : "/rides"}
             onClick={() => setAlert(null)}
             className="mt-1 inline-block text-[12px] font-semibold text-accent hover:underline"
           >
-            Order now →
+            {t("pa.orderNow")}
           </Link>
         </div>
         <button
           onClick={() => setAlert(null)}
-          aria-label="Dismiss"
+          aria-label={t("common.close")}
           className="rounded-full p-1 text-cocoa/60 hover:bg-beige hover:text-cocoa"
         >
           <X size={15} />

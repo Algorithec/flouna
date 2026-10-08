@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useEffect, useState } from "react";
 import { Tag, Award, Zap, Gift } from "lucide-react";
 import { api } from "@/lib/api";
@@ -32,6 +33,7 @@ function subscriptionStatus(): Promise<PlusStatus> {
 }
 
 export function RadiusUpsell() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<PlusStatus | null>(null);
 
   useEffect(() => {
@@ -55,27 +57,27 @@ export function RadiusUpsell() {
   return (
     <div className="mt-4 rounded-card border border-accent/30 bg-accent-soft/40 p-4">
       <div className="mb-3">
-        <h3 className="text-[15px] font-bold text-ink">Unlock more with Flouna</h3>
-        <p className="text-[13px] text-cocoa">Get the best prices, fastest delivery and exclusive offers.</p>
+        <h3 className="text-[15px] font-bold text-ink">{t("ru.title")}</h3>
+        <p className="text-[13px] text-cocoa">{t("ru.sub")}</p>
       </div>
       
       <div className="mb-4 grid grid-cols-2 gap-2">
         <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-          <Tag size={14} className="text-accent" /> Best Prices
+          <Tag size={14} className="text-accent" /> {t("ru.bestPrices")}
         </div>
         <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-          <Award size={14} className="text-accent" /> Top Rated
+          <Award size={14} className="text-accent" /> {t("ru.topRated")}
         </div>
         <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-          <Zap size={14} className="text-accent" /> Fast Delivery
+          <Zap size={14} className="text-accent" /> {t("ru.fast")}
         </div>
         <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-          <Gift size={14} className="text-accent" /> Great Offers
+          <Gift size={14} className="text-accent" /> {t("ru.offers")}
         </div>
       </div>
 
       <button className="tap-target w-full rounded-pill bg-accent py-2.5 text-[14px] font-bold text-white transition-colors hover:bg-accent/90">
-        Explore More Options
+        {t("ru.explore")}
       </button>
     </div>
   );
