@@ -166,7 +166,7 @@ export default function CartPage() {
       clear();
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not place the order");
+      setError(e instanceof Error ? e.message : t("ct.placeFailed"));
       setBusy(false);
     }
   }
@@ -219,7 +219,7 @@ export default function CartPage() {
                   <div className="flex shrink-0 flex-col items-end gap-2">
                     <div className="flex items-center gap-1 rounded-pill border border-accent/50 px-1">
                       <button
-                        aria-label="Decrease quantity"
+                        aria-label={t("fh.less")}
                         onClick={() => setQty(l.dishId, l.platform, l.qty - 1)}
                         className="p-1.5 text-accent"
                       >
@@ -229,7 +229,7 @@ export default function CartPage() {
                         {l.qty}
                       </span>
                       <button
-                        aria-label="Increase quantity"
+                        aria-label={t("fh.more")}
                         onClick={() => setQty(l.dishId, l.platform, l.qty + 1)}
                         className="p-1.5 text-accent"
                       >
@@ -284,10 +284,11 @@ export default function CartPage() {
                 <>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-bold text-success">
-                      {coupon.code} applied
+                      {t("ct.applied").replace("{code}", coupon.code)}
                     </span>
                     <span className="block truncate text-[11px] text-cocoa">
-                      {coupon.description} · saving {rupees(coupon.discountPaise)}
+                      {coupon.description} ·{" "}
+                      {t("ct.saving").replace("{amount}", rupees(coupon.discountPaise))}
                     </span>
                   </span>
                   <button
@@ -298,7 +299,7 @@ export default function CartPage() {
                     }}
                     className="shrink-0 text-[12px] font-semibold text-cocoa hover:text-danger"
                   >
-                    Remove
+                    {t("ct.remove")}
                   </button>
                 </>
               ) : (
@@ -309,7 +310,7 @@ export default function CartPage() {
                       setCodeInput(e.target.value.toUpperCase().slice(0, 24));
                       setCouponError("");
                     }}
-                    placeholder="Enter promo code"
+                    placeholder={t("ct.promoPlaceholder")}
                     className="min-w-0 flex-1 bg-transparent text-[13px] uppercase text-ink outline-none placeholder:normal-case placeholder:text-cocoa/50"
                   />
                   <button
@@ -317,7 +318,7 @@ export default function CartPage() {
                     disabled={couponBusy || codeInput.trim().length < 2}
                     className="shrink-0 text-[12px] font-semibold text-accent hover:underline disabled:opacity-40"
                   >
-                    {couponBusy ? "Checking…" : "Apply"}
+                    {couponBusy ? t("pp.priv.checking") : t("ct.apply")}
                   </button>
                 </>
               )}
@@ -346,7 +347,7 @@ export default function CartPage() {
             <div className="flex items-center gap-2.5">
               <MapPin size={16} className="shrink-0 text-accent" />
               {address === undefined ? (
-                <p className="text-[13px] text-cocoa">Loading address…</p>
+                <p className="text-[13px] text-cocoa">{t("ct.loadingAddress")}</p>
               ) : address ? (
                 <p className="min-w-0 flex-1 truncate text-[13px] text-ink">
                   <span className="font-semibold">{address.label}</span>,{" "}
@@ -354,14 +355,14 @@ export default function CartPage() {
                 </p>
               ) : (
                 <p className="min-w-0 flex-1 text-[13px] text-cocoa">
-                  No delivery address saved
+                  {t("ct.noAddress")}
                 </p>
               )}
               <Link
                 href="/profile/addresses"
                 className="shrink-0 text-[12px] font-semibold text-accent hover:underline"
               >
-                {address ? "Change" : "Add"}
+                {address ? t("ct.change") : t("ct.add")}
               </Link>
             </div>
           </Card>
@@ -372,7 +373,7 @@ export default function CartPage() {
               server-side at checkout, so quoting them now would be a price
               promise this screen can't keep. The line stays honest instead. */}
           <Card className="mt-4">
-            <p className="text-[17px] font-extrabold text-ink">Order Summary</p>
+            <p className="text-[17px] font-extrabold text-ink">{t("ct.summary")}</p>
             <div className="mt-3 flex flex-col gap-2.5 text-[14px]">
               <div className="flex justify-between">
                 <span className="text-cocoa">
@@ -417,7 +418,7 @@ export default function CartPage() {
               )}
               {coupon && (
                 <div className="flex justify-between text-success">
-                  <span>Promo {coupon.code}</span>
+                  <span>{t("ct.promo")}{" "}{coupon.code}</span>
                   <span className="font-semibold">− {rupees(coupon.discountPaise)}</span>
                 </div>
               )}
@@ -452,7 +453,7 @@ export default function CartPage() {
                 href="/profile/addresses"
                 className="flex h-[56px] w-full items-center justify-center gap-2 rounded-[22px] bg-accent text-[15px] font-semibold text-white shadow-card transition-colors hover:bg-[#d4570f]"
               >
-                <MapPin size={17} /> Add a delivery address
+                <MapPin size={17} /> {t("ct.addAddress")}
               </Link>
             ) : (
               <Button

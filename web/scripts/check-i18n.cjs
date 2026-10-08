@@ -47,6 +47,12 @@ const TRANSLATED = [
   "app/(app)/orders/[id]/page.tsx",
   "app/(app)/orders/[id]/invoice/page.tsx",
   "app/(app)/orders/[id]/chat/page.tsx",
+  "app/(app)/food/page.tsx",
+  "app/(app)/food/order/[dishId]/page.tsx",
+  "app/(app)/cart/page.tsx",
+  "app/(app)/results/page.tsx",
+  "app/(app)/shop/page.tsx",
+  "app/(app)/shop/product/[productId]/page.tsx",
 ];
 
 // Not prose: format examples a person copies the shape of, and identifiers.
@@ -58,6 +64,9 @@ const ALLOWED = new Set([
   "Flouna",
   "Algorithec Pvt Ltd",
   "support@flouna.app",
+  // The shop's fallback category. The other category names come from the
+  // catalogue in English, so they are translated together, on the server.
+  "All",
 ]);
 
 const problems = [];

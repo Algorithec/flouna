@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Sparkles, Share2, Check } from "lucide-react";
@@ -22,6 +23,7 @@ export default function ResultsPage() {
 }
 
 function Results() {
+  const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const chatId = params.get("chat");
@@ -39,7 +41,7 @@ function Results() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [shared, setShared] = useState(false);
   const loading = addressed && fetching;
-  const error = addressed ? fetchError : "Missing chat or message ID";
+  const error = addressed ? fetchError : t("rs.missingId");
 
   useEffect(() => {
     if (!addressed) return;
@@ -70,12 +72,12 @@ function Results() {
   if (!chatId || !msgId) {
     return (
       <div className="flex h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-4 px-4 lg:h-dvh">
-        <p className="text-[15px] text-cocoa">Missing chat or message ID</p>
+        <p className="text-[15px] text-cocoa">{t("rs.missingId")}</p>
         <button
           onClick={() => router.back()}
           className="rounded-pill bg-accent px-5 py-2.5 text-[14px] font-semibold text-white"
         >
-          Go back
+          {t("rs.goBack")}
         </button>
       </div>
     );
@@ -100,7 +102,7 @@ function Results() {
       <div className="flex h-[calc(100dvh-4rem)] items-center justify-center lg:h-dvh">
         <div className="flex flex-col items-center gap-3">
           <Sparkles size={28} className="animate-pulse text-accent" />
-          <p className="text-[14px] text-cocoa">Loading results&hellip;</p>
+          <p className="text-[14px] text-cocoa">{t("rs.loading")}</p>
         </div>
       </div>
     );
@@ -109,12 +111,12 @@ function Results() {
   if (error || !rec) {
     return (
       <div className="flex h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-4 px-4 lg:h-dvh">
-        <p className="text-[15px] text-cocoa">{error ?? "No results found"}</p>
+        <p className="text-[15px] text-cocoa">{error ?? t("fp.noResults")}</p>
         <button
           onClick={() => router.back()}
           className="rounded-pill bg-accent px-5 py-2.5 text-[14px] font-semibold text-white"
         >
-          Go back
+          {t("rs.goBack")}
         </button>
       </div>
     );
@@ -129,18 +131,26 @@ function Results() {
           className="tap-target flex items-center gap-2 text-[14px] font-medium text-ink transition-colors hover:text-accent"
         >
           <ArrowLeft size={18} />
-          <span className="hidden sm:inline">Back to chat</span>
+          <span className="hidden sm:inline">{t("rs.backToChat")}</span>
         </button>
 
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-[11px] font-bold tracking-wide text-accent">
             <Sparkles size={12} />
-            {rec.type === "combo" ? "FOOD + RIDE" : rec.type.toUpperCase()} RESULTS
+            <span className="uppercase">
+              {rec.type === "combo"
+                ? t("rs.comboResults")
+                : rec.type === "ride"
+                  ? t("rs.rideResults")
+                  : rec.type === "shop"
+                    ? t("rs.shopResults")
+                    : t("rs.foodResults")}
+            </span>
           </span>
           <button
             onClick={onShare}
             className="tap-target flex size-9 items-center justify-center rounded-full border border-line transition-colors hover:bg-beige/50"
-            aria-label="Share results"
+            aria-label={t("rs.share")}
           >
             {shared ? (
               <Check size={16} className="text-success" />
@@ -158,7 +168,7 @@ function Results() {
           {content && (
             <div className="rounded-card border border-accent/20 bg-accent-soft/30 p-4">
               <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent">
-                <Sparkles size={12} /> AI REASONING
+                <Sparkles size={12} /> <span className="uppercase">{t("rs.whyPick")}</span>
               </p>
               <p className="mt-2 text-[14px] leading-relaxed text-ink">
                 {content}
