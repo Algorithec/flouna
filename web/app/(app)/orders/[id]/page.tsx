@@ -292,7 +292,7 @@ export default function OrderDetailPage({
             onClick={() => setCancelling(true)}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-pill border border-danger/30 bg-card py-3 text-[14px] font-semibold text-danger transition-colors hover:bg-danger/5"
           >
-            {t("od.cancel")}{" "}{order.domain === "ride" ? "booking" : "order"}
+            {order.domain === "ride" ? t("od.cancelBooking") : t("track.food.cancelOrder")}
           </button>
         )}
 
