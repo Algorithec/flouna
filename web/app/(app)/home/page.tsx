@@ -329,7 +329,9 @@ function ChatHome() {
           {/* Hero heading — two lines, two colours (Figma 2177:4763: navy then
               terracotta). */}
           <FadeIn y={10}>
-            <h1 className="text-balance text-[30px] font-bold leading-[1.2] tracking-tight lg:text-[44px]">
+            {/* Scales with the screen, and a word too long for it may wrap:
+                Telugu's ఎంచుకోవాలనుకుంటున్నారు alone was wider than a 360px phone. */}
+            <h1 className="text-balance text-[clamp(22px,7.5vw,30px)] font-bold leading-[1.2] tracking-tight [overflow-wrap:anywhere] lg:text-[44px]">
               <span className="text-navy">{t("chat.heading1")}</span>
               <span className="text-terracotta">{t("chat.heading2")}</span>
             </h1>
