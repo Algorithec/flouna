@@ -1,3 +1,4 @@
+import { useI18n } from "@/components/i18n/I18nContext";
 /**
  * Flat side-on drawings of the three vehicle types.
  *
@@ -25,8 +26,9 @@ export function VehicleArt({ vehicle, className }: Props) {
 }
 
 function Auto({ className }: { className?: string }) {
+  const { t } = useI18n();
   return (
-    <svg viewBox="0 0 72 48" className={className} role="img" aria-label="Auto rickshaw">
+    <svg viewBox="0 0 72 48" className={className} role="img" aria-label={t("veh.autoRickshaw")}>
       {/* Canopy and cabin */}
       <path d="M20 12c0-4.4 3.6-8 8-8h10c6.6 0 12 5.4 12 12v10H20V12Z" fill="#f5c518" />
       <path d="M20 12c0-4.4 3.6-8 8-8h10c6.6 0 12 5.4 12 12v3H20v-3Z" fill="#1f7a4d" />
@@ -47,8 +49,9 @@ function Auto({ className }: { className?: string }) {
 }
 
 function Bike({ className }: { className?: string }) {
+  const { t } = useI18n();
   return (
-    <svg viewBox="0 0 72 48" className={className} role="img" aria-label="Motorbike">
+    <svg viewBox="0 0 72 48" className={className} role="img" aria-label={t("veh.motorbike")}>
       {/* Wheels */}
       <circle cx="16" cy="34" r="10" fill="none" stroke={WHEEL} strokeWidth="4" />
       <circle cx="56" cy="34" r="10" fill="none" stroke={WHEEL} strokeWidth="4" />
@@ -72,8 +75,9 @@ function Bike({ className }: { className?: string }) {
 }
 
 function Cab({ className }: { className?: string }) {
+  const { t } = useI18n();
   return (
-    <svg viewBox="0 0 72 48" className={className} role="img" aria-label="Car">
+    <svg viewBox="0 0 72 48" className={className} role="img" aria-label={t("veh.car")}>
       {/* Roof and cabin */}
       <path d="M22 12h20c3 0 5.8 1.4 7.6 3.8L54 22H18l2.2-7.2A3 3 0 0 1 22 12Z" fill="#3b6ea8" />
       {/* Windows */}

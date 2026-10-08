@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { Star, Users, Clock3, Snowflake, Route, Zap } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { rupees } from "@/lib/money";
@@ -24,6 +25,7 @@ export function RideBestCard({
   onSelect?: () => void;
   busy?: boolean;
 }) {
+  const { t } = useI18n();
   const { seats, ac } = vehicleFacts(q.vehicle);
   return (
     <div className="overflow-hidden rounded-card border-2 border-accent bg-gradient-to-b from-accent-soft/60 to-card">
@@ -31,7 +33,7 @@ export function RideBestCard({
       <div className="flex items-center justify-between gap-2 bg-accent px-3.5 py-1.5">
         <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-white">
           <Zap size={12} className="fill-white" />
-          Best option
+          {t("rd.bestOption")}
         </p>
         {q.badge && (
           <span className="rounded-pill bg-white/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
@@ -61,7 +63,7 @@ export function RideBestCard({
             </div>
             <div className="shrink-0 text-right">
               <p className="text-[10px] font-medium uppercase tracking-wide text-cocoa">
-                Estimated fare
+                {t("rd.estFare")}
               </p>
               <p className="text-[20px] font-extrabold leading-tight text-accent">
                 {rupees(q.effectivePaise)}
@@ -80,7 +82,7 @@ export function RideBestCard({
             disabled={busy}
             className="tap-target w-full rounded-pill bg-accent px-4 py-2.5 text-[14px] font-bold text-white transition-opacity disabled:opacity-60"
           >
-            {busy ? "Booking…" : "Select"}
+            {busy ? t("rides.booking") : t("rc.select")}
           </button>
         </div>
       )}
@@ -98,6 +100,7 @@ export function RideOptionRow({
   onSelect?: () => void;
   busy?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-2.5 rounded-card border border-line bg-card p-2.5">
       <VehicleArt vehicle={q.vehicle} className="h-9 w-12 shrink-0" />
@@ -115,7 +118,7 @@ export function RideOptionRow({
         <p className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-[11px] text-cocoa">
           <span className="flex items-center gap-0.5">
             <Clock3 size={10} className="shrink-0" />
-            {q.pickupEtaMinutes} min
+            {q.pickupEtaMinutes} {t("u.min")}
           </span>
           <span className="flex items-center gap-0.5">
             <Star size={10} className="shrink-0 fill-warning text-warning" />
@@ -133,7 +136,7 @@ export function RideOptionRow({
           disabled={busy}
           className="tap-target shrink-0 rounded-pill border border-accent px-3 py-1.5 text-[12px] font-bold text-accent transition-colors hover:bg-accent-soft disabled:opacity-60"
         >
-          Select
+          {t("rc.select")}
         </button>
       )}
     </div>

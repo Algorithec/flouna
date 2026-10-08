@@ -53,6 +53,11 @@ const TRANSLATED = [
   "app/(app)/results/page.tsx",
   "app/(app)/shop/page.tsx",
   "app/(app)/shop/product/[productId]/page.tsx",
+  "app/(app)/rides/page.tsx",
+  "app/(app)/rides/group/[id]/page.tsx",
+  "components/rides/RideOptionCard.tsx",
+  "components/rides/VehicleArt.tsx",
+  "app/(app)/pay/[orderId]/page.tsx",
 ];
 
 // Not prose: format examples a person copies the shape of, and identifiers.
