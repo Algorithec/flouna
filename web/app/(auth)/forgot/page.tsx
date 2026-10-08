@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,7 @@ type Step = "email" | "reset";
 // the six-box code entry from OTP Verify. Nothing here is a new visual idea —
 // it just stops /forgot being the one screen still wearing the brand palette.
 export default function ForgotPasswordPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const leaveAuth = useBackTo("/login");
   const [step, setStep] = useState<Step>("email");
@@ -67,7 +69,7 @@ export default function ForgotPasswordPage() {
       await api("/api/auth/forgot", { method: "POST", json: { email: email.trim() } });
       setStep("reset");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send the code");
+      setError(err instanceof Error ? err.message : t("pp.priv.codeSendFailed"));
     } finally {
       setBusy(false);
     }
@@ -77,7 +79,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError("");
     if (password !== confirm) {
-      setError("Passwords do not match");
+      setError(t("au.pwMismatch"));
       return;
     }
     setBusy(true);
@@ -89,7 +91,7 @@ export default function ForgotPasswordPage() {
       // The reset is done; going back into the form would be meaningless.
       router.replace("/login?reset=1");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not reset password");
+      setError(err instanceof Error ? err.message : t("au.resetFailed"));
       setBusy(false);
     }
   }
@@ -98,7 +100,7 @@ export default function ForgotPasswordPage() {
     <button
       type="button"
       onClick={() => setShowPw((v) => !v)}
-      aria-label={showPw ? "Hide password" : "Show password"}
+      aria-label={showPw ? t("au.hidePw") : t("au.showPw")}
       className="rounded-full p-1 text-auth-muted transition-colors hover:text-auth-ink"
     >
       {showPw ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -111,7 +113,7 @@ export default function ForgotPasswordPage() {
         <button
           type="button"
           onClick={() => (step === "reset" ? setStep("email") : leaveAuth())}
-          aria-label="Back"
+          aria-label={t("au.back")}
           className="flex size-10 items-center justify-center rounded-full bg-auth-well text-auth-ink transition-colors hover:bg-auth-well/80"
         >
           <ArrowLeft size={20} />
@@ -126,15 +128,16 @@ export default function ForgotPasswordPage() {
             className="size-[92px] text-auth-ink/80 [@media(max-width:480px)]:size-[44px]"
           />
           <h1 className="mt-7 text-[26px] font-bold text-auth-ink [@media(max-width:480px)]:mt-2 [@media(max-width:480px)]:text-[19px]">
-            {step === "email" ? "Reset your password" : "Choose a new password"}
+            {step === "email" ? t("au.resetTitle") : t("au.newPwTitle")}
           </h1>
           <p className="mt-3 max-w-[330px] text-[16px] leading-[1.5] text-auth-muted [@media(max-width:480px)]:mt-1 [@media(max-width:480px)]:text-[12px] [@media(max-width:480px)]:leading-[1.3]">
             {step === "email" ? (
-              "Enter your account email and we'll send you a 6-digit code."
+              t("au.enterEmail")
             ) : (
               <>
-                We sent a code to{" "}
+                {t("au.sentTo").split("{email}")[0]}
                 <span className="font-semibold text-auth-ink">{email}</span>
+                {t("au.sentTo").split("{email}")[1]}
               </>
             )}
           </p>
@@ -143,7 +146,7 @@ export default function ForgotPasswordPage() {
         {step === "email" ? (
           <form onSubmit={sendCode} className="mt-9 flex flex-col gap-4 [@media(max-width:480px)]:mt-4 [@media(max-width:480px)]:gap-2">
             <AuthField
-              label="Email"
+              label={t("au.email")}
               type="email"
               autoComplete="email"
               autoFocus
@@ -157,7 +160,7 @@ export default function ForgotPasswordPage() {
               </p>
             )}
             <AuthButton type="submit" disabled={busy || !emailValid}>
-              {busy ? "Sending…" : "Send code"}
+              {busy ? t("au.sending") : t("au.sendCode")}
             </AuthButton>
           </form>
         ) : (
@@ -166,7 +169,7 @@ export default function ForgotPasswordPage() {
               className="flex justify-center gap-2.5"
               onPaste={onPaste}
               role="group"
-              aria-label="Reset code"
+              aria-label={t("au.resetCode")}
             >
               {digits.map((d, i) => (
                 <input
@@ -187,7 +190,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             <AuthField
-              label="New password"
+              label={t("au.newPw")}
               type={showPw ? "text" : "password"}
               autoComplete="new-password"
               trailing={eye}
@@ -197,10 +200,10 @@ export default function ForgotPasswordPage() {
               required
             />
             <AuthField
-              label="Re-Enter the Password"
+              label={t("au.reenterPw")}
               type={showPw ? "text" : "password"}
               autoComplete="new-password"
-              error={mismatch ? "Passwords do not match" : undefined}
+              error={mismatch ? t("au.pwMismatch") : undefined}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               minLength={8}
@@ -214,7 +217,7 @@ export default function ForgotPasswordPage() {
             )}
 
             <AuthButton type="submit" disabled={busy || !canReset}>
-              {busy ? "Resetting…" : "Reset password"}
+              {busy ? t("au.resetting") : t("au.resetBtn")}
             </AuthButton>
 
             <button
@@ -225,15 +228,15 @@ export default function ForgotPasswordPage() {
               }}
               className="text-[15px] font-bold text-auth-ink hover:underline"
             >
-              Didn&apos;t get it? Send again
+              {t("au.sendAgain")}
             </button>
           </form>
         )}
 
         <p className="mt-7 pb-8 text-center text-[15px] text-auth-muted [@media(max-width:480px)]:mt-3 [@media(max-width:480px)]:pb-2">
-          Remembered it?{" "}
+          {t("au.remembered")}{" "}
           <Link href="/login" className="font-bold text-auth-ink hover:underline">
-            Log In
+            {t("au.logIn")}
           </Link>
         </p>
       </div>

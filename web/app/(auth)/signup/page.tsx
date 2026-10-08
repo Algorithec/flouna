@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,6 +18,7 @@ import {
 // entry screen shown read-only with an Edit link, then Create Password,
 // Re-Enter the Password, Continue, an OR rule and Continue with Google.
 export default function SignupPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,7 +69,7 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
     if (password !== confirm) {
-      setError("Passwords do not match");
+      setError(t("au.pwMismatch"));
       return;
     }
     setBusy(true);
@@ -86,7 +88,7 @@ export default function SignupPage() {
       // The account exists now; back into the signup form would only fail.
       router.replace("/verify");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign up failed");
+      setError(err instanceof Error ? err.message : t("au.signupFailed"));
     } finally {
       setBusy(false);
     }
@@ -96,7 +98,7 @@ export default function SignupPage() {
     <button
       type="button"
       onClick={toggle}
-      aria-label={shown ? "Hide password" : "Show password"}
+      aria-label={shown ? t("au.hidePw") : t("au.showPw")}
       className="rounded-full p-1 text-auth-muted transition-colors hover:text-auth-ink"
     >
       {shown ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -108,7 +110,7 @@ export default function SignupPage() {
       <div className="mx-auto w-full max-w-[420px]">
         <Link
           href="/login"
-          aria-label="Back"
+          aria-label={t("au.back")}
           className="flex size-10 items-center justify-center rounded-full bg-auth-well text-auth-ink transition-colors hover:bg-auth-well/80"
         >
           <ArrowLeft size={20} />
@@ -122,17 +124,16 @@ export default function SignupPage() {
             className="size-[92px] text-auth-ink/80 [@media(max-width:480px)]:size-[48px]"
           />
           <h1 className="mt-7 text-[26px] font-bold text-auth-ink [@media(max-width:480px)]:mt-2 [@media(max-width:480px)]:text-[20px]">
-            Log in or sign up
+            {t("au.loginOrSignup")}
           </h1>
           <p className="mt-3 max-w-[330px] text-[16px] leading-[1.5] text-auth-muted [@media(max-width:480px)]:mt-1 [@media(max-width:480px)]:text-[12px] [@media(max-width:480px)]:leading-[1.3]">
-            You&apos;ll get smarter responses and can book rides, order food and
-            more.
+            {t("au.smarter")}
           </p>
         </div>
 
         <form onSubmit={onSubmit} className="mt-9 flex flex-col gap-5 [@media(max-width:480px)]:mt-2 [@media(max-width:480px)]:gap-1">
           <AuthField
-            label="Full name"
+            label={t("au.fullName")}
             autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -140,7 +141,7 @@ export default function SignupPage() {
             required
           />
           <AuthField
-            label="Email"
+            label={t("au.email")}
             type="email"
             autoComplete="email"
             value={email}
@@ -148,7 +149,7 @@ export default function SignupPage() {
             required
           />
           <AuthField
-            label="Create Password"
+            label={t("au.createPw")}
             type={showPw ? "text" : "password"}
             autoComplete="new-password"
             trailing={eye(showPw, () => setShowPw((v) => !v))}
@@ -158,11 +159,11 @@ export default function SignupPage() {
             required
           />
           <AuthField
-            label="Re-Enter the Password"
+            label={t("au.reenterPw")}
             type={showConfirm ? "text" : "password"}
             autoComplete="new-password"
             trailing={eye(showConfirm, () => setShowConfirm((v) => !v))}
-            error={mismatch ? "Passwords do not match" : undefined}
+            error={mismatch ? t("au.pwMismatch") : undefined}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             minLength={8}
@@ -170,10 +171,10 @@ export default function SignupPage() {
           />
 
           <AuthField
-            label="Date of birth"
+            label={t("au.dob")}
             type="date"
             autoComplete="bday"
-            error={tooYoung ? "You must be 18 or over to use Flouna" : undefined}
+            error={tooYoung ? t("au.must18") : undefined}
             value={dob}
             onChange={(e) => setDob(e.target.value)}
             required
@@ -191,17 +192,17 @@ export default function SignupPage() {
               required
             />
             <span>
-              I am 18 or over and I agree to the{" "}
+              {t("au.agreePrefix")}{" "}
               <Link href="/legal/terms" className="font-medium text-auth-ink underline">
-                Terms of Service
+                {t("au.termsOfService")}
               </Link>
               ,{" "}
               <Link href="/legal/privacy" className="font-medium text-auth-ink underline">
-                Privacy Policy
+                {t("au.privacy")}
               </Link>{" "}
-              and{" "}
+              {t("au.and")}{" "}
               <Link href="/legal/acceptable-use" className="font-medium text-auth-ink underline">
-                Acceptable Use Policy
+                {t("au.aup")}
               </Link>
               .
             </span>
@@ -214,7 +215,7 @@ export default function SignupPage() {
           )}
 
           <AuthButton type="submit" disabled={busy || !ready}>
-            {busy ? "Creating account…" : "Continue"}
+            {busy ? t("au.creating") : t("au.continue")}
           </AuthButton>
         </form>
 
@@ -223,23 +224,23 @@ export default function SignupPage() {
         </div>
 
         <div className="mt-7 [@media(max-width:480px)]:mt-3">
-          <GoogleButton onError={setError} label="Continue with Google" />
+          <GoogleButton onError={setError} label={t("au.google")} />
         </div>
 
         <p className="mt-7 text-center text-[15px] text-auth-muted [@media(max-width:480px)]:mt-3">
-          Already have an account?{" "}
+          {t("au.haveAccount")}{" "}
           <Link href="/login" className="font-bold text-auth-ink hover:underline">
-            Log In
+            {t("au.logIn")}
           </Link>
         </p>
 
         <p className="mt-4 pb-8 text-center text-[15px] [@media(max-width:480px)]:mt-2 [@media(max-width:480px)]:pb-2">
           <Link href="/legal/terms" className="font-medium text-auth-ink hover:underline">
-            Terms of Use
+            {t("au.termsOfUse")}
           </Link>
           <span className="px-2 text-auth-muted">·</span>
           <Link href="/legal/privacy" className="font-medium text-auth-ink hover:underline">
-            Privacy Policy
+            {t("au.privacy")}
           </Link>
         </p>
       </div>
