@@ -36,8 +36,8 @@ export default function GroupRidePage({
   const load = useCallback(() => {
     api<GroupCart>(`/api/groups/${id}`)
       .then(setCart)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-  }, [id]);
+      .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed")));
+  }, [id, t]);
 
   // Poll so everyone sees riders joining (and the booked state) live.
   useEffect(() => {
@@ -83,7 +83,10 @@ export default function GroupRidePage({
       setOrderId(d.orderId);
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not book the ride");
+      setError(e instanceof Error ? e.message : t("rd.bookFailed"));
+      // A refused booking can mean the fare moved; the server has already
+      // updated it, so show the new total and shares now, not at the next poll.
+      load();
     } finally {
       setBusy(false);
     }
@@ -92,7 +95,7 @@ export default function GroupRidePage({
   if (!cart) {
     return (
       <div className="mx-auto max-w-xl px-4 py-10">
-        <p className="text-[14px] text-cocoa">{error || "Loading…"}</p>
+        <p className="text-[14px] text-cocoa">{error || t("dp.loading")}</p>
       </div>
     );
   }
@@ -153,14 +156,14 @@ export default function GroupRidePage({
             </span>
             <button
               onClick={copyCode}
-              aria-label="Copy code"
+              aria-label={t("rd.copyCode")}
               className="rounded-card border border-line p-3 text-cocoa hover:bg-beige/40"
             >
               {copied ? <Check size={17} className="text-success" /> : <Copy size={17} />}
             </button>
             <button
               onClick={shareCode}
-              aria-label="Share code"
+              aria-label={t("rd.shareCode")}
               className="rounded-card border border-line p-3 text-cocoa hover:bg-beige/40"
             >
               <Send size={17} />
@@ -189,7 +192,7 @@ export default function GroupRidePage({
           >
             <p className="text-[14px] text-ink">
               {m.name}
-              {m.isYou && <span className="ml-1.5 text-[12px] text-accent">(you)</span>}
+              {m.isYou && <span className="ml-1.5 text-[12px] text-accent">{t("rd.you")}</span>}
             </p>
             <p className="text-[13px] font-semibold text-cocoa">
               {rupees(m.subtotalPaise)}
@@ -231,7 +234,8 @@ export default function GroupRidePage({
             </>
           ) : (
             <p className="mt-1 text-[12px] text-cocoa">
-              Your share is {rupees(cart.equalSplitPaise)}, {t("grp.memberShareNote")}
+              {t("rd.yourShare").replace("{amount}", rupees(cart.equalSplitPaise))},{" "}
+              {t("grp.memberShareNote")}
             </p>
           )}
           {(orderId ?? cart.orderId) && cart.isHost && (
@@ -249,14 +253,14 @@ export default function GroupRidePage({
       {!booked && !shares && cart.isHost && (
         <div className="mt-5">
           <Input
-            label="Your UPI ID (to collect shares, optional)"
+            label={t("rd.upiLabel")}
             placeholder="name@bank"
             value={hostUpi}
             onChange={(e) => setHostUpi(e.target.value)}
           />
           <Button onClick={bookRide} disabled={busy} className="mt-3 w-full">
             {busy
-              ? "Booking…"
+              ? t("rides.booking")
               : `Book ${cart.ride?.displayName ?? "ride"} · ${rupees(cart.totalPaise)}`}
           </Button>
           <p className="mt-2 text-center text-[11px] text-cocoa/70">

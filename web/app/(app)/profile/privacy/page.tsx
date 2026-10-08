@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import Link from "next/link";
 import { useBackTo } from "@/lib/navHistory";
 import {
@@ -151,6 +152,7 @@ function Sheet({
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
+  useEscapeToClose(true, onClose);
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:items-center"
@@ -276,7 +278,7 @@ export default function PrivacySecurityPage() {
       setCode("");
       setTwoFactorStep("code");
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Could not send the code");
+      toast(err instanceof Error ? err.message : t("pp.priv.codeSendFailed"));
     } finally {
       setBusy(false);
     }
@@ -291,7 +293,7 @@ export default function PrivacySecurityPage() {
       setTwoFactorStep(null);
       toast(t("pp.priv.twoFactorOn"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "That code did not work");
+      setError(err instanceof Error ? err.message : t("pp.priv.codeFailed"));
     } finally {
       setBusy(false);
     }
@@ -307,7 +309,7 @@ export default function PrivacySecurityPage() {
       setPassword("");
       toast(t("pp.priv.twoFactorOff"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not turn that off");
+      setError(err instanceof Error ? err.message : t("pp.priv.offFailed"));
     } finally {
       setBusy(false);
     }
@@ -339,7 +341,7 @@ export default function PrivacySecurityPage() {
             subtitle={t("pp.priv.shareLocSub")}
           >
             <Toggle
-              label="Share my location"
+              label={t("pp.priv.shareLoc")}
               checked={prefs?.shareLocation ?? true}
               onChange={(v) => savePref("shareLocation", v)}
               disabled={!prefs}
@@ -358,7 +360,7 @@ export default function PrivacySecurityPage() {
             subtitle={t("pp.priv.activitySub")}
           >
             <Toggle
-              label="Activity status"
+              label={t("pp.priv.activity")}
               checked={prefs?.activityStatus ?? true}
               onChange={(v) => savePref("activityStatus", v)}
               disabled={!prefs}
@@ -389,7 +391,7 @@ export default function PrivacySecurityPage() {
             subtitle={t("pp.priv.biometricSub")}
           >
             <Toggle
-              label="Biometric lock"
+              label={t("pp.priv.biometric")}
               checked={prefs?.biometricLock ?? false}
               onChange={toggleBiometric}
               disabled={!prefs || busy}
@@ -466,8 +468,7 @@ export default function PrivacySecurityPage() {
       {twoFactorStep === "code" && (
         <Sheet title={t("pp.priv.twoFactor")} onClose={() => setTwoFactorStep(null)}>
           <p className="mt-1 text-[13px] text-acct-muted">
-            We emailed a 6-digit code to {user?.email}. Enter it to turn on
-            two-factor sign-in.
+            {t("pp.priv.codeSentTo").replace("{email}", user?.email ?? "")}
           </p>
           <input
             autoFocus
@@ -488,7 +489,7 @@ export default function PrivacySecurityPage() {
             onClick={confirmTwoFactor}
             className="mt-4 h-[52px] w-full rounded-pill bg-acct-accent text-[15px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "Checking…" : "Turn on"}
+            {busy ? t("pp.priv.checking") : t("pp.priv.turnOn")}
           </button>
         </Sheet>
       )}
@@ -496,7 +497,7 @@ export default function PrivacySecurityPage() {
       {twoFactorStep === "password" && (
         <Sheet title={t("pp.priv.turnOff2fa")} onClose={() => setTwoFactorStep(null)}>
           <p className="mt-1 text-[13px] text-acct-muted">
-            Enter your password to remove the extra sign-in step.
+            {t("pp.priv.passwordToRemove")}
           </p>
           <input
             autoFocus
@@ -516,7 +517,7 @@ export default function PrivacySecurityPage() {
             onClick={disableTwoFactor}
             className="mt-4 h-[52px] w-full rounded-pill bg-danger text-[15px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "Turning off…" : "Turn off"}
+            {busy ? t("pp.priv.turningOff") : t("pp.priv.turnOff")}
           </button>
         </Sheet>
       )}

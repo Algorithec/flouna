@@ -78,6 +78,18 @@ let browser = null;
 
   browser = await chromium.launch({ channel: "chrome" });
   const context = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  // SMOKE_OFFLINE=1 blocks every host but the app's own, as a venue network
+  // that lets nothing out would. Pair it with an API run the same way.
+  const blocked = [];
+  if (process.env.SMOKE_OFFLINE) {
+    const own = new Set([new URL(WEB).host, new URL(API).host]);
+    await context.route("**/*", (route) => {
+      const url = new URL(route.request().url());
+      if (own.has(url.host) || url.protocol === "data:" || url.protocol === "blob:") return route.continue();
+      blocked.push(url.host);
+      return route.abort("internetdisconnected");
+    });
+  }
   const page = await context.newPage();
 
   // Anything that crashes the page or 500s is a failure wherever it happens.
@@ -142,16 +154,74 @@ let browser = null;
     await ask(page, "I want biryani under 300");
     const text = await page.evaluate(() => document.body.innerText);
     check("food recommendation returns a pick", /Available Providers/i.test(text));
-    check("shows which platforms were compared", /Compared across/i.test(text));
+    // The evidence row under the answer. Its wording changed with the results
+    // page (it now counts providers instead of naming them), so the check is
+    // on the claim being made rather than on one sentence: keying a smoke
+    // check to exact copy is what made this one fail on a redesign that broke
+    // nothing.
+    check(
+      "shows how widely it looked",
+      /(Checked|Compared) \d+\+? providers/i.test(text) || /Compared across/i.test(text),
+    );
     check("shows the reasoning", /Why this is the best choice/i.test(text));
     check("shows the insights panel", /FLOUNA INSIGHTS/i.test(text));
     check("shows a timestamp", /\d{1,2}:\d{2}\s?(am|pm)/i.test(text));
     check("offers a way to disagree", /I disagree with this pick/i.test(text));
   });
 
+  // --- Cart: the total on the screen is the amount charged ---
+  group("cart");
+  await guarded("the cart total is what the order charges", async () => {
+    // The screen used to add the total up itself from per-item prices, which
+    // counted one delivery fee per line and took each offer off once per unit.
+    // At quantity two it showed a number nobody was going to charge, so the
+    // check is the comparison: what the cart promises against what the order
+    // is created for. Two of one dish, because one hid the bug.
+    await page.goto(`${WEB}/food/order/dum-biryani?platform=ondc`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Add to cart" }).click();
+    await page.waitForURL(/\/cart/, { timeout: 20000 });
+    await page.getByRole("button", { name: "Increase quantity" }).first().click();
+    await page.waitForTimeout(2500);
+
+    const checkout = page.getByRole("button", { name: /Proceed to checkout/ }).first();
+    const label = (await checkout.textContent()) || "";
+    const promised = Number((label.match(/₹\s?([\d,]+)/) || [])[1]?.replace(/,/g, ""));
+    check("checkout states a total", Number.isFinite(promised), label.trim());
+
+    await checkout.click();
+    await page.waitForURL(/\/pay\//, { timeout: 30000 });
+    await page.waitForTimeout(2500);
+    // The bill line, not a button: "Pay with any UPI app" also begins with Pay.
+    const payText = await page.evaluate(() => document.body.innerText);
+    const charged = Number(
+      (payText.match(/Total amount\s*₹\s?([\d,]+)/) || [])[1]?.replace(/,/g, ""),
+    );
+    check("payment states a total", Number.isFinite(charged), `₹${charged}`);
+    check(
+      "the cart total equals the amount charged",
+      promised === charged,
+      `cart ₹${promised} vs pay ₹${charged}`,
+    );
+  });
+
   // --- Ride: booked inside the conversation ---
   group("ride");
   await guarded("ride books in the thread", async () => {
+    // What the booking actually sends. The decision id is the only link
+    // between the fares the rider was shown and the one they took, and it
+    // lives entirely in the client: the server cannot tell a booking that
+    // omitted it from a booking made by someone browsing. Read off the wire
+    // because that is the only place the answer is.
+    const orderPosts = [];
+    page.on("request", (r) => {
+      if (r.method() === "POST" && r.url().endsWith("/api/orders")) {
+        try {
+          orderPosts.push(JSON.parse(r.postData() || "{}"));
+        } catch {
+          orderPosts.push({});
+        }
+      }
+    });
     await page.goto(`${WEB}/home`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
     await ask(page, "book a cab to Hitech City");
@@ -190,8 +260,62 @@ let browser = null;
         await page.waitForTimeout(5000);
         check("booking stays in the conversation", page.url().includes("/home"));
         check("payment appears in the thread", (await page.locator('button:has-text("Pay ")').count()) > 0);
+        const ride = orderPosts.find((b) => b.domain === "ride");
+        check("the booking was sent", !!ride);
+        check(
+          "the booking carries the ranking it was chosen from",
+          typeof ride?.decisionId === "string" && ride.decisionId.length > 0,
+          ride ? `decisionId=${ride.decisionId}` : "no ride order posted",
+        );
       }
     }
+  });
+
+  await guarded("an unpaid ride's chat offers payment", async () => {
+    // The booking above leaves a ride waiting for payment. Its chat used to
+    // say "Finding your captain" over a message box the server refused, and
+    // asked for the driver's messages and the live position of a ride that
+    // was never booked, every fifteen seconds.
+    const list = await page.request.get(`${WEB}/api/orders`);
+    const orders = (await list.json()).orders || [];
+    const unpaid = orders.find((o) => o.domain === "ride" && o.status === "pending_payment");
+    check("an unpaid ride exists to open", !!unpaid);
+    if (!unpaid) return;
+    const refused = [];
+    const onResponse = (r) => {
+      if (r.url().includes(`/api/orders/${unpaid.id}/`) && r.status() >= 400) {
+        refused.push(`${r.status()} ${r.url().split("/api")[1]}`);
+      }
+    };
+    page.on("response", onResponse);
+    await page.goto(`${WEB}/orders/${unpaid.id}/chat`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(800);
+    page.off("response", onResponse);
+    const text = await page.evaluate(() => document.body.innerText);
+    check("it asks for payment instead of a captain", /Pay to book/.test(text) && !/Finding your captain/.test(text));
+    check("it makes no refused requests", refused.length === 0, refused.join(" "));
+    check("it offers no message box", (await page.locator('input[placeholder="Type a message…"]').count()) === 0);
+  });
+
+  group("group order");
+  await guarded("a group order page loads cleanly", async () => {
+    // A member with many old devices owed a chain to more than one upload
+    // may carry; the upload was refused outright on every visit.
+    const created = await page.request.post(`${WEB}/api/groups`, { data: { platform: "ondc" } });
+    const cart = await created.json();
+    check("a group order can be started", created.ok(), `${created.status()}`);
+    if (!created.ok()) return;
+    const refused = [];
+    const onResponse = (r) => {
+      if (r.url().includes("/api/") && r.status() >= 400 && r.status() !== 401) {
+        refused.push(`${r.status()} ${r.url().split("/api")[1]}`);
+      }
+    };
+    page.on("response", onResponse);
+    await page.goto(`${WEB}/food/group/${cart.id}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1500);
+    page.off("response", onResponse);
+    check("the group page makes no refused requests", refused.length === 0, refused.join(" "));
   });
 
   // --- The rights the privacy policy grants ---
@@ -255,6 +379,13 @@ let browser = null;
 
   group("stability");
   check("no crashes or 5xx anywhere", faults.length === 0, faults.slice(0, 3).join(" | "));
+  if (process.env.SMOKE_OFFLINE) {
+    check(
+      "ran with every outside host blocked",
+      true,
+      `${new Set(blocked).size} hosts refused: ${[...new Set(blocked)].slice(0, 4).join(" ")}`,
+    );
+  }
 
   // --- Report ---
   let lastGroup = "";

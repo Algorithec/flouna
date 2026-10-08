@@ -328,3 +328,97 @@ describe("rewards wallet at checkout", () => {
     expect(await walletBalance(myId)).toBe(3000);
   });
 });
+
+// Two spends of the same rupees.
+//
+// Production is Postgres at read committed. Two checkouts for different orders
+// each summed the same balance, neither saw the other's uncommitted debit, and
+// both committed: against a real Postgres, 39 of 40 such pairs spent ₹100
+// twice and left the wallet at minus ₹100. SQLite, which this suite runs on,
+// only ever admits one writer, so it cannot show that race; the Postgres run
+// is the proof, and these pin the parts that prevent it.
+describe("the wallet cannot be spent twice", () => {
+  it("asks the database for a serializable spend", async () => {
+    // The whole fix is this level plus the retry. Read committed is what let
+    // both debits through, so the level is asserted rather than trusted.
+    const { vi } = await import("vitest");
+    const { spendFromWallet } = await import("../src/modules/users/wallet.service.js");
+    const { email } = await authedAgent();
+    const id = await userId(email);
+    await creditCashback({ userId: id, orderId: "earn-level", marginPaise: 10_000 });
+
+    const spy = vi.spyOn(prisma, "$transaction");
+    try {
+      await spendFromWallet({ userId: id, orderId: "order-level", maxPaise: 1000 });
+      const opts = spy.mock.calls.at(-1)?.[1] as { isolationLevel?: string } | undefined;
+      expect(opts?.isolationLevel).toBe("Serializable");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("retries a spend the database refused, instead of failing the checkout", async () => {
+    // Serializable works by aborting one of two conflicting transactions. That
+    // abort (P2034) is the mechanism doing its job, and the retry is what then
+    // takes only what is left.
+    const { vi } = await import("vitest");
+    const { spendFromWallet } = await import("../src/modules/users/wallet.service.js");
+    const { email } = await authedAgent();
+    const id = await userId(email);
+    await creditCashback({ userId: id, orderId: "earn-retry", marginPaise: 10_000 }); // 3000
+
+    const real = prisma.$transaction.bind(prisma);
+    let calls = 0;
+    const spy = vi.spyOn(prisma, "$transaction").mockImplementation(((fn: unknown, opts: unknown) => {
+      calls++;
+      if (calls === 1) {
+        return Promise.reject(Object.assign(new Error("write conflict"), { code: "P2034" }));
+      }
+      return (real as (a: unknown, b: unknown) => Promise<unknown>)(fn, opts);
+    }) as typeof prisma.$transaction);
+    try {
+      const took = await spendFromWallet({ userId: id, orderId: "order-retry", maxPaise: 5000 });
+      expect(took).toBe(3000);
+      expect(calls).toBe(2);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await walletBalance(id)).toBe(0);
+  });
+
+  it("returns the first debit when the same order spends again", async () => {
+    // A retried checkout, or one that crashed after debiting and before
+    // writing the amount onto the order. It used to hit the unique index and
+    // fail with a 500 every time after, so that order could never be paid.
+    const { spendFromWallet } = await import("../src/modules/users/wallet.service.js");
+    const { email } = await authedAgent();
+    const id = await userId(email);
+    await creditCashback({ userId: id, orderId: "earn-again", marginPaise: 10_000 }); // 3000
+
+    const first = await spendFromWallet({ userId: id, orderId: "order-again", maxPaise: 2000 });
+    const second = await spendFromWallet({ userId: id, orderId: "order-again", maxPaise: 2000 });
+
+    expect(first).toBe(2000);
+    expect(second).toBe(2000);
+    expect(await walletBalance(id)).toBe(1000);
+    const debits = await prisma.walletEntry.count({
+      where: { userId: id, orderId: "order-again", reason: "spend" },
+    });
+    expect(debits).toBe(1);
+  });
+
+  it("never lets spends across orders exceed the balance", async () => {
+    const { spendFromWallet } = await import("../src/modules/users/wallet.service.js");
+    const { email } = await authedAgent();
+    const id = await userId(email);
+    await creditCashback({ userId: id, orderId: "earn-many", marginPaise: 10_000 }); // 3000
+
+    const taken = await Promise.all(
+      ["o1", "o2", "o3", "o4"].map((o) =>
+        spendFromWallet({ userId: id, orderId: `many-${o}`, maxPaise: 3000 }),
+      ),
+    );
+    expect(taken.reduce((s, t) => s + t, 0)).toBe(3000);
+    expect(await walletBalance(id)).toBe(0);
+  });
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import {
   createContext,
   useCallback,
@@ -68,6 +69,7 @@ const TONE = {
 } as const;
 
 function ToastRow({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+  const { t } = useI18n();
   const Icon = ICONS[toast.kind];
   useEffect(() => {
     const t = setTimeout(onDismiss, AUTO_DISMISS_MS);
@@ -88,7 +90,7 @@ function ToastRow({ toast, onDismiss }: { toast: Toast; onDismiss: () => void })
       </span>
       <button
         onClick={onDismiss}
-        aria-label="Dismiss"
+        aria-label={t("common.dismiss")}
         className="shrink-0 rounded-full p-0.5 text-cocoa/50 hover:text-cocoa"
       >
         <X size={14} />

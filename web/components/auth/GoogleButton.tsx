@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -37,6 +38,7 @@ export function GoogleButton({
    *  page's other buttons use. */
   variant?: "auth" | "surface";
 }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const router = useRouter();
@@ -62,7 +64,7 @@ export function GoogleButton({
             setUser(d.user);
             router.replace("/home");
           } catch (e) {
-            onError(e instanceof Error ? e.message : "Google sign-in failed");
+            onError(e instanceof Error ? e.message : t("gb.failed"));
           }
         },
       });
@@ -93,12 +95,12 @@ export function GoogleButton({
     script.async = true;
     script.onload = init;
     document.head.appendChild(script);
-  }, [router, setUser, onError]);
+  }, [router, setUser, onError, t]);
 
   if (!GOOGLE_CLIENT_ID) {
     const handleDevLogin = async () => {
       if (process.env.NODE_ENV === "production") {
-        onError("Google sign-in is not configured yet");
+        onError(t("gb.notConfigured"));
         return;
       }
       try {
@@ -109,7 +111,7 @@ export function GoogleButton({
         setUser(d.user);
         router.replace("/home");
       } catch (e) {
-        onError(e instanceof Error ? e.message : "Google sign-in failed");
+        onError(e instanceof Error ? e.message : t("gb.failed"));
       }
     };
 

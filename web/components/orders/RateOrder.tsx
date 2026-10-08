@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { api } from "@/lib/api";
@@ -19,6 +20,7 @@ export function RateOrder({
   domain: string;
   existingStars?: number | null;
 }) {
+  const { t } = useI18n();
   const [stars, setStars] = useState(existingStars ?? 0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
@@ -36,9 +38,9 @@ export function RateOrder({
         json: { stars: value, ...(comment.trim() ? { comment: comment.trim() } : {}) },
       });
       setSaved(true);
-      toast("Thanks for rating!");
+      toast(t("ro.thanks"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save your rating");
+      setError(e instanceof Error ? e.message : t("ro.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -51,10 +53,10 @@ export function RateOrder({
       <Card className="mt-4 border-success/40 bg-success/5">
         <p className="flex items-center gap-2 text-[14px] font-bold text-ink">
           <Star size={15} className="fill-accent text-accent" />
-          Thanks for rating
+          {t("ro.thanksTitle")}
         </p>
         <p className="mt-1 text-[12px] text-cocoa">
-          Your {stars}-star rating helps Flouna pick better next time.
+          {t("ro.helps").replace("{n}", String(stars))}
         </p>
       </Card>
     );
@@ -63,10 +65,10 @@ export function RateOrder({
   return (
     <Card className="mt-4">
       <p className="text-[14px] font-bold text-ink">
-        {isFood ? "How was your food?" : "How was your trip?"}
+        {isFood ? t("ro.howFood") : t("ro.howTrip")}
       </p>
       <p className="mt-0.5 text-[12px] text-cocoa">
-        Your rating improves everyone&apos;s recommendations.
+        {t("ro.improves")}
       </p>
 
       <div className="mt-3 flex items-center gap-1.5">
@@ -98,7 +100,7 @@ export function RateOrder({
           <input
             value={comment}
             onChange={(e) => setComment(e.target.value.slice(0, 300))}
-            placeholder="Add a note (optional)"
+            placeholder={t("ro.note")}
             className="mt-3 w-full rounded-card border border-line bg-card px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-cocoa/50 focus:border-accent"
           />
           <button
@@ -106,7 +108,7 @@ export function RateOrder({
             disabled={busy}
             className="mt-3 h-11 w-full rounded-pill bg-accent text-[14px] font-semibold text-white transition-colors hover:bg-[#d4570f] disabled:opacity-50"
           >
-            {busy ? "Saving…" : "Submit rating"}
+            {busy ? t("ro.saving") : t("pp.chat.submitRating")}
           </button>
         </>
       )}

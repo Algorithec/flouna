@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useState } from "react";
 import { Share2, Check, Sparkles, Download, Loader2 } from "lucide-react";
 import { rupees } from "@/lib/money";
@@ -21,6 +22,7 @@ export function DecisionReceipt({
   domain: "food" | "ride";
   title: string;
 }) {
+  const { t } = useI18n();
   const [state, setState] = useState<"idle" | "working" | "done">("idle");
   // Feature-detect once: native file-share vs. download fallback decides the icon.
   const [canNativeShare] = useState(
@@ -86,21 +88,25 @@ export function DecisionReceipt({
   return (
     <div className="rounded-card border border-accent/40 bg-gradient-to-br from-accent-soft/80 to-cream p-4">
       <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-accent">
-        <Sparkles size={13} /> Decision receipt
+        <Sparkles size={13} /> {t("dr.title")}
       </p>
       <p className="mt-2 text-[15px] font-bold leading-snug text-ink">
-        Flouna compared {comparedOptions} options across {comparedPlatforms}{" "}
-        apps
-        {savedPaise > 0 ? (
-          <>
-            {" "}
-            and saved you{" "}
-            <span className="text-accent">{rupees(savedPaise)}</span>
-          </>
-        ) : (
-          " and picked the best one"
-        )}
-        .
+        {(() => {
+          const line = t(savedPaise > 0 ? "dr.comparedSaved" : "dr.comparedPicked")
+            .replace("{n}", String(comparedOptions))
+            .replace("{apps}", String(comparedPlatforms));
+          // The amount keeps its colour wherever the language puts it.
+          const [before, after] = line.split("{amount}");
+          return after === undefined ? (
+            line
+          ) : (
+            <>
+              {before}
+              <span className="text-accent">{rupees(savedPaise)}</span>
+              {after}
+            </>
+          );
+        })()}
       </p>
       <button
         onClick={share}
@@ -117,10 +123,10 @@ export function DecisionReceipt({
           <Download size={13} />
         )}
         {state === "working"
-          ? "Creating…"
+          ? t("dr.creating")
           : state === "done"
-            ? "Saved!"
-            : "Share my savings"}
+            ? t("dr.saved")
+            : t("dr.share")}
       </button>
     </div>
   );

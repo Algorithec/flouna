@@ -175,10 +175,18 @@ export async function listOrders(opts: {
 export async function flagRefund(orderId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { id: true, userId: true, title: true, payment: { select: { id: true, status: true } } },
+    select: {
+      id: true,
+      userId: true,
+      title: true,
+      payment: { select: { id: true, status: true, amount: true } },
+    },
   });
   if (!order) return { ok: false as const, reason: "not_found" as const };
-  if (!order.payment || order.payment.status !== "success") {
+  // A zero rupee payment took nothing through the gateway (the wallet paid),
+  // so there is nothing for Cashfree to refund; a flag would sit in the queue
+  // failing for ever.
+  if (!order.payment || order.payment.status !== "success" || order.payment.amount <= 0) {
     return { ok: false as const, reason: "not_refundable" as const };
   }
   // "refund_pending" is a review state distinct from the gateway's "refunded".

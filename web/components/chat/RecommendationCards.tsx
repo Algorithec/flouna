@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/components/i18n/I18nContext";
 import Link from "next/link";
 import {
   Star,
@@ -91,6 +92,7 @@ function SectionHeader({
   sub: string;
   count: number;
 }) {
+  const { t } = useI18n();
   return (
     <div className="hidden items-start justify-between gap-4 lg:flex">
       <div className="min-w-0">
@@ -100,8 +102,8 @@ function SectionHeader({
         <p className="mt-0.5 text-[13px] text-cocoa">{sub}</p>
       </div>
       <span className="flex shrink-0 items-center gap-1.5 rounded-pill border border-accent/40 bg-accent-soft px-3 py-1 text-[12px] font-semibold text-accent">
-        <span className="size-1.5 rounded-full bg-accent" /> {count} Option
-        {count === 1 ? "" : "s"} Found
+        <span className="size-1.5 rounded-full bg-accent" />{" "}
+        {count === 1 ? t("rc.oneOptionFound") : t("rc.optionsFound").replace("{n}", String(count))}
       </span>
     </div>
   );
@@ -109,10 +111,11 @@ function SectionHeader({
 
 // Tinted insight rail card (Figma desktop right rail).
 function InsightCard({ text }: { text: string }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-card border border-accent/30 bg-accent-soft/40 p-4">
       <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent">
-        <Zap size={12} /> FLOUNA INSIGHTS
+        <Zap size={12} /> <span className="uppercase">{t("rc.insights")}</span>
       </p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-ink">{text}</p>
     </div>
@@ -127,6 +130,7 @@ export function FoodRecommendation({
 }: {
   rec: Extract<Recommendation, { type: "food" }>;
 }) {
+  const { t } = useI18n();
   const insightProps = {
     quote: rec.best.reviewSummary,
     hacks: [
@@ -139,8 +143,8 @@ export function FoodRecommendation({
     <FadeIn y={8} className="flex w-full flex-col gap-2.5">
       <SectionHeader
         icon={Utensils}
-        label="Food Order"
-        sub="Best dining experience based on preparation quality, delivery time & consistency"
+        label={t("rc.foodOrder")}
+        sub={t("rc.foodOrderSub")}
         count={1 + rec.alternatives.length}
       />
 
@@ -170,8 +174,7 @@ export function FoodRecommendation({
         <p className="flex items-start gap-2 rounded-2xl border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning">
           <Info size={15} className="mt-0.5 shrink-0" />
           <span>
-            We don&apos;t have that on Flouna yet, here&apos;s the closest we
-            can do right now.
+            {t("rc.notOnFlouna")}
           </span>
         </p>
       )}
@@ -180,9 +183,7 @@ export function FoodRecommendation({
         <p className="flex items-start gap-2 rounded-2xl border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning">
           <Wallet size={15} className="mt-0.5 shrink-0" />
           <span>
-            This is {rupees(rec.overBudgetPaise)} above your stated budget.
-            It&apos;s the closest option we found &mdash; prices shown are final
-            after all offers.
+            {t("rc.overBudget").replace("{amount}", rupees(rec.overBudgetPaise))}
           </span>
         </p>
       )}
@@ -200,17 +201,19 @@ export function FoodRecommendation({
 
       {/* Figma: section header with the count of options the engine compared */}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[15px] font-bold text-ink">Available Providers</p>
+        <p className="text-[15px] font-bold text-ink">{t("rc.availableProviders")}</p>
         <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent">
           <Sparkles size={11} />
-          {rec.alternatives.length + 1} option{rec.alternatives.length === 0 ? "" : "s"} found
+          {rec.alternatives.length === 0
+            ? t("rc.oneOptionFound")
+            : t("rc.optionsFound").replace("{n}", String(rec.alternatives.length + 1))}
         </span>
       </div>
 
       {/* insightProps extracted once so both the desktop rail and the mobile
           footer use the same values and cannot drift apart. */}
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-4">
-        <FoodHeroCard q={rec.best} />
+        <FoodHeroCard q={rec.best} decisionId={rec.decisionId} />
 
         {/* Desktop rail: InsightCard + FlounaInsights beside the hero.
             Hidden on mobile — insights render after alternatives below. */}
@@ -227,7 +230,7 @@ export function FoodRecommendation({
               the thing the engine just did. */}
           <div className="flex flex-col gap-2.5 lg:hidden">
             <p className="mt-1 text-[15px] font-bold text-ink">
-              Compare other providers
+              {t("rc.compareOthers")}
             </p>
             {rec.alternatives.map((q) => (
               <FoodAltRow key={`${q.dishId}-${q.platform}`} q={q} />
@@ -238,7 +241,7 @@ export function FoodRecommendation({
             href="/food/group"
             className="tap-target mt-1 flex w-full items-center justify-center rounded-2xl border border-accent/50 bg-accent-soft/30 px-4 py-3 text-[14px] font-bold text-accent transition-colors hover:bg-accent-soft/60 lg:hidden"
           >
-            Group ordering
+            {t("rc.groupOrdering")}
           </Link>
 
           <div className="lg:hidden">
@@ -247,11 +250,15 @@ export function FoodRecommendation({
 
           <div className="hidden lg:block">
             <p className="mt-2 text-[15px] font-bold text-ink">
-              Compare other providers
+              {t("rc.compareOthers")}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-3 xl:grid-cols-3">
               {rec.alternatives.map((q) => (
-                <FoodAltCard key={`${q.dishId}-${q.platform}`} q={q} />
+                <FoodAltCard
+                  key={`${q.dishId}-${q.platform}`}
+                  q={q}
+                  decisionId={rec.decisionId}
+                />
               ))}
             </div>
           </div>
@@ -266,6 +273,7 @@ export function FoodRecommendation({
 // the platform it came from, price against its pre-offer total, and a single
 // tap to add it without leaving the conversation.
 function FoodAltRow({ q }: { q: FoodQuote }) {
+  const { t } = useI18n();
   const { add } = useCart();
   const [added, setAdded] = useState(false);
   const originalPaise = q.basePaise + q.deliveryFeePaise;
@@ -280,7 +288,10 @@ function FoodAltRow({ q }: { q: FoodQuote }) {
           </span>
           <p className="mt-1 truncate text-[14px] font-semibold text-ink">{q.name}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2.5">
+        {/* Price above the button rather than beside it. Side by side they
+            left the dish name a single letter at phone width once the button
+            was in Telugu or Tamil, whose words run longer than "+ Add". */}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
           <p className="flex items-baseline gap-1.5">
             <span className="text-[20px] font-bold text-ink">{rupees(q.effectivePaise)}</span>
             {originalPaise > q.effectivePaise && (
@@ -307,7 +318,7 @@ function FoodAltRow({ q }: { q: FoodQuote }) {
             }}
             className="rounded-lg border border-ink/80 px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:bg-beige/50"
           >
-            {added ? "Added" : "+ Add"}
+            {added ? t("rc.added") : t("rc.add")}
           </button>
         </div>
       </div>
@@ -316,9 +327,12 @@ function FoodAltRow({ q }: { q: FoodQuote }) {
 }
 
 // Compact alternative card for the desktop grid.
-function FoodAltCard({ q }: { q: FoodQuote }) {
+function FoodAltCard({ q, decisionId }: { q: FoodQuote; decisionId?: string }) {
   return (
-    <Link href={`/food/order/${q.dishId}?platform=${q.platform}`} className="block">
+    <Link
+      href={`/food/order/${q.dishId}?platform=${q.platform}${decisionId ? `&decision=${decisionId}` : ""}`}
+      className="block"
+    >
       <Card className="h-full py-3.5 transition-all hover:-translate-y-0.5 hover:shadow-card">
         <div className="flex items-center gap-3">
           <DishArt name={q.name} image={q.image} size={44} />
@@ -363,6 +377,7 @@ function RideQuoteRow({
   drop?: string;
   scheduledAt?: string | null;
 }) {
+  const { t } = useI18n();
   // Carry the destination + chosen vehicle (and the scheduled time, if any)
   // so the rides screen opens ready — pickup comes from live GPS, drop is
   // geocoded, no re-asking.
@@ -389,7 +404,7 @@ function RideQuoteRow({
           </p>
           <p className="mt-0.5 flex items-center gap-2 text-[12px] text-cocoa">
             <span className="flex items-center gap-0.5">
-              <Clock size={12} /> {q.pickupEtaMinutes} min away
+              <Clock size={12} /> {q.pickupEtaMinutes} {t("track.minAway")}
             </span>
             <span className="flex items-center gap-0.5">
               <Star size={12} className="fill-accent text-accent" /> {q.driverRating}
@@ -405,7 +420,7 @@ function RideQuoteRow({
             href={href}
             className="mt-1.5 inline-block rounded-pill bg-accent px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#d4570f] transition-colors"
           >
-            Select
+            {t("rc.select")}
           </Link>
         </div>
       </div>
@@ -430,6 +445,7 @@ export function RideRecommendation({
    */
   onBook?: (orderId: string) => void;
 }) {
+  const { t } = useI18n();
   // Vehicle types present, in a stable display order.
   const order = ["bike", "auto", "cab"];
   const vehicles = order.filter((v) => rec.quotes.some((q) => q.vehicle === v));
@@ -444,8 +460,8 @@ export function RideRecommendation({
     <FadeIn y={8} className="flex w-full flex-col gap-2.5">
       <SectionHeader
         icon={Car}
-        label="Ride Booking"
-        sub="Shortest pickup time with fair price & reliable availability"
+        label={t("rc.rideBooking")}
+        sub={t("rc.rideBookingSub")}
         count={shown.length}
       />
 
@@ -457,7 +473,7 @@ export function RideRecommendation({
 
       {rec.scheduledAt && (
         <p className="flex items-center gap-1.5 self-start rounded-pill bg-accent-soft px-3 py-1 text-[12px] font-semibold text-accent">
-          <Clock size={12} /> Scheduled for{" "}
+          <Clock size={12} /> {t("rc.scheduledFor")}{" "}
           {new Date(rec.scheduledAt).toLocaleString("en-IN", {
             hour: "numeric",
             minute: "2-digit",
@@ -497,6 +513,11 @@ export function RideRecommendation({
               scheduledAt={rec.scheduledAt}
               onBooked={onBook}
               showAny={rec.vehicle === "any" || !rec.vehicle}
+              decisionId={rec.decisionId}
+              // The limits the rider stated. Chat could not apply them to a
+              // placeholder trip; this card prices the real one.
+              fareLimitPaise={rec.fareLimitPaise}
+              pickupLimitMinutes={rec.pickupLimitMinutes}
             />
           ) : (
             shown.map((q) => (
@@ -542,11 +563,11 @@ export function ComboRecommendation({
 }: {
   rec: Extract<Recommendation, { type: "combo" }>;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex w-full flex-col gap-4">
       <p className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
-        <Sparkles size={14} className="text-accent" /> Your evening, sorted
-        food + ride in one go
+        <Sparkles size={14} className="text-accent" /> {t("rc.comboSorted")}
       </p>
       {rec.food && (
         <div className="rounded-card border border-line/70 p-3">
@@ -561,6 +582,7 @@ export function ComboRecommendation({
 }
 
 function ProductRow({ q, highlight }: { q: ProductQuote; highlight?: boolean }) {
+  const { t } = useI18n();
   return (
     <Card
       className={
@@ -598,7 +620,7 @@ function ProductRow({ q, highlight }: { q: ProductQuote; highlight?: boolean }) 
             href={`/shop/product/${q.productId}?platform=${q.platform}`}
             className="mt-2 inline-block rounded-pill bg-accent px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#d4570f] transition-colors"
           >
-            View deal
+            {t("rc.viewDeal")}
           </Link>
         </div>
       </div>
@@ -611,6 +633,7 @@ export function ShopRecommendation({
 }: {
   rec: Extract<Recommendation, { type: "shop" }>;
 }) {
+  const { t } = useI18n();
   return (
     <FadeIn y={8} className="flex w-full flex-col gap-2.5">
       <PickBadge reason={rec.pickReason} />
@@ -625,7 +648,7 @@ export function ShopRecommendation({
       {rec.alternatives.length > 0 && (
         <>
           <p className="mt-1 text-[12px] font-semibold text-cocoa">
-            Other places to buy
+            {t("rc.otherPlaces")}
           </p>
           {rec.alternatives.map((q) => (
             <ProductRow key={`${q.productId}-${q.platform}`} q={q} />

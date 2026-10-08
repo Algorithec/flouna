@@ -47,12 +47,12 @@ export default function ProductPage({
         setQuotes(d.quotes);
         setPlatform(d.quotes[0]?.platform ?? "");
       })
-      .catch((e) => active && setError(e instanceof Error ? e.message : "Failed to load"))
+      .catch((e) => active && setError(e instanceof Error ? e.message : t("od.loadFailed")))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [productId]);
+  }, [productId, t]);
 
   const selected = quotes.find((q) => q.platform === platform);
 
@@ -67,7 +67,7 @@ export default function ProductPage({
       });
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not place order");
+      setError(e instanceof Error ? e.message : t("dp.placeFailed"));
       setBusy(false);
     }
   }
@@ -76,7 +76,7 @@ export default function ProductPage({
   if (error)
     return (
       <ErrorView
-        title="Couldn't load this product"
+        title={t("pr.loadFailed")}
         message={error}
         backHref="/shop"
         backLabel="Back to Shop"
@@ -86,7 +86,7 @@ export default function ProductPage({
     return (
       <ErrorView
         notFound
-        title="Product not found"
+        title={t("pr.notFound")}
         message="This product may no longer be available."
         backHref="/shop"
         backLabel="Back to Shop"
@@ -102,7 +102,7 @@ export default function ProductPage({
         onClick={back}
         className="tap-target flex items-center gap-1 text-[13px] font-medium text-cocoa hover:text-ink"
       >
-        <ChevronLeft size={16} /> Shop
+        <ChevronLeft size={16} /> {t("pr.shop")}
       </button>
 
       <h1 className="mt-3 text-[20px] font-bold text-ink">{selected.name}</h1>
@@ -162,7 +162,7 @@ export default function ProductPage({
           ))}
         </div>
         <p className="mt-2 text-[11px] text-cocoa">
-          Best applicable offer is already reflected in the price above.
+          {t("pr.offerReflected")}
         </p>
       </Card>
 
@@ -176,10 +176,10 @@ export default function ProductPage({
 
       {/* Bought in-app — the order is routed to the seller via ONDC. */}
       <Button className="mt-5 w-full" onClick={placeOrder} disabled={busy}>
-        {busy ? "Placing order…" : `${t("shop.buyNow")} · ${rupees(selected.effectivePaise)}`}
+        {busy ? t("pr.placing") : `${t("shop.buyNow")} · ${rupees(selected.effectivePaise)}`}
       </Button>
       <p className="mt-3 flex items-center justify-center gap-1 text-center text-[11px] text-cocoa/70">
-        <ShieldCheck size={12} /> Order &amp; pay in-app · best offer pre-applied
+        <ShieldCheck size={12} /> {t("pr.orderInApp")}
       </p>
     </div>
   );

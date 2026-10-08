@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { Send, Lock, ShieldAlert, Info, ShieldCheck, Smartphone, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { GroupHeader } from "@/components/food/GroupHeader";
@@ -99,6 +100,7 @@ export default function GroupChatPage({
   const [devices, setDevices] = useState<MemberDevice[]>([]);
   const [safety, setSafety] = useState("");
   const [showDevices, setShowDevices] = useState(false);
+  useEscapeToClose(showDevices, () => setShowDevices(false));
   // Mirrored into state purely so the device list can render it: reading a ref
   // during render is exactly the tearing hazard React warns about.
   const [myDeviceId, setMyDeviceId] = useState("");

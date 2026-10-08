@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { useBackTo } from "@/lib/navHistory";
 import {
   ArrowLeft,
@@ -66,6 +67,8 @@ export default function PaymentMethodsPage() {
   const [expiry, setExpiry] = useState(""); // MM/YY
   const [vpa, setVpa] = useState("");
   const [busy, setBusy] = useState(false);
+  useEscapeToClose(Boolean(acting), () => setActing(null));
+  useEscapeToClose(adding && !busy, () => setAdding(false));
   const [error, setError] = useState("");
 
   function load() {
@@ -105,7 +108,7 @@ export default function PaymentMethodsPage() {
       setVpa("");
       toast(t("pp.pay.added"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add that method");
+      setError(err instanceof Error ? err.message : t("pp.pay.addFailed"));
     } finally {
       setBusy(false);
     }
@@ -335,9 +338,9 @@ export default function PaymentMethodsPage() {
             <div className="mt-4 flex gap-2">
               {(
                 [
-                  ["card", "Card", CreditCard],
+                  ["card", t("pp.pay.card"), CreditCard],
                   ["upi", "UPI", Smartphone],
-                  ["wallet", "Wallet", Wallet],
+                  ["wallet", t("pp.pay.wallet"), Wallet],
                 ] as const
               ).map(([value, label, Icon]) => (
                 <button

@@ -161,7 +161,8 @@ export default function ComplaintPage() {
     try {
       const d = await api<{ level: number }>(`/api/complaints/${params.id}/escalate`, {
         method: "POST",
-        json: { reason: t("cx.notSatisfied") },
+        // The level on screen, so a double tap cannot escalate twice.
+        json: { reason: t("cx.notSatisfied"), fromLevel: complaint?.escalationLevel ?? 0 },
       });
       await load();
       toast(d.level === 1 ? t("cx.escalatedGro") : t("cx.escalatedOndc"));

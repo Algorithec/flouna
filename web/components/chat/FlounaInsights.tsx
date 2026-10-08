@@ -3,8 +3,14 @@
 import { useState } from "react";
 import { Zap } from "lucide-react";
 import { rupees } from "@/lib/money";
+import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
-export type Hack = { label: string; detail: string };
+/**
+ * A suggestion, as keys and the values to put in them. Built outside any
+ * component, where the language is not known, and worded when shown.
+ */
+export type Hack = { label: TranslationKey; detail: TranslationKey; vars: Record<string, string> };
 
 export function FlounaInsights({
   quote,
@@ -16,6 +22,7 @@ export function FlounaInsights({
   offers?: { label: string; discountPaise: number }[];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const { t } = useI18n();
   if (!quote && hacks.length === 0 && offers.length === 0) return null;
 
   const visibleOffers = expanded ? offers : offers.slice(0, 2);
@@ -24,7 +31,7 @@ export function FlounaInsights({
   return (
     <div className="rounded-card border border-accent/30 bg-accent-soft/40 p-4">
       <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent">
-        <Zap size={12} /> FLOUNA INSIGHTS
+        <Zap size={12} /> <span className="uppercase">{t("rc.insights")}</span>
       </p>
 
       {quote && (
@@ -43,9 +50,13 @@ export function FlounaInsights({
               key={h.label}
               className="rounded-xl border border-line bg-card px-3 py-2.5"
             >
-              <p className="text-[13px] font-bold text-ink">{h.label}</p>
+              <p className="text-[13px] font-bold text-ink">{t(h.label)}</p>
               <p className="mt-0.5 text-[12px] leading-snug text-cocoa">
-                {"→"} {h.detail}
+                {"→"}{" "}
+                {Object.entries(h.vars).reduce(
+                  (text, [k, v]) => text.replace(`{${k}}`, v),
+                  t(h.detail) as string,
+                )}
               </p>
             </div>
           ))}
@@ -55,7 +66,7 @@ export function FlounaInsights({
       {offers.length > 0 && (
         <div className="mt-3">
           <p className="text-[13px] font-bold text-ink">
-            Available offers and coupons
+            {t("fi.offers")}
           </p>
           <div className="mt-1.5 flex flex-col gap-1">
             {visibleOffers.map((o) => (
@@ -68,7 +79,7 @@ export function FlounaInsights({
                   {o.label}
                   {o.discountPaise > 0 && (
                     <span className="text-cocoa">
-                      {" "}&middot; saves {rupees(o.discountPaise)}
+                      {" "}&middot; {t("ts.saves").replace("{amount}", rupees(o.discountPaise))}
                     </span>
                   )}
                 </span>
@@ -80,7 +91,7 @@ export function FlounaInsights({
               onClick={() => setExpanded(true)}
               className="mt-2.5 rounded-lg border border-ink/70 px-3.5 py-1.5 text-[12px] font-semibold text-ink transition-colors hover:bg-card"
             >
-              MORE
+              <span className="uppercase">{t("fi.more")}</span>
             </button>
           )}
         </div>
@@ -104,8 +115,9 @@ export function cheaperVehicleHack(
   const saving = best.effectivePaise - cheapest.effectivePaise;
   if (saving < MIN_WORTH_SAYING) return null;
   return {
-    label: "Ride hack",
-    detail: `Switch to ${cheapest.vehicle} and save ${rupees(saving)} on this trip.`,
+    label: "fi.rideHack",
+    detail: "fi.rideHackDetail",
+    vars: { vehicle: cheapest.vehicle, amount: rupees(saving) },
   };
 }
 
@@ -116,7 +128,8 @@ export function bundleHack(
   if (addOns.length === 0 || bundleDiscountPaise <= 0) return null;
   const names = addOns.map((a) => a.name).join(" + ");
   return {
-    label: "Bundle deal",
-    detail: `Add ${names} and save ${rupees(bundleDiscountPaise)} on this order.`,
+    label: "fi.bundle",
+    detail: "fi.bundleDetail",
+    vars: { names, amount: rupees(bundleDiscountPaise) },
   };
 }

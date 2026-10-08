@@ -13,6 +13,7 @@ import {
   getSubscriptionState,
 } from "@/lib/push";
 import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { LANGUAGES } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/cn";
 import { useTheme } from "@/components/theme/ThemeContext";
@@ -23,23 +24,23 @@ import { useTheme } from "@/components/theme/ThemeContext";
 const PREF_SETTINGS = [
   {
     key: "emailUpdates" as const,
-    label: "Order emails",
-    subtitle: "Receipts, cancellations, refund updates",
+    label: "st.orderEmails" as TranslationKey,
+    subtitle: "st.orderEmailsSub" as TranslationKey,
   },
   {
     key: "emailMoneyUpdates" as const,
-    label: "Money-saving emails",
-    subtitle: "Savings milestones, price drops, Plus value",
+    label: "st.moneyEmails" as TranslationKey,
+    subtitle: "st.moneyEmailsSub" as TranslationKey,
   },
   {
     key: "emailTips" as const,
-    label: "Tips & announcements",
-    subtitle: "New features and occasional offers",
+    label: "st.tips" as TranslationKey,
+    subtitle: "st.tipsSub" as TranslationKey,
   },
   {
     key: "smartSuggestions" as const,
-    label: "Smart suggestions",
-    subtitle: "AI picks based on your orders",
+    label: "st.smart" as TranslationKey,
+    subtitle: "st.smartSub" as TranslationKey,
   },
 ];
 
@@ -113,7 +114,7 @@ export default function SettingsPage() {
     try {
       const value = clear ? null : Number(budgetInput);
       if (!clear && (!Number.isInteger(value) || value! < 100)) {
-        setBudgetSaved("Enter at least ₹100");
+        setBudgetSaved(t("st.min100"));
         return;
       }
       await api("/api/users/budget", {
@@ -121,9 +122,9 @@ export default function SettingsPage() {
         json: { weeklyBudgetRupees: value },
       });
       if (clear) setBudgetInput("");
-      setBudgetSaved(clear ? "Budget cleared" : "Budget saved");
+      setBudgetSaved(clear ? t("st.budgetCleared") : t("st.budgetSaved"));
     } catch (e) {
-      setBudgetSaved(e instanceof Error ? e.message : "Could not save");
+      setBudgetSaved(e instanceof Error ? e.message : t("pd.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -164,22 +165,21 @@ export default function SettingsPage() {
           <Wallet size={15} className="text-accent" /> {t("settings.budgetTitle")}
         </p>
         <p className="mt-1 text-[12px] text-cocoa">
-          Flouna tracks your food spend Monday Sunday and warns you before an
-          order takes you over.
+          {t("st.budgetNote")}
         </p>
         <div className="mt-3 flex items-end gap-2">
           <Input
-            label="Budget (₹ per week)"
+            label={t("st.budgetLabel")}
             inputMode="numeric"
             placeholder="e.g. 1500"
             value={budgetInput}
             onChange={(e) => setBudgetInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
           />
           <Button size="md" disabled={busy || !budgetInput} onClick={() => saveBudget(false)}>
-            Save
+            {t("st.save")}
           </Button>
           <Button size="md" variant="secondary" disabled={busy} onClick={() => saveBudget(true)}>
-            Clear
+            {t("st.clear")}
           </Button>
         </div>
         {budgetSaved && (
@@ -200,15 +200,15 @@ export default function SettingsPage() {
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-medium text-ink">Dark mode</p>
+            <p className="text-[14px] font-medium text-ink">{t("st.darkMode")}</p>
             <p className="text-[12px] text-cocoa">
-              {theme === "dark" ? "On, easier on the eyes at night" : "Off"}
+              {theme === "dark" ? t("st.darkOn") : t("st.off")}
             </p>
           </div>
           <button
             role="switch"
             aria-checked={theme === "dark"}
-            aria-label="Dark mode"
+            aria-label={t("st.darkMode")}
             onClick={toggle}
             className={cn(
               "tap-target h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors",
@@ -235,16 +235,16 @@ export default function SettingsPage() {
             <p className="text-[14px] font-medium text-ink">{t("settings.pushTitle")}</p>
             <p className="text-[12px] text-cocoa">
               {pushState === "unsupported"
-                ? "Not supported in this browser"
+                ? t("st.notSupported")
                 : pushState === "denied"
-                  ? "Blocked, enable in browser settings"
-                  : "Order updates and live offers"}
+                  ? t("st.blocked")
+                  : t("st.pushNote")}
             </p>
           </div>
           <button
             role="switch"
             aria-checked={pushState === "subscribed"}
-            aria-label="Push notifications"
+            aria-label={t("st.push")}
             disabled={
               pushBusy || pushState === "unsupported" || pushState === "denied" || pushState === "loading"
             }
@@ -265,7 +265,7 @@ export default function SettingsPage() {
       </Card>
 
       <p className="mb-2 mt-1 px-1 text-[13px] font-bold text-ink">
-        Email &amp; suggestions
+        {t("st.emailSuggestions")}
       </p>
       <Card className="p-0">
         {PREF_SETTINGS.map((s, i) => (
@@ -277,13 +277,13 @@ export default function SettingsPage() {
             )}
           >
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-medium text-ink">{s.label}</p>
-              <p className="text-[12px] text-cocoa">{s.subtitle}</p>
+              <p className="text-[14px] font-medium text-ink">{t(s.label)}</p>
+              <p className="text-[12px] text-cocoa">{t(s.subtitle)}</p>
             </div>
             <button
               role="switch"
               aria-checked={prefs[s.key]}
-              aria-label={s.label}
+              aria-label={t(s.label)}
               onClick={() => togglePref(s.key)}
               className={cn(
                 "tap-target h-6 w-11 rounded-full p-0.5 transition-colors",

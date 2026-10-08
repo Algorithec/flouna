@@ -1,11 +1,18 @@
 // Simulated ride-provider quotes (Uber/Ola/Rapido/ONDC). Same adapter shape
 // real provider/ONDC-mobility integrations will implement later.
+import { qualityOf, type CommunityRating } from "../ratings/blend.js";
+import { googleRoute } from "../maps/googleRoutes.js";
 import {
   scoreOptions,
   appliedWeights,
   type Priority,
   type DecisionTrace,
 } from "../advisor/scoring.js";
+import {
+  applyHardConstraints,
+  type HardConstraints,
+  type NearestMiss,
+} from "../advisor/constraints.js";
 
 // Great-circle distance between two coordinates.
 export function haversineKm(
@@ -52,13 +59,71 @@ export type RouteResult = {
 
 // Server-side route lookup with offline fallback. Used by the /route endpoint
 // and at booking time so the live-tracking marker has real road geometry.
+// The same trip, priced twice, must cost the same.
+//
+// A ride's fare comes from the route distance, looked up once for the screen
+// and again when the order is placed, since a distance from the client is
+// never trusted. Google routes with live traffic, and its shortest
+// alternative can change between the two: the review button said ₹413 and the
+// order charged ₹476. So a route is remembered for ten minutes, long enough to
+// cover choosing and booking, and short enough that it is still today's road.
+// It also spares a billed call when the same trip is asked for again.
+const ROUTE_TTL_MS = 10 * 60_000;
+const ROUTE_CACHE_MAX = 500;
+const routeCache = new Map<string, { at: number; route: RouteResult }>();
+
+/** Five decimals is about a metre: the same pin, not merely a nearby one. */
+function routeKey(fromLat: number, fromLng: number, toLat: number, toLng: number): string {
+  return [fromLat, fromLng, toLat, toLng].map((n) => n.toFixed(5)).join(",");
+}
+
+/** For tests: forget every remembered route. */
+export function clearRouteCache() {
+  routeCache.clear();
+}
+
 export async function fetchRoute(
   fromLat: number,
   fromLng: number,
   toLat: number,
   toLng: number,
   orsKey?: string,
+  googleKey?: string,
 ): Promise<RouteResult> {
+  const key = routeKey(fromLat, fromLng, toLat, toLng);
+  const hit = routeCache.get(key);
+  if (hit && Date.now() - hit.at < ROUTE_TTL_MS) return hit.route;
+
+  const route = await lookupRoute(fromLat, fromLng, toLat, toLng, orsKey, googleKey);
+  routeCache.delete(key);
+  routeCache.set(key, { at: Date.now(), route });
+  // Oldest first in a Map, so the first key is the one to drop.
+  if (routeCache.size > ROUTE_CACHE_MAX) {
+    const oldest = routeCache.keys().next().value;
+    if (oldest !== undefined) routeCache.delete(oldest);
+  }
+  return route;
+}
+
+async function lookupRoute(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+  orsKey?: string,
+  googleKey?: string,
+): Promise<RouteResult> {
+  // Google first when it is configured: real roads, live traffic, and the
+  // shortest of its alternatives, so the line both people see is the one the
+  // fare is priced on. Any failure falls through to the providers below.
+  if (googleKey) {
+    const g = await googleRoute(
+      googleKey,
+      { latitude: fromLat, longitude: fromLng },
+      { latitude: toLat, longitude: toLng },
+    );
+    if (g) return g;
+  }
   if (orsKey) {
     try {
       // Hard timeout: if ORS is slow or down (it 502s intermittently), don't
@@ -189,9 +254,36 @@ export function quoteRides(opts: QuoteRidesOpts): RideQuote[] {
 
 // Same quoting, but also reporting how the ordering was reached. Kept as the
 // single implementation so a logged explanation cannot drift from behaviour.
-export function quoteRidesTraced(opts: QuoteRidesOpts): {
+export function quoteRidesTraced(
+  opts: QuoteRidesOpts & {
+    /**
+     * What riders have actually said about each provider.
+     *
+     * Ranking used the catalogue driver rating while the screen showed a
+     * community-blended one, so the order and the numbers beside it came from
+     * different sources. Optional, so a caller without a database can still
+     * rank.
+     */
+    community?: Map<string, CommunityRating>;
+    /**
+     * Limits the customer stated: a maximum fare, a longest acceptable wait
+     * for pickup, a latest arrival. Enforced before ranking and never waived.
+     *
+     * Only on this recommending path, deliberately. `quoteRides` also serves
+     * the order route, which recomputes the fare server-side at booking, and a
+     * limit applied there could stop a valid booking finding its own quote.
+     */
+    constraints?: HardConstraints | null;
+  },
+): {
   quotes: RideQuote[];
   trace: DecisionTrace | null;
+  /**
+   * Present only when the stated limits removed every option. Carries the
+   * closest miss so the rider can be told what is available, which is not
+   * the same as recommending it.
+   */
+  unmet?: NearestMiss<RideQuote> | null;
 } {
   const wanted = opts.vehicle && opts.vehicle !== "any" ? opts.vehicle : null;
 
@@ -207,7 +299,23 @@ export function quoteRidesTraced(opts: QuoteRidesOpts): {
         // charged: rounding only the label would have shown ₹131 against a
         // ₹131.44 payment.
         const fare = Math.round((prod.basePaise + prod.perKmPaise * opts.distanceKm) / 100) * 100;
-        const offers = prod.offer ? [prod.offer] : [];
+        // A coupon cannot be worth more than the ride.
+        //
+        // The flat offers here are ₹50 off an auto and ₹25 off a bike, which
+        // is more than the whole fare on a short trip: every ride under 2.2 km
+        // had at least one option priced at zero, and being the cheapest it
+        // was badged BEST PRICE and ranked first, so the product gave away the
+        // ride the rider was most likely to take. Clamping the total to zero
+        // only hid it, because the order route charges this number.
+        //
+        // An offer therefore applies only when the fare can absorb it and
+        // still leave the boarding charge, which is what a minimum fare is.
+        // Applying it partly would be worse than not applying it at all: the
+        // label states an amount, and a "₹25 off" that comes off by ₹8 is a
+        // claim the bill contradicts.
+        const offer =
+          prod.offer && fare - prod.offer.discountPaise >= prod.basePaise ? prod.offer : null;
+        const offers = offer ? [offer] : [];
         const discount = offers.reduce((s, o) => s + o.discountPaise, 0);
         return {
           provider: p.provider,
@@ -216,7 +324,10 @@ export function quoteRidesTraced(opts: QuoteRidesOpts): {
           displayName: prod.displayName,
           farePaise: fare,
           offers,
-          effectivePaise: Math.max(0, fare - discount),
+          // No clamp: an offer that cannot be absorbed is not applied, so this
+          // is always at least the boarding charge. A clamp here would hide
+          // the next offer that outgrows a fare rather than refuse it.
+          effectivePaise: fare - discount,
           pickupEtaMinutes: prod.pickupEta,
           rideMinutes: opts.rideMinutes,
           driverRating: prod.rating,
@@ -226,33 +337,59 @@ export function quoteRidesTraced(opts: QuoteRidesOpts): {
       }),
   );
 
-  // Badge the genuine best price and fastest before reordering.
-  const cheapest = [...quotes].sort((a, b) => a.effectivePaise - b.effectivePaise)[0];
-  const fastestQ = [...quotes].sort((a, b) => a.pickupEtaMinutes - b.pickupEtaMinutes)[0];
+  // The stated limits go first, before anything is badged or ranked. An option
+  // a rider has ruled out must not be labelled the best price, and must not
+  // take part in the ranking where a strong rating could carry it back in.
+  const hard = applyHardConstraints(
+    quotes,
+    (q) => ({
+      pricePaise: q.effectivePaise,
+      pickupMinutes: q.pickupEtaMinutes,
+      etaMinutes: journeyMinutes(q),
+    }),
+    opts.constraints,
+  );
+  const valid = hard.kept;
+
+  // Badge the genuine best price and fastest before reordering, among the
+  // options still valid. Fastest means the whole journey: a ride that arrives
+  // first but takes longest is not the fast one.
+  const cheapest = [...valid].sort((a, b) => a.effectivePaise - b.effectivePaise)[0];
+  const fastestQ = [...valid].sort((a, b) => journeyMinutes(a) - journeyMinutes(b))[0];
   if (cheapest) cheapest.badge = "BEST PRICE";
   if (fastestQ && !fastestQ.badge) fastestQ.badge = "FASTEST";
 
-  // Order by the user's priority (driver rating, fare, or pickup ETA weighted);
-  // defaults to balanced. The best-scoring quote is presented first.
+  // Order by the user's priority; defaults to balanced. The best-scoring quote
+  // is presented first.
   const priority = opts.priority ?? "balanced";
   const ranked = scoreOptions(
-    quotes.map((q) => ({
+    valid.map((q) => ({
       pricePaise: q.effectivePaise,
-      rating: q.driverRating,
-      etaMinutes: q.pickupEtaMinutes,
+      // Rank on what riders said, with the weight of evidence behind it.
+      ...(opts.community
+        ? qualityOf(q.driverRating, opts.community.get(q.provider))
+        : { rating: q.driverRating }),
+      etaMinutes: journeyMinutes(q),
       quote: q,
     })),
     priority,
   );
   const ordered = ranked.map((r) => r.item.quote);
 
-  // Vehicle filtering is the only rule that removes a ride option before
-  // scoring; everything configured for that type is quoted.
+  // Two things remove a ride before scoring: the vehicle type asked for, and
+  // any limit the rider stated. Counted separately, because "we have no
+  // autos" and "no auto is under ₹150" are different answers.
   const totalProducts = providers.reduce((n, p) => n + p.products.length, 0);
-  const excludedCount = totalProducts - quotes.length;
+  const vehicleExcluded = totalProducts - quotes.length;
+  const exclusions = [
+    ...(vehicleExcluded > 0 ? [{ rule: "vehicle_type", count: vehicleExcluded }] : []),
+    ...hard.rejected,
+  ];
+  const excludedCount = exclusions.reduce((s, e) => s + e.count, 0);
 
   return {
     quotes: ordered,
+    unmet: hard.nearestMiss,
     trace:
       ordered.length === 0
         ? null
@@ -263,15 +400,52 @@ export function quoteRidesTraced(opts: QuoteRidesOpts): {
             personalized: false,
             candidateCount: quotes.length,
             excludedCount,
-            exclusions: excludedCount > 0 ? [{ rule: "vehicle_type", count: excludedCount }] : [],
+            exclusions,
             scores: ranked.map((r) => ({
               key: r.item.quote.productName,
               pricePaise: r.item.quote.effectivePaise,
               rating: r.item.quote.driverRating,
-              etaMinutes: r.item.quote.pickupEtaMinutes,
+              // The journey the ranking used. The price of time is read out of
+              // these rows, and a rider paying more to shorten the whole trip
+              // would be misread if only the wait were recorded.
+              etaMinutes: journeyMinutes(r.item.quote),
               score: r.score,
             })),
             chosenKey: ordered[0]!.productName,
           },
   };
+}
+
+/**
+ * Door to destination: the wait for pickup plus the trip itself.
+ *
+ * Ranking on pickup alone would call a cab that arrives in two minutes and
+ * takes fifty the fast option over one that arrives in four and takes
+ * twenty-five. In the simulated catalogue every provider shares one route, so
+ * the trip is a constant and the ordering happens not to change; it changes
+ * the moment real providers quote their own trip times.
+ */
+export function journeyMinutes(q: Pick<RideQuote, "pickupEtaMinutes" | "rideMinutes">): number {
+  return q.pickupEtaMinutes + q.rideMinutes;
+}
+
+/**
+ * What to tell a rider whose own limit left nothing to offer.
+ *
+ * Shared by chat and the quotes route so both surfaces say the same thing, and
+ * kept as a sentence rather than the rejected quote itself: a client handed
+ * the option would sooner or later draw it as bookable, which is the one thing
+ * a hard constraint exists to prevent. The limit is recovered from the miss
+ * (`by` is how far over it went) so nothing has to be passed in twice.
+ */
+export function unmetRideNote(unmet: NearestMiss<RideQuote>): string {
+  const q = unmet.item;
+  const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
+  if (unmet.rule === "max_price") {
+    return `No ride comes in under ${rupees(q.effectivePaise - unmet.by)} for this trip. The cheapest is ${rupees(q.effectivePaise)}, ${q.displayName}.`;
+  }
+  if (unmet.rule === "max_pickup") {
+    return `No ride can pick you up within ${q.pickupEtaMinutes - unmet.by} minutes right now. The soonest is ${q.displayName}, ${q.pickupEtaMinutes} minutes away.`;
+  }
+  return `No ride gets you there within ${journeyMinutes(q) - unmet.by} minutes. The quickest is ${q.displayName}, ${journeyMinutes(q)} minutes.`;
 }

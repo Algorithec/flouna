@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { useEffect, useState } from "react";
 
 // What the engine is doing, while it does it.
@@ -19,17 +21,13 @@ import { useEffect, useState } from "react";
 // the answer forming above it.
 
 /** Phases for a real comparison. Ordered as the work actually happens. */
-const PHASES = [
-  "Searching",
-  "Comparing prices",
-  "Applying offers",
-  "Picking the best option",
-];
+const PHASES: TranslationKey[] = ["th.searching", "th.comparing", "th.applying", "th.picking"];
 
 /** Roughly how long each phase holds before the next one takes over. */
 const PHASE_MS = 1900;
 
 export function ThinkingSteps({ simple = false }: { simple?: boolean }) {
+  const { t } = useI18n();
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
@@ -45,7 +43,7 @@ export function ThinkingSteps({ simple = false }: { simple?: boolean }) {
 
   // A greeting is not a price comparison. Claiming to compare providers for
   // "hello" is theatre, and the kind a person notices.
-  const label = simple ? "Thinking" : PHASES[phase];
+  const label = t(simple ? "th.thinking" : PHASES[phase]!);
 
   return (
     <div className="flex items-center pl-1">
@@ -55,7 +53,7 @@ export function ThinkingSteps({ simple = false }: { simple?: boolean }) {
         // silence.
         role="status"
         aria-live="polite"
-        aria-label="Working on your request"
+        aria-label={t("th.working")}
         className="text-shimmer text-[14px] font-medium"
       >
         {label}

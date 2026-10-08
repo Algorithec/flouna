@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Clock, ShieldAlert } from "lucide-react";
@@ -50,44 +52,45 @@ function overdue(due: string | null, met: string | null): boolean {
 // sentence rather than shouted at the customer in upper snake case. Anything
 // unmapped is de-cased rather than shown raw, so a new ONDC code degrades to
 // "Item not received" rather than to noise.
-const ISSUE_COPY: Record<string, string> = {
-  ITEM_DAMAGED: "Item damaged",
-  WRONG_ITEM_DELIVERED: "Wrong item delivered",
-  ITEM_NOT_RECEIVED: "Item not received",
-  ITEM_MISSING: "Item missing",
-  REFUND_NOT_RECEIVED: "Refund not received",
-  PAYMENT_ISSUE: "Payment issue",
-  DELAYED_DELIVERY: "Delayed delivery",
-  QUALITY_ISSUE: "Quality issue",
-  ORDER_NOT_RECEIVED: "Order not received",
+const ISSUE_COPY: Record<string, TranslationKey> = {
+  ITEM_DAMAGED: "cx.itemDamaged",
+  WRONG_ITEM_DELIVERED: "cx.wrongItem",
+  ITEM_NOT_RECEIVED: "gv.itemNotReceived",
+  ITEM_MISSING: "gv.itemMissing",
+  REFUND_NOT_RECEIVED: "cx.refundNotReceived",
+  PAYMENT_ISSUE: "cx.paymentIssue",
+  DELAYED_DELIVERY: "gv.delayed",
+  QUALITY_ISSUE: "gv.quality",
+  ORDER_NOT_RECEIVED: "cx.orderNotReceived",
   // Ride complaints, which read nothing like the delivery ones.
-  DRIVER_NOT_ARRIVED: "Driver never arrived",
-  RIDE_NOT_COMPLETED: "Ride ended early",
-  FARE_DISPUTE: "Charged more than quoted",
-  DRIVER_CONDUCT: "Driver behaviour or safety",
-  VEHICLE_ISSUE: "Vehicle not as described",
-  FULFILLMENT: "Delivery issue",
-  ITEM: "Item issue",
-  PAYMENT: "Payment issue",
-  OTHER: "Other",
+  DRIVER_NOT_ARRIVED: "cx.driverNotArrived",
+  RIDE_NOT_COMPLETED: "cx.rideNotCompleted",
+  FARE_DISPUTE: "cx.fareDispute",
+  DRIVER_CONDUCT: "cx.driverConduct",
+  VEHICLE_ISSUE: "cx.vehicleIssue",
+  FULFILLMENT: "gv.fulfillment",
+  ITEM: "gv.item",
+  PAYMENT: "cx.paymentIssue",
+  OTHER: "cx.other",
 };
 
-function issueLabel(code: string): string {
+function issueLabel(code: string, t: (key: TranslationKey) => string): string {
   const known = ISSUE_COPY[code];
-  if (known) return known;
+  if (known) return t(known);
   const words = code.replace(/_/g, " ").trim().toLowerCase();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-const STATUS_COPY: Record<string, string> = {
-  OPEN: "Submitted",
-  PROCESSING: "Being investigated",
-  RESOLVED: "Resolved",
-  CLOSED: "Closed",
-  ESCALATED: "Escalated",
+const STATUS_COPY: Record<string, TranslationKey> = {
+  OPEN: "gv.submitted",
+  PROCESSING: "cx.investigating",
+  RESOLVED: "cx.resolved",
+  CLOSED: "cx.closed",
+  ESCALATED: "gv.escalated",
 };
 
 export default function GrievancesPage() {
+  const { t } = useI18n();
   const [list, setList] = useState<Complaint[] | null>(null);
 
   const load = useCallback(() => {
@@ -98,26 +101,23 @@ export default function GrievancesPage() {
   useEffect(load, [load]);
 
   return (
-    <SubPage title="Grievances">
+    <SubPage title={t("gv.title")}>
       <p className="text-[13px] leading-relaxed text-acct-muted">
-        Complaints you have raised. An officer is assigned within 48 hours,
-        contacts you within 5 days, and the investigation concludes within 30
-        days. You can appeal an outcome once.
+        {t("gv.intro")}
       </p>
 
       {list === null ? (
-        <p className="mt-6 text-[13px] text-acct-muted">Loading…</p>
+        <p className="mt-6 text-[13px] text-acct-muted">{t("dp.loading")}</p>
       ) : list.length === 0 ? (
         <div className="mt-8 flex flex-col items-center px-6 text-center">
           <span className="flex size-14 items-center justify-center rounded-full bg-acct-tint">
             <ShieldAlert size={24} className="text-acct-accent" />
           </span>
           <p className="mt-4 text-[16px] font-bold text-acct-ink">
-            No grievances raised
+            {t("gv.none")}
           </p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-acct-muted">
-            If something goes wrong with an order, open it and choose Need Help.
-            Your complaint and its progress will appear here.
+            {t("gv.howTo")}
           </p>
           {/* /history, not /orders: the orders list lives under Booking
               History and /orders is not a route. This was a dead link. */}
@@ -125,7 +125,7 @@ export default function GrievancesPage() {
             href="/history"
             className="tap-target mt-5 rounded-pill bg-acct-accent px-5 py-3 text-[14px] font-bold text-white"
           >
-            Go to my orders
+            {t("gv.goOrders")}
           </Link>
         </div>
       ) : (
@@ -136,10 +136,10 @@ export default function GrievancesPage() {
               overdue(c.contactBy, c.contactedAt) ||
               overdue(c.investigateBy, c.resolvedAt);
             const nextDue = !c.assignedAt
-              ? { label: "Officer assigned by", when: c.assignBy, met: c.assignedAt }
+              ? { label: t("gv.assignBy"), when: c.assignBy, met: c.assignedAt }
               : !c.contactedAt
-                ? { label: "Contact you by", when: c.contactBy, met: c.contactedAt }
-                : { label: "Investigation by", when: c.investigateBy, met: c.resolvedAt };
+                ? { label: t("gv.contactBy"), when: c.contactBy, met: c.contactedAt }
+                : { label: t("gv.investigateBy"), when: c.investigateBy, met: c.resolvedAt };
 
             return (
               <Link
@@ -153,15 +153,15 @@ export default function GrievancesPage() {
                       {c.code}
                     </span>
                     <span className="text-[12px] text-acct-muted">
-                      {STATUS_COPY[c.status] ?? c.status}
+                      {STATUS_COPY[c.status] ? t(STATUS_COPY[c.status]!) : c.status}
                     </span>
                   </span>
                   <span className="mt-1 block truncate text-[14px] text-acct-ink">
-                    {issueLabel(c.subCategory ?? c.category)}
+                    {issueLabel(c.subCategory ?? c.category, t)}
                   </span>
                   {c.resolvedAt ? (
                     <span className="mt-1 block text-[12px] text-acct-muted">
-                      Resolved {day(c.resolvedAt)}
+                      {t("gv.resolved")}{" "}{day(c.resolvedAt)}
                     </span>
                   ) : (
                     // Cases raised before the deadlines were introduced carry
@@ -186,7 +186,7 @@ export default function GrievancesPage() {
                           {/* Said plainly when we have missed our own
                               deadline. Hiding it does not make it untrue and
                               the person waiting already knows. */}
-                          {overdue(nextDue.when, nextDue.met) ? " · overdue" : ""}
+                          {overdue(nextDue.when, nextDue.met) ? t("gv.overdue") : ""}
                         </span>
                       </span>
                     )

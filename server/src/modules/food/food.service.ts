@@ -6,6 +6,7 @@ import { dishes as catalogue, type Dish, type Listing } from "../../data/restaur
 // group deal engine and order pricing still see them, and invisible to search
 // and recommendation, which is where a single person is being advised.
 const dishes = catalogue.filter((d) => !d.serves);
+import { qualityOf, type CommunityRating } from "../ratings/blend.js";
 import {
   scoreOptions,
   appliedWeights,
@@ -16,12 +17,37 @@ import {
   type DecisionTrace,
   type Exclusion,
 } from "../advisor/scoring.js";
+import {
+  applyHardConstraints,
+  type HardConstraints,
+  type NearestMiss,
+} from "../advisor/constraints.js";
 
 export type FoodQuote = {
   dishId: string;
   name: string;
   restaurant: string;
   rating: number;
+  /**
+   * How many ratings the catalogue claims for this dish.
+   *
+   * Not the same thing as `ratingCount`, which the ratings service attaches
+   * and which counts what Flouna customers actually left. One letter apart and
+   * opposite in meaning: this one is a fixed catalogue figure, that one is
+   * evidence, and it is the evidence that drives confidence weighting so a
+   * thin 4.9 cannot outrank an established 4.6. Never feed this into ranking.
+   */
+  ratingsCount?: number;
+  /** Display chips such as "500g" or "Basmati Rice". */
+  portion?: string[];
+  /**
+   * Shown with the dish, not priced by it.
+   *
+   * The order routes do not read these: nothing lets a customer add one, and
+   * no discount is applied if they could. They exist for display only.
+   */
+  addOns?: { name: string; pricePaise: number }[];
+  bundleDiscountPaise?: number;
   tag: string;
   dietary: "veg" | "nonveg";
   reviewSummary: string;
@@ -47,6 +73,20 @@ export type FoodRecommendation = {
   /** The user stated a budget and the best option exceeds it. */
   overBudgetPaise?: number;
 };
+
+/**
+ * The recommendation without its reasoning, for sending to a client.
+ *
+ * The trace carries the engine's weights, every candidate's score and what
+ * each filter removed. It is written to the decision log, which is where it
+ * belongs, and it was also being sent to the browser with every chat reply
+ * even though nothing there reads it. That published the ranking arithmetic to
+ * anyone with developer tools open, for no feature.
+ */
+export function withoutTrace(rec: FoodRecommendation): Omit<FoodRecommendation, "trace"> {
+  const { trace: _trace, ...rest } = rec;
+  return rest;
+}
 
 /** Stable identity of a food option: which dish, on which listing. */
 function quoteKey(q: FoodQuote): string {
@@ -141,8 +181,19 @@ const FILLER_WORDS = new Set([
 
 export type SearchOpts = {
   query: string;
+  /**
+   * A soft ceiling: preferred, and waived rather than leave nothing to show.
+   *
+   * This is the Budget Guardian's remaining weekly allowance, which is advice
+   * about spending. A price the customer actually stated goes in
+   * `constraints` instead, where it is enforced. Routing a stated price here
+   * would quietly break it; routing the weekly allowance there would refuse
+   * every search for someone near the end of their week.
+   */
   budgetPaise?: number | null;
   dietary?: "veg" | "nonveg" | "any";
+  /** Limits the customer stated, enforced before ranking and never waived. */
+  constraints?: HardConstraints | null;
 };
 
 export function searchFood(opts: SearchOpts): FoodQuote[] {
@@ -161,6 +212,11 @@ export function searchFoodTraced(opts: SearchOpts): {
    * it, "sushi" is answered with a dosa and nothing admits the swap.
    */
   substituted: boolean;
+  /**
+   * Present only when a stated limit removed every option: the nearest miss,
+   * so the customer can be told what exists without it being recommended.
+   */
+  unmet: NearestMiss<FoodQuote> | null;
 } {
   const exclusions: Exclusion[] = [];
   let substituted = false;
@@ -209,7 +265,19 @@ export function searchFoodTraced(opts: SearchOpts): {
   }
 
   let quotes = matched.flatMap(toQuotes);
-  if (opts.budgetPaise) {
+
+  // What the customer ruled out comes out first, and stays out. Applied
+  // before the soft budget so that allowance only ever chooses among options
+  // that are valid: it may be waived, a stated limit may not.
+  const hard = applyHardConstraints(
+    quotes,
+    (q) => ({ pricePaise: q.effectivePaise, etaMinutes: q.etaMinutes }),
+    opts.constraints,
+  );
+  for (const r of hard.rejected) note(r.rule, r.count);
+  quotes = hard.kept;
+
+  if (opts.budgetPaise && quotes.length > 0) {
     const within = quotes.filter((q) => q.effectivePaise <= opts.budgetPaise!);
     // The budget is deliberately non-binding: if nothing fits, it is discarded
     // rather than returning an empty screen. Both outcomes are recorded, since
@@ -225,6 +293,7 @@ export function searchFoodTraced(opts: SearchOpts): {
     quotes: quotes.sort((a, b) => a.effectivePaise - b.effectivePaise),
     exclusions,
     substituted,
+    unmet: hard.nearestMiss,
   };
 }
 
@@ -235,6 +304,19 @@ export function recommendFood(
   opts: SearchOpts & {
     priority?: Priority;
     personal?: Personalization;
+    /**
+     * What customers have actually said, keyed by dish.
+     *
+     * Ranking used the catalogue baseline while the screen showed a
+     * community-blended number, so the two could disagree: Flouna could call
+     * something its top-rated pick and display a rating lower than an
+     * alternative's. Ratings were collected, shown, and then ignored by the
+     * one step they were collected for.
+     *
+     * Optional, because a caller without a database (the tests, and the
+     * offline paths) still needs to be able to rank.
+     */
+    community?: Map<string, CommunityRating>;
   },
 ): FoodRecommendation | null {
   const { quotes, exclusions, substituted } = searchFoodTraced(opts);
@@ -244,7 +326,12 @@ export function recommendFood(
   const ranked = scoreOptions(
     quotes.map((q) => ({
       pricePaise: q.effectivePaise,
-      rating: q.rating,
+      // Rank on the number the customer is shown, with the weight of evidence
+      // behind it. Without a community map this is the catalogue baseline and
+      // confidence weighting stays off, exactly as before.
+      ...(opts.community
+        ? qualityOf(q.rating, opts.community.get(q.dishId))
+        : { rating: q.rating }),
       etaMinutes: q.etaMinutes,
       name: q.name,
       quote: q,
@@ -263,9 +350,25 @@ export function recommendFood(
     .slice(0, 3)
     .map((r) => r.item.quote);
 
-  // Savings vs the cheapest alternative platform for the same dish (honest:
-  // only positive when the pick really is the cheapest, or near it).
-  const saving = Math.max(0, cheapest.effectivePaise - best.effectivePaise);
+  // What the same dish costs on the next cheapest platform we did not pick.
+  //
+  // This used to measure against `cheapest`, the lowest price anywhere in the
+  // result set. The pick is drawn from that same set, so its price is never
+  // below the minimum and the difference could only ever be zero or negative:
+  // both messages below were unreachable. Measured across 2,420 searches
+  // covering every dish, priority, budget and dietary combination, neither
+  // line appeared once, including on the 387 where the pick genuinely was
+  // dearer than an alternative on screen and the customer most needed the
+  // trade explained.
+  //
+  // Comparing the same dish across platforms is what the saving was always
+  // meant to be, and is the number the savings ledger is built on.
+  const sameDishElsewhere = quotes
+    .filter((q) => q.dishId === best.dishId && q.platform !== best.platform)
+    .sort((a, b) => a.effectivePaise - b.effectivePaise)[0];
+  const saving = sameDishElsewhere
+    ? Math.max(0, sameDishElsewhere.effectivePaise - best.effectivePaise)
+    : 0;
 
   let why: string;
   if (priority === "rating") {
@@ -287,10 +390,15 @@ export function recommendFood(
     why += `. Want the highest rated? ${topRated.restaurant} is ${topRated.rating}★`;
   }
 
+  // Measured against the price the customer named, which is what the banner
+  // tells them ("above your stated budget"). That limit is enforced before
+  // ranking, so this is normally absent and stays as a guard should the
+  // enforcement ever be bypassed. It is not measured against budgetPaise: that
+  // is the weekly allowance, which the customer did not state in this message
+  // and which already has its own note.
+  const stated = opts.constraints?.maxPricePaise ?? null;
   const overBudgetPaise =
-    opts.budgetPaise && best.effectivePaise > opts.budgetPaise
-      ? best.effectivePaise - opts.budgetPaise
-      : undefined;
+    stated && best.effectivePaise > stated ? best.effectivePaise - stated : undefined;
 
   return {
     best,

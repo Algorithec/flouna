@@ -267,7 +267,7 @@ function ChatHome() {
           id: `e-${Date.now()}`,
           role: "assistant",
           content:
-            err instanceof Error ? err.message : "Something went wrong, try again.",
+            err instanceof Error ? err.message : t("hm.error"),
         },
       ]);
     } finally {
@@ -329,7 +329,9 @@ function ChatHome() {
           {/* Hero heading — two lines, two colours (Figma 2177:4763: navy then
               terracotta). */}
           <FadeIn y={10}>
-            <h1 className="text-balance text-[30px] font-bold leading-[1.2] tracking-tight lg:text-[44px]">
+            {/* Scales with the screen, and a word too long for it may wrap:
+                Telugu's ఎంచుకోవాలనుకుంటున్నారు alone was wider than a 360px phone. */}
+            <h1 className="text-balance text-[clamp(22px,7.5vw,30px)] font-bold leading-[1.2] tracking-tight [overflow-wrap:anywhere] lg:text-[44px]">
               <span className="text-navy">{t("chat.heading1")}</span>
               <span className="text-terracotta">{t("chat.heading2")}</span>
             </h1>
@@ -456,7 +458,7 @@ function ChatHome() {
                         className="mt-2 flex items-center justify-center gap-1.5 rounded-pill border border-accent/40 bg-accent-soft/30 px-4 py-2.5 text-[13px] font-semibold text-accent transition-colors hover:bg-accent-soft/60"
                       >
                         <Sparkles size={13} />
-                        View full results
+                        {t("hm.viewFull")}
                       </Link>
                       <RadiusUpsell />
                     </>
@@ -505,7 +507,7 @@ function ChatHome() {
           <button
             type="submit"
             disabled={!input.trim() || thinking}
-            aria-label="Send"
+            aria-label={t("common.send")}
             className="flex size-[54px] shrink-0 items-center justify-center rounded-full bg-send text-white transition-colors hover:opacity-90 disabled:opacity-40"
           >
             <Send size={20} />

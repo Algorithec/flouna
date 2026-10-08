@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -18,6 +18,7 @@ import {
   CarTaxiFront,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { newSearchSession, resolvePlace, searchPlaces, suggestionKey, type Suggestion } from "@/lib/places";
 import { rupees } from "@/lib/money";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -89,8 +90,10 @@ function PlaceSearch({
   action?: React.ReactNode;
 }) {
   const [text, setText] = useState("");
-  const [places, setPlaces] = useState<Place[]>([]);
+  const [places, setPlaces] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
+  // One search session per use of this box; replaced once a place is chosen.
+  const session = useRef(newSearchSession());
 
   useEffect(() => {
     const short = text.length < 2;
@@ -100,12 +103,9 @@ function PlaceSearch({
           setPlaces([]);
           return;
         }
-        api<{ places: Place[] }>(
-          `/api/rides/geocode?q=${encodeURIComponent(text)}` +
-            (near ? `&lat=${near.lat}&lng=${near.lng}` : ""),
-        )
-          .then((d) => {
-            setPlaces(d.places);
+        searchPlaces(text, { near, session: session.current })
+          .then((found) => {
+            setPlaces(found);
             setOpen(true);
           })
           .catch(() => setPlaces([]));
@@ -137,11 +137,14 @@ function PlaceSearch({
         <div className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-[14px] border border-line bg-card shadow-card">
           {places.map((p) => (
             <button
-              key={`${p.lat}-${p.lng}`}
-              onClick={() => {
-                onSelect(p);
+              key={suggestionKey(p)}
+              onClick={async () => {
                 setOpen(false);
                 setText("");
+                // A Google suggestion has no coordinates until it is chosen.
+                const place = await resolvePlace(p, session.current);
+                session.current = newSearchSession();
+                if (place) onSelect(place);
               }}
               className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] hover:bg-beige/40"
             >
@@ -407,10 +410,9 @@ function RidesInner() {
       }
       // 2) Geocode the (possibly rewritten) query.
       try {
-        const d = await api<{ places: Place[] }>(
-          `/api/rides/geocode?q=${encodeURIComponent(query)}`,
-        );
-        if (!cancelled && d.places[0]) setDrop(d.places[0]);
+        const first = (await searchPlaces(query))[0];
+        const place = first ? await resolvePlace(first) : null;
+        if (!cancelled && place) setDrop(place);
       } catch {
         // leave drop unset; user can search manually
       }
@@ -440,8 +442,8 @@ function RidesInner() {
       `/api/rides/route?fromLat=${pickup.lat}&fromLng=${pickup.lng}&toLat=${drop.lat}&toLng=${drop.lng}`,
     )
       .then(setRoute)
-      .catch(() => setError("Could not calculate the route"));
-  }, [pickup, drop]);
+      .catch(() => setError(t("rd.routeFailed")));
+  }, [pickup, drop, t]);
 
   const loadQuotes = useCallback(() => {
     if (!route) return;
@@ -453,8 +455,8 @@ function RidesInner() {
         setAdvice(d.advice ?? null);
         setSelected(d.quotes[0] ?? null);
       })
-      .catch(() => setError("Could not fetch ride options"));
-  }, [route, vehicle]);
+      .catch(() => setError(t("rd.optionsFailed")));
+  }, [route, vehicle, t]);
 
   useEffect(loadQuotes, [loadQuotes]);
 
@@ -492,7 +494,7 @@ function RidesInner() {
       router.push(`/rides/group/${cart.id}`);
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Could not start a shared ride",
+        e instanceof Error ? e.message : t("rd.sharedFailed"),
       );
       setBusy(false);
     }
@@ -522,7 +524,7 @@ function RidesInner() {
       });
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not book the ride");
+      setError(e instanceof Error ? e.message : t("rd.bookFailed"));
       setBusy(false);
     }
   }
@@ -542,15 +544,15 @@ function RidesInner() {
           <FadeIn y={8}>
             <div className="flex items-center justify-between">
               <h1 className="text-[17px] font-bold text-ink">
-                Select your location
+                {t("rd.selectLocation")}
               </h1>
               <button
                 type="button"
                 onClick={() => setDrop(null)}
-                title="Choose a different destination"
+                title={t("rd.chooseDifferent")}
                 className="rounded-[17px] bg-beige px-3.5 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:bg-beige/70"
               >
-                Change drop
+                {t("rd.changeDrop")}
               </button>
             </div>
           </FadeIn>
@@ -564,7 +566,7 @@ function RidesInner() {
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-2.5">
               <PlaceSearch
-                label={locating ? "Locating you…" : "Pickup location"}
+                label={locating ? t("rd.locating") : t("rd.pickupLocation")}
                 value={pickup}
                 onSelect={setPickup}
                 near={mapPoints.pickup}
@@ -573,8 +575,8 @@ function RidesInner() {
                     type="button"
                     onClick={detectPickup}
                     disabled={locating}
-                    aria-label="Use my current location"
-                    title="Use my current location"
+                    aria-label={t("ib.useLocation")}
+                    title={t("ib.useLocation")}
                     className="shrink-0 rounded-full p-1.5 text-accent transition-colors hover:bg-accent-soft disabled:opacity-50"
                   >
                     {locating ? (
@@ -586,7 +588,7 @@ function RidesInner() {
                 }
               />
               <PlaceSearch
-                label="Search for a location…"
+                label={t("rd.searchLocation")}
                 value={drop}
                 onSelect={setDrop}
                 near={mapPoints.pickup}
@@ -611,14 +613,14 @@ function RidesInner() {
               <MapPin size={15} className="text-accent" />
               {picking
                 ? `Tap the map to set ${picking === "pickup" ? "pickup" : "drop"}`
-                : "Select on map"}
+                : t("rd.selectOnMap")}
             </button>
             <button
               type="button"
               disabled
               className="flex flex-1 items-center justify-center gap-1.5 rounded-pill border border-line bg-card py-2.5 text-[13px] font-semibold text-cocoa/60"
             >
-              <Plus size={15} /> Add stops
+              <Plus size={15} /> {t("rd.addStops")}
             </button>
           </div>
 
@@ -626,7 +628,7 @@ function RidesInner() {
           {!drop && saved.length > 0 && (
             <div>
               <p className="text-[13px] font-bold text-ink">
-                Suggested locations
+                {t("rd.suggested")}
               </p>
               <div className="mt-0.5 flex flex-col divide-y divide-line/70">
                 {saved.slice(0, 5).map((p) => (
@@ -646,7 +648,7 @@ function RidesInner() {
                     </span>
                     {pickup && (
                       <span className="shrink-0 text-[12px] text-cocoa">
-                        {Math.max(1, Math.round(haversineKm(pickup, p)))} km
+                        {Math.max(1, Math.round(haversineKm(pickup, p)))} {t("u.km")}
                       </span>
                     )}
                   </button>
@@ -657,7 +659,9 @@ function RidesInner() {
 
           {route && (
             <p className="text-[12px] text-cocoa">
-              {route.distanceKm.toFixed(1)} km · about {route.rideMinutes} min
+              {t("ib.routeLine")
+                .replace("{km}", route.distanceKm.toFixed(1))
+                .replace("{min}", String(route.rideMinutes))}
             </p>
           )}
 
@@ -676,7 +680,7 @@ function RidesInner() {
                         : "border-line bg-card text-cocoa hover:bg-beige/40",
                     )}
                   >
-                    {v === "any" ? "All" : v}
+                    {t(v === "any" ? "veh.any" : v === "bike" ? "veh.bike" : v === "auto" ? "veh.auto" : "veh.cab")}
                   </button>
                 ))}
               </div>
@@ -709,11 +713,12 @@ function RidesInner() {
                               <p className="mt-0.5 flex items-center gap-2 text-[12px] text-cocoa">
                                 {seats && (
                                   <span className="flex items-center gap-0.5">
-                                    <Users size={12} /> {seats} Seat{seats > 1 ? "s" : ""}
+                                    <Users size={12} />{" "}
+                                    {seats > 1 ? t("rd.seats").replace("{n}", String(seats)) : t("rd.seat")}
                                   </span>
                                 )}
                                 <span className="flex items-center gap-0.5">
-                                  <Clock size={12} /> {q.pickupEtaMinutes} min away
+                                  <Clock size={12} /> {q.pickupEtaMinutes} {t("track.minAway")}
                                 </span>
                                 <span className="flex items-center gap-0.5">
                                   <Star size={12} className="fill-accent text-accent" />
@@ -765,7 +770,7 @@ function RidesInner() {
                 </button>
                 <input
                   type="datetime-local"
-                  aria-label="Schedule for later"
+                  aria-label={t("rd.scheduleLater")}
                   value={
                     scheduledAt
                       ? new Date(

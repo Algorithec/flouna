@@ -25,8 +25,8 @@ export default function ShopLandingPage() {
   useEffect(() => {
     api<Feed>("/api/shop/feed")
       .then(setFeed)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-  }, []);
+      .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed")));
+  }, [t]);
 
   const activeQuery = (category === "All" ? query : `${query} ${category}`).trim();
 
@@ -87,7 +87,7 @@ export default function ShopLandingPage() {
       ) : (
         <section className="mt-6">
           <p className="flex items-center gap-1 text-[12px] font-semibold text-accent">
-            AI Recommends ✦
+            {t("fp.recommends")}
           </p>
           <h2 className="mt-1 text-[17px] font-bold text-ink">
             {showSearch ? t("shop.results") : t("shop.trending")}
@@ -95,7 +95,7 @@ export default function ShopLandingPage() {
           <Stagger className="mt-3 flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
             {showSearch && results.length === 0 && (
               <p className="text-[13px] text-cocoa">
-                No matches, try “laptop”, “earbuds”, or “shoes”.
+                {t("sh.noMatches")}
               </p>
             )}
             {(showSearch ? results : (feed?.picks ?? [])).map((q) => (
@@ -111,6 +111,7 @@ export default function ShopLandingPage() {
 }
 
 function ProductCard({ q }: { q: ProductQuote }) {
+  const { t } = useI18n();
   return (
     <Card className="transition-all hover:-translate-y-0.5 hover:shadow-card">
       <div className="flex items-center gap-3">
@@ -138,7 +139,7 @@ function ProductCard({ q }: { q: ProductQuote }) {
             href={`/shop/product/${q.productId}?platform=${q.platform}`}
             className="rounded-pill bg-accent px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#d4570f]"
           >
-            View
+            {t("sh.view")}
           </Link>
         </div>
       </div>

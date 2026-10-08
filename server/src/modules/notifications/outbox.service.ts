@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
 import { sendPrebuiltEmail } from "../../lib/mailer.js";
 import { notificationEmail } from "../../lib/emailTemplates.js";
-import { istStartOfDay } from "../../lib/istTime.js";
+import { istStartOfDay, istYearMonth } from "../../lib/istTime.js";
 
 // ---------------------------------------------------------------------------
 // Email-notification outbox.
@@ -530,7 +530,10 @@ export async function runLifecycleSweep(now = new Date()): Promise<{
   // intentionally NOT blasted here, it needs a real per-user counterfactual
   // savings figure to be honest, and monthly mail to every free user would hurt
   // domain deliverability. It's triggered case-by-case instead.)
-  const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
+  // The Indian calendar month. The host's, on a UTC server, changes month five
+  // and a half hours late, so around the 1st this sent twice or not at all.
+  const { year, month } = istYearMonth(now);
+  const monthKey = `${year}-${month}`;
   const activePlus = await prisma.user.findMany({
     where: { plusActive: true, plusUntil: { gt: now } },
     select: { id: true },

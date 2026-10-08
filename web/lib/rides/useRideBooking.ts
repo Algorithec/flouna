@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { resolvePlace, searchPlaces } from "@/lib/places";
 import type { RideQuote } from "@/components/chat/types";
 import type { Advice } from "@/components/ui/AdviceBanner";
 
@@ -49,6 +50,24 @@ export function useRideBooking(opts: {
   initialScheduledAt?: string | null;
   /** Skips the live-position read. The chat card sets this until it is opened. */
   enabled?: boolean;
+  /**
+   * The ranking this booking came from, when it started as a recommendation.
+   *
+   * Sent with the order so the ride taken is paired with the ride offered.
+   * Absent when the rider opened the rides screen directly, which came from
+   * no ranking.
+   */
+  decisionId?: string;
+  /**
+   * Limits the rider stated in the conversation.
+   *
+   * Applied here because this is where the real route is priced: a fare limit
+   * checked against chat's placeholder distance would refuse a short trip that
+   * fits and pass a long one that does not. Absent on the rides screen, which
+   * states no limits.
+   */
+  maxFarePaise?: number;
+  maxPickupMinutes?: number;
 } = {}) {
   const enabled = opts.enabled !== false;
 
@@ -57,6 +76,23 @@ export function useRideBooking(opts: {
   const [route, setRoute] = useState<RouteInfo | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle>(opts.initialVehicle ?? "any");
   const [quotes, setQuotes] = useState<RideQuote[]>([]);
+  /**
+   * The ranking these fares came from.
+   *
+   * The booking card re-prices over the real route, so this, not the one the
+   * chat reply carried, is the list the rider actually chose from. Replaced
+   * whenever the quotes are, so a booking is never paired to a ranking of
+   * fares that are no longer on screen.
+   */
+  const [quoteDecisionId, setQuoteDecisionId] = useState<string | null>(null);
+  /**
+   * Why there are no fares, when the reason is the rider's own limit.
+   *
+   * Without it an empty list is indistinguishable from a slow one, and the
+   * button sits on "Getting prices…" for a request that has already come back
+   * with an answer.
+   */
+  const [unmetNote, setUnmetNote] = useState<string | null>(null);
   const [advice, setAdvice] = useState<Advice | null>(null);
   const [selected, setSelected] = useState<RideQuote | null>(null);
   const [scheduledAt, setScheduledAt] = useState<string | null>(
@@ -256,10 +292,9 @@ export function useRideBooking(opts: {
         }
       }
       try {
-        const d = await api<{ places: Place[] }>(
-          `/api/rides/geocode?q=${encodeURIComponent(query)}`,
-        );
-        if (!cancelled && d.places[0]) setDrop((prev) => prev ?? d.places[0]!);
+        const first = (await searchPlaces(query))[0];
+        const place = first ? await resolvePlace(first) : null;
+        if (!cancelled && place) setDrop((prev) => prev ?? place);
       } catch {
         // Leaves drop empty so the person can type it, rather than guessing.
       }
@@ -285,6 +320,9 @@ export function useRideBooking(opts: {
     }
   }
 
+  // Bumped to fetch the route again; see the refused booking below.
+  const [routeVersion, setRouteVersion] = useState(0);
+
   // Route, then quotes. Both are derived, so neither is stored by the caller.
   useEffect(() => {
     if (!pickup || !drop) return;
@@ -297,20 +335,35 @@ export function useRideBooking(opts: {
     return () => {
       cancelled = true;
     };
-  }, [pickup, drop]);
+  }, [pickup, drop, routeVersion]);
 
+  const { maxFarePaise, maxPickupMinutes } = opts;
   const loadQuotes = useCallback(() => {
     if (!route) return;
-    api<{ quotes: RideQuote[]; advice?: Advice }>(
-      `/api/rides/quotes?distanceKm=${route.distanceKm.toFixed(2)}&rideMinutes=${route.rideMinutes}&vehicle=${vehicle}`,
+    const limits =
+      (maxFarePaise ? `&maxFarePaise=${maxFarePaise}` : "") +
+      (maxPickupMinutes ? `&maxPickupMinutes=${maxPickupMinutes}` : "");
+    api<{
+      quotes: RideQuote[];
+      advice?: Advice;
+      decisionId?: string | null;
+      unmetNote?: string;
+    }>(
+      `/api/rides/quotes?distanceKm=${route.distanceKm.toFixed(2)}&rideMinutes=${route.rideMinutes}&vehicle=${vehicle}${limits}`,
     )
       .then((d) => {
         setQuotes(d.quotes);
         setAdvice(d.advice ?? null);
         setSelected(d.quotes[0] ?? null);
+        setQuoteDecisionId(d.decisionId ?? null);
+        setUnmetNote(d.unmetNote ?? null);
       })
-      .catch(() => setError("Could not fetch ride options"));
-  }, [route, vehicle]);
+      .catch(() => {
+        setError("Could not fetch ride options");
+        setQuoteDecisionId(null);
+        setUnmetNote(null);
+      });
+  }, [route, vehicle, maxFarePaise, maxPickupMinutes]);
   useEffect(loadQuotes, [loadQuotes]);
 
   const mapPoints = useMemo(
@@ -339,8 +392,17 @@ export function useRideBooking(opts: {
         headers: { "Idempotency-Key": attemptKey.current },
         json: {
           domain: "ride",
+          // The ranking the chosen fare came from. Prefer the one behind the
+          // fares on screen; fall back to the chat's ranking when the quotes
+          // route recorded none.
+          ...(quoteDecisionId || opts.decisionId
+            ? { decisionId: quoteDecisionId ?? opts.decisionId }
+            : {}),
           provider: selected.provider,
           productName: selected.productName,
+          // What the rider agreed to. The server still prices the ride; it only
+          // refuses to book if its price no longer matches this.
+          expectedPaise: selected.effectivePaise,
           pickup: pickup.name,
           drop: drop.name,
           pickupLat: pickup.lat,
@@ -355,6 +417,11 @@ export function useRideBooking(opts: {
       return d.order.id;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not book the ride");
+      // A refusal can mean the fare moved. Re-pricing from the route already
+      // held would show the old fare again and the rider would loop, so the
+      // route is fetched afresh; the server now answers with the one it just
+      // priced, and the quotes follow it.
+      setRouteVersion((v) => v + 1);
       return null;
     } finally {
       setBusy(false);
@@ -367,6 +434,7 @@ export function useRideBooking(opts: {
     route,
     vehicle, setVehicle,
     quotes, advice,
+    unmetNote,
     selected, setSelected,
     scheduledAt, setScheduledAt,
     saved,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +17,7 @@ const RESEND_SECONDS = 45;
 // drawn, so the code submits itself once the sixth digit lands — guarded so a
 // rejected code can't resubmit in a loop while the boxes are still full.
 export default function VerifyEmailPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const { setUser } = useAuth();
   const [email, setEmail] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export default function VerifyEmailPage() {
       setUser(d.user);
       setSettingUp(true); // themed transition handles the redirect
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed");
+      setError(err instanceof Error ? err.message : t("au.verifyFailed"));
       setBusy(false);
       // Clear so the next attempt is a fresh six digits, and put the caret back
       // at the start — otherwise the boxes stay full with a code already known
@@ -67,7 +69,7 @@ export default function VerifyEmailPage() {
       setDigits(Array(6).fill(""));
       inputs.current[0]?.focus();
     }
-  }, [digits, email, busy, setUser]);
+  }, [digits, email, busy, setUser, t]);
 
   useEffect(() => {
     const code = digits.join("");
@@ -113,7 +115,7 @@ export default function VerifyEmailPage() {
       attempted.current = "";
       inputs.current[0]?.focus();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not resend code");
+      setError(err instanceof Error ? err.message : t("au.resendFailed"));
     }
   }
 
@@ -126,7 +128,7 @@ export default function VerifyEmailPage() {
       <div className="mx-auto w-full max-w-[420px]">
         <Link
           href="/signup"
-          aria-label="Back"
+          aria-label={t("au.back")}
           className="flex size-10 items-center justify-center rounded-full bg-auth-well text-auth-ink transition-colors hover:bg-auth-well/80"
         >
           <ArrowLeft size={20} />
@@ -138,18 +140,17 @@ export default function VerifyEmailPage() {
             className="size-[92px] text-auth-ink/80 [@media(max-width:480px)]:size-[56px]"
           />
           <h1 className="mt-7 text-[26px] font-bold text-auth-ink [@media(max-width:480px)]:mt-2 [@media(max-width:480px)]:text-[20px]">
-            Log in or sign up
+            {t("au.loginOrSignup")}
           </h1>
           <p className="mt-3 max-w-[330px] text-[16px] leading-[1.5] text-auth-muted [@media(max-width:480px)]:mt-1 [@media(max-width:480px)]:text-[12px] [@media(max-width:480px)]:leading-[1.3]">
-            You&apos;ll get smarter responses and can book rides, order food and
-            more.
+            {t("au.smarter")}
           </p>
         </div>
 
         <div
           className="mt-10 flex justify-center gap-2.5 [@media(max-width:480px)]:mt-3"
           onPaste={onPaste}
-          aria-label="Verification code"
+          aria-label={t("au.code")}
           role="group"
         >
           {digits.map((d, i) => (
@@ -172,24 +173,24 @@ export default function VerifyEmailPage() {
         </div>
 
         <p className="mt-7 text-center text-[16px] text-auth-muted [@media(max-width:480px)]:mt-3 [@media(max-width:480px)]:text-[14px]">
-          Didn&apos;t receive code?{" "}
+          {t("au.noCode")}{" "}
           {secondsLeft > 0 ? (
             <span className="font-bold text-auth-accent">
-              Resend in 00:{String(secondsLeft).padStart(2, "0")}
+              {t("au.resendIn").replace("{s}", String(secondsLeft).padStart(2, "0"))}
             </span>
           ) : (
             <button
               onClick={resend}
               className="font-bold text-auth-ink hover:underline"
             >
-              Resend now
+              {t("au.resendNow")}
             </button>
           )}
         </p>
 
         {busy && (
           <p className="mt-4 text-center text-[15px] text-auth-muted">
-            Verifying…
+            {t("au.verifying")}
           </p>
         )}
         {error && (

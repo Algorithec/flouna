@@ -69,7 +69,7 @@ export default function PayPage({
   if (!status) {
     return (
       <div className="mx-auto max-w-md px-4 py-12">
-        <p className="text-[14px] text-cocoa">{error || "Loading…"}</p>
+        <p className="text-[14px] text-cocoa">{error || t("dp.loading")}</p>
       </div>
     );
   }
@@ -284,7 +284,7 @@ export default function PayPage({
             onClick={() => setStage("select")}
             className="mt-6 text-[12px] font-semibold text-cocoa underline hover:text-ink"
           >
-            Taking too long? Go back to payment options
+            {t("py.tooLong")}
           </button>
         </FadeIn>
       )}
@@ -387,7 +387,7 @@ export default function PayPage({
                 : t("pay.successRide")}
           </p>
           <span className="mt-3 rounded-pill border border-success/40 bg-success/5 px-3 py-1 font-mono text-[11px] font-semibold text-success">
-            Order ID: #{orderId.slice(-8).toUpperCase()}
+            {t("py.orderId").replace("{id}", orderId.slice(-8).toUpperCase())}
           </span>
 
           {/* ETA banner */}
@@ -397,7 +397,7 @@ export default function PayPage({
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] text-white/80">
-                {isFood ? "Estimated delivery time" : "Estimated pickup"}
+                {isFood ? t("py.estDeliveryTime") : t("tt.estPickup")}
               </p>
               <p className="text-[15px] font-bold">
                 {isFood
@@ -406,7 +406,7 @@ export default function PayPage({
               </p>
             </div>
             <span className="flex items-center gap-1 rounded-pill bg-white/15 px-2 py-0.5 text-[10px] font-bold">
-              <span className="size-1.5 animate-pulse rounded-full bg-white" /> LIVE
+              <span className="size-1.5 animate-pulse rounded-full bg-white" /> {t("tt.live")}
             </span>
           </div>
 

@@ -87,7 +87,7 @@ export default function OrderDetailPage({
           setOrder(d.order);
           setError("");
         })
-        .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+        .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed")));
     load();
     const fetchTimer = setInterval(load, POLL_MS);
     // A faster local clock advances the driver marker smoothly between fetches.
@@ -96,7 +96,8 @@ export default function OrderDetailPage({
       clearInterval(fetchTimer);
       clearInterval(tickTimer);
     };
-  }, [id]);
+    // t only words the error; a change of language restarts polling once.
+  }, [id, t]);
 
   if (!order) {
     return error ? (
@@ -161,8 +162,8 @@ export default function OrderDetailPage({
             domain={order.domain}
             pickup={{ lat: d.pickupLat!, lng: d.pickupLng! }}
             drop={{ lat: d.dropLat!, lng: d.dropLng! }}
-            pickupLabel={d.pickup ?? "your pickup"}
-            dropLabel={order.domain === "food" ? "your address" : d.drop ?? "your drop"}
+            pickupLabel={d.pickup ?? t("od.yourPickup")}
+            dropLabel={order.domain === "food" ? t("od.yourAddress") : d.drop ?? t("od.yourDrop")}
             farePaise={d.farePaise ?? order.amount}
             onCancelRequest={() => setCancelling(true)}
             onTrackingUpdate={setTracking}
@@ -268,7 +269,7 @@ export default function OrderDetailPage({
             value={
               order.payment
                 ? `${order.payment.method?.toUpperCase() ?? " "} · ${order.payment.status}`
-                : "Not recorded"
+                : t("od.notRecorded")
             }
           />
           <Row label={t("bill.orderId")} value={order.id} mono />
@@ -291,7 +292,7 @@ export default function OrderDetailPage({
             onClick={() => setCancelling(true)}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-pill border border-danger/30 bg-card py-3 text-[14px] font-semibold text-danger transition-colors hover:bg-danger/5"
           >
-            Cancel {order.domain === "ride" ? "booking" : "order"}
+            {order.domain === "ride" ? t("od.cancelBooking") : t("track.food.cancelOrder")}
           </button>
         )}
 
@@ -315,7 +316,7 @@ export default function OrderDetailPage({
         href={`/orders/${order.id}/help`}
         className="mt-4 flex items-center justify-center gap-2 rounded-pill bg-ink py-3.5 text-[14px] font-bold text-white transition-opacity hover:opacity-90"
       >
-        <LifeBuoy size={16} /> Need Help
+        <LifeBuoy size={16} /> {t("od.needHelp")}
       </Link>
       <Link
         href={`/profile/help?order=${order.id}`}

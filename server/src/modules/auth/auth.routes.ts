@@ -167,14 +167,30 @@ authRouter.post(
         termsAcceptedAt: new Date(),
         termsVersion: POLICY_VERSION,
       };
+      const updateExisting = (id: string) =>
+        prisma.user.update({
+          where: { id },
+          data: { name, passwordHash, dateOfBirth, ...consent, ...optional },
+        });
       const user = existing
-        ? await prisma.user.update({
-            where: { id: existing.id },
-            data: { name, passwordHash, dateOfBirth, ...consent, ...optional },
-          })
-        : await prisma.user.create({
-            data: { name, email, passwordHash, dateOfBirth, ...consent, ...optional },
-          });
+        ? await updateExisting(existing.id)
+        : await prisma.user
+            .create({
+              data: { name, email, passwordHash, dateOfBirth, ...consent, ...optional },
+            })
+            .catch(async (err: { code?: string }) => {
+              // A second tap created the same account a moment earlier: both
+              // looked, both found nothing, both tried to create it. This one
+              // carries on as the update it would have been, rather than
+              // failing a sign up that worked with a 500.
+              if (err?.code !== "P2002") throw err;
+              const raced = await prisma.user.findUnique({ where: { email } });
+              if (!raced) throw err;
+              if (raced.emailVerified) {
+                throw new ApiError(409, "An account with this email already exists");
+              }
+              return updateExisting(raced.id);
+            });
 
       // The account row carries the current state; the log carries the
       // history, including this being the second time if they signed up,
@@ -278,6 +294,29 @@ authRouter.post(
 const MAX_FAILED_LOGINS = 10;
 const LOCKOUT_MS = 15 * 60_000;
 
+/**
+ * Counts a wrong password, and locks the account at the limit.
+ *
+ * Incremented by the database rather than written back as the value read
+ * with the user plus one. Wrong passwords sent at the same moment all wrote
+ * the same number, so a burst of ten counted as one and the lock never
+ * engaged. Shared by the customer and operator logins so the two cannot
+ * drift apart again; the operator one had the same fault.
+ */
+async function recordFailedLogin(userId: string) {
+  const { failedLogins } = await prisma.user.update({
+    where: { id: userId },
+    data: { failedLogins: { increment: 1 } },
+    select: { failedLogins: true },
+  });
+  if (failedLogins >= MAX_FAILED_LOGINS) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lockedUntil: new Date(Date.now() + LOCKOUT_MS) },
+    });
+  }
+}
+
 authRouter.post(
   "/login",
   sensitiveLimit,
@@ -295,19 +334,7 @@ authRouter.post(
 
       // Single generic error for all failure modes — no account enumeration.
       if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
-        if (user) {
-          const failed = user.failedLogins + 1;
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              failedLogins: failed,
-              lockedUntil:
-                failed >= MAX_FAILED_LOGINS
-                  ? new Date(Date.now() + LOCKOUT_MS)
-                  : null,
-            },
-          });
-        }
+        if (user) await recordFailedLogin(user.id);
         throw new ApiError(401, "Incorrect email or password");
       }
 
@@ -459,17 +486,7 @@ authRouter.post(
       const passwordOk =
         user?.passwordHash && (await verifyPassword(password, user.passwordHash));
       if (!user || !passwordOk) {
-        if (user) {
-          const failed = user.failedLogins + 1;
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              failedLogins: failed,
-              lockedUntil:
-                failed >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCKOUT_MS) : null,
-            },
-          });
-        }
+        if (user) await recordFailedLogin(user.id);
         throw new ApiError(401, "Incorrect email or password");
       }
 

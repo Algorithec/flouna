@@ -12,7 +12,7 @@ export default function AboutPage() {
       <div className="flex flex-col items-center py-4 text-center">
         <FlounaLogo size={84} className="text-ink" />
         <h2 className="mt-3 text-[18px] font-bold text-ink">Flouna</h2>
-        <p className="text-[12px] text-cocoa">Version 0.1.0 · by Algorithec Pvt Ltd</p>
+        <p className="text-[12px] text-cocoa">{t("ab.version").replace("{v}", "0.1.0")}</p>
       </div>
 
       <Card>

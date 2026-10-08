@@ -62,7 +62,9 @@ describe("group ride-sharing", () => {
     const view = await friend2.agent.post("/api/groups/join").send({ code }).expect(200);
 
     expect(view.body.members).toHaveLength(3);
-    expect(view.body.equalSplitPaise).toBe(Math.round(totalPaise / 3));
+    // What each friend owes; the host's line carries the remainder so the
+    // shares add up to the fare (see group-ride-split.test.ts).
+    expect(view.body.equalSplitPaise).toBe(Math.floor(totalPaise / 3));
     // Everyone sees the same trip.
     expect(view.body.ride.drop).toBe("Airport");
     // Non-members still can't read the cart.
@@ -113,7 +115,7 @@ describe("group ride-sharing", () => {
       .expect(200);
     expect(checkout.body.shares).toHaveLength(2);
     const friendShare = checkout.body.shares.find((s: { isHost: boolean }) => !s.isHost);
-    expect(friendShare.sharePaise).toBe(Math.round(checkout.body.totalPaise / 2));
+    expect(friendShare.sharePaise).toBe(Math.floor(checkout.body.totalPaise / 2));
     expect(friendShare.upiLink).toContain("upi://pay?");
     expect(friendShare.upiLink).toContain("host%40upi");
 

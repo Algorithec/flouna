@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "@/components/i18n/I18nContext";
 import dynamic from "next/dynamic";
 import { Crosshair, MapPin, Loader2, Search, Sparkles } from "lucide-react";
-import { api } from "@/lib/api";
+import { newSearchSession, resolvePlace, searchPlaces, type Suggestion } from "@/lib/places";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import { VehicleArt } from "@/components/rides/VehicleArt";
@@ -48,6 +49,9 @@ export function InlineRideBooking({
   scheduledAt,
   onBooked,
   showAny = true,
+  decisionId,
+  fareLimitPaise,
+  pickupLimitMinutes,
 }: {
   /** Destination the chat already understood, resolved on open. */
   drop?: string | null;
@@ -56,11 +60,27 @@ export function InlineRideBooking({
   /** Handed the new order id so the thread can move on to payment. */
   onBooked: (orderId: string) => void;
   showAny?: boolean;
+  /** The ranking behind these quotes, paired with the order on booking. */
+  decisionId?: string;
+  /**
+   * Limits the rider stated in the conversation, applied to the real trip.
+   *
+   * Chat prices a placeholder distance, so it cannot hold a fare to a stated
+   * maximum. This card prices the route the rider actually set, which is the
+   * only place the limit can be applied honestly, so it arrives here rather
+   * than being dropped after the reply had already mentioned it.
+   */
+  fareLimitPaise?: number;
+  pickupLimitMinutes?: number;
 }) {
+  const { t } = useI18n();
   const b = useRideBooking({
     initialDrop: drop ?? null,
     initialVehicle: vehicle ?? "any",
     initialScheduledAt: scheduledAt ?? null,
+    decisionId,
+    maxFarePaise: fareLimitPaise,
+    maxPickupMinutes: pickupLimitMinutes,
   });
   const [confirming, setConfirming] = useState(false);
   // Choosing a fare and paying for it used to be the same tap. The summary is
@@ -68,7 +88,9 @@ export function InlineRideBooking({
   // any money moves.
   const [reviewing, setReviewing] = useState(false);
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<{ name: string; area: string; lat: number; lng: number }[]>([]);
+  const [hits, setHits] = useState<Suggestion[]>([]);
+  // One search session per pick; replaced once a place is chosen.
+  const session = useRef(newSearchSession());
   const [searching, setSearching] = useState(false);
   const seq = useRef(0);
 
@@ -86,12 +108,10 @@ export function InlineRideBooking({
       // Moved inside the timer: setting it synchronously would flash the
       // spinner on every keystroke, including ones the debounce discards.
       setSearching(true);
-      api<{ places: { name: string; area: string; lat: number; lng: number }[] }>(
-        `/api/rides/geocode?q=${encodeURIComponent(q)}`,
-      )
-        .then((d) => {
+      searchPlaces(q, { session: session.current })
+        .then((found) => {
           if (mine !== seq.current) return;
-          setHits(d.places.slice(0, 5));
+          setHits(found.slice(0, 5));
         })
         .catch(() => mine === seq.current && setHits([]))
         .finally(() => mine === seq.current && setSearching(false));
@@ -103,12 +123,17 @@ export function InlineRideBooking({
   // simply not shown, rather than being cleared out of state on the way past.
   const visibleHits = b.picking && query.trim().length >= 3 ? hits : [];
 
-  function choose(place: { name: string; area: string; lat: number; lng: number }) {
-    if (b.picking === "pickup") b.setPickup(place);
-    else b.setDrop(place);
-    b.setPicking(null);
+  async function choose(suggestion: Suggestion) {
+    const picking = b.picking;
     setQuery("");
     setHits([]);
+    // A Google suggestion has no coordinates until it is chosen.
+    const place = await resolvePlace(suggestion, session.current);
+    session.current = newSearchSession();
+    if (!place) return;
+    if (picking === "pickup") b.setPickup(place);
+    else b.setDrop(place);
+    b.setPicking(null);
   }
 
   async function confirm() {
@@ -140,7 +165,7 @@ export function InlineRideBooking({
         />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium text-ink">
-            {place?.name ?? (which === "pickup" ? "Pickup" : "Where to?")}
+            {place?.name ?? (which === "pickup" ? t("bill.pickup") : t("ib.whereTo"))}
           </span>
           {place?.area && (
             <span className="block truncate text-[11px] text-cocoa">{place.area}</span>
@@ -150,7 +175,7 @@ export function InlineRideBooking({
             person to discover that the map became interactive. */}
         {active && (
           <span className="shrink-0 text-[11px] font-semibold text-accent">
-            tap the map
+            {t("ib.tapMap")}
           </span>
         )}
       </button>
@@ -207,7 +232,7 @@ export function InlineRideBooking({
           type="button"
           onClick={() => b.detectPickup()}
           disabled={b.locating}
-          aria-label="Use my current location"
+          aria-label={t("ib.useLocation")}
           className="tap-target absolute bottom-2.5 right-2.5 z-10 flex size-10 items-center justify-center rounded-full bg-card text-ink shadow-md transition-transform hover:scale-105 disabled:opacity-60"
         >
           {b.locating ? (
@@ -235,7 +260,7 @@ export function InlineRideBooking({
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
               placeholder={
-                b.picking === "pickup" ? "Search for a pickup point" : "Search for a destination"
+                b.picking === "pickup" ? t("ib.searchPickup") : t("ib.searchDrop")
               }
               className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-cocoa/60"
             />
@@ -306,7 +331,9 @@ export function InlineRideBooking({
 
       {b.route && (
         <p className="mt-2.5 text-[12px] text-cocoa">
-          {b.route.distanceKm.toFixed(1)} km · about {b.route.rideMinutes} min
+          {t("ib.routeLine")
+            .replace("{km}", b.route.distanceKm.toFixed(1))
+            .replace("{min}", String(b.route.rideMinutes))}
         </p>
       )}
 
@@ -324,10 +351,12 @@ export function InlineRideBooking({
           })()}
 
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[15px] font-bold text-ink">Available providers</p>
+            <p className="text-[15px] font-bold text-ink">{t("rc.availableProviders")}</p>
             <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent">
               <Sparkles size={11} />
-              {b.quotes.length} option{b.quotes.length === 1 ? "" : "s"} found
+              {b.quotes.length === 1
+                ? t("rc.oneOptionFound")
+                : t("rc.optionsFound").replace("{n}", String(b.quotes.length))}
             </span>
           </div>
 
@@ -346,7 +375,7 @@ export function InlineRideBooking({
           {b.quotes.length > 1 && (
             <>
               <p className="mt-0.5 text-[14px] font-bold text-ink">
-                Options we think you&apos;ll like
+                {t("ib.youllLike")}
               </p>
               {b.quotes.slice(1).map((q) => (
                 <RideOptionRow
@@ -363,6 +392,17 @@ export function InlineRideBooking({
         </div>
       )}
 
+      {/* The rider's own limit left nothing to show. Said plainly, with what
+          is actually available, because an empty list with a button reading
+          "Getting prices…" claims a request is still running when it has
+          already been answered. The limit is not quietly waived: the nearest
+          option is named, not offered. */}
+      {b.quotes.length === 0 && b.unmetNote && (
+        <p role="status" className="mt-3 rounded-2xl bg-beige/60 px-3 py-2.5 text-[12px] text-ink">
+          {b.unmetNote}
+        </p>
+      )}
+
       {b.error && (
         <p role="alert" className="mt-2.5 text-[12px] text-danger">
           {b.error}
@@ -376,12 +416,16 @@ export function InlineRideBooking({
         className="tap-target mt-3 w-full rounded-pill bg-accent px-4 py-3 text-[14px] font-bold text-white transition-opacity disabled:opacity-50"
       >
         {confirming
-          ? "Booking…"
+          ? t("rides.booking")
           : b.selected
-            ? `Review ${b.selected.displayName} · ${rupees(b.selected.effectivePaise)}`
-            : b.pickup && b.drop
-              ? "Getting prices…"
-              : "Set pickup and destination"}
+            ? t("ib.review")
+                .replace("{name}", b.selected.displayName)
+                .replace("{price}", rupees(b.selected.effectivePaise))
+            : b.unmetNote
+              ? t("ib.nothingFits")
+              : b.pickup && b.drop
+                ? t("ib.gettingPrices")
+                : t("ib.setBoth")}
       </button>
     </div>
   );

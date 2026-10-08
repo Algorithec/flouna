@@ -3,6 +3,14 @@
 import { useEffect, useRef } from "react";
 import maplibregl, { type Map as MlMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { useMapEngine } from "@/lib/maps/googleMaps";
+import { GoogleRideMap } from "./GoogleRideMap";
+import {
+  placeLabelElement,
+  providerPillElement,
+  providerPositions,
+  shorten,
+} from "./rideMapShared";
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
 // MapTiler when configured; otherwise the free MapLibre demo style.
@@ -12,7 +20,34 @@ const STYLE_URL = MAPTILER_KEY
 
 export type LatLng = { lat: number; lng: number };
 
-export function RideMap({
+type RideMapProps = {
+  pickup: LatLng | null;
+  drop: LatLng | null;
+  routeGeometry: [number, number][] | null;
+  /** Names for the two ends, so the map says where it is rather than showing
+      two anonymous pins. */
+  pickupLabel?: string | null;
+  dropLabel?: string | null;
+  /** Providers covering this route, shown along it. */
+  providers?: string[];
+  // Set while the user is choosing a point by tapping the map. Kept in a ref
+  // so toggling it doesn't tear the map down and rebuild it.
+  onPick?: ((p: LatLng) => void) | null;
+};
+
+/**
+ * The ride map, on Google when a browser key is set and MapLibre otherwise.
+ * While Google loads, an empty frame holds the space, so a MapLibre map is
+ * never drawn and then swapped out from under the rider.
+ */
+export function RideMap(props: RideMapProps) {
+  const engine = useMapEngine();
+  if (engine === "google") return <GoogleRideMap {...props} />;
+  if (engine === "loading") return <div className="size-full min-h-[260px] bg-beige/40" />;
+  return <MapLibreRideMap {...props} />;
+}
+
+function MapLibreRideMap({
   pickup,
   drop,
   routeGeometry,
@@ -97,20 +132,7 @@ export function RideMap({
      * the map rather than only in the field below it.
      */
     const addLabel = (point: LatLng, text: string, kind: "pickup" | "drop") => {
-      const el = document.createElement("div");
-      el.className =
-        "flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-[#3d1c00] shadow-md whitespace-nowrap";
-      if (kind === "drop") {
-        const flag = document.createElement("span");
-        flag.textContent = "🏁";
-        flag.className = "text-[10px]";
-        el.append(flag, document.createTextNode(text));
-      } else {
-        const dot = document.createElement("span");
-        dot.className = "size-2 shrink-0 rounded-full";
-        dot.style.background = "#1ca65c";
-        el.append(dot, document.createTextNode(text));
-      }
+      const el = placeLabelElement(text, kind);
       // Under the point, not over it. A pin points down, so the space above it
       // is where the pin body and the map's own zoom and attribution controls
       // are, and a destination in the top corner had its name clipped off the
@@ -133,37 +155,11 @@ export function RideMap({
     // The providers that cover this route, spaced along it. Evidence that the
     // comparison happened, placed where the route is rather than as another
     // line of text under it.
-    if (providers.length > 0 && routeGeometry && routeGeometry.length > 3) {
-      const seen = [...new Set(providers)].slice(0, 3);
-      seen.forEach((name, i) => {
-        const at = routeGeometry[
-          Math.floor(((i + 1) / (seen.length + 1)) * (routeGeometry.length - 1))
-        ];
-        if (!at) return;
-        const el = document.createElement("div");
-        const n = name.toLowerCase();
-        let bg = "#3d1c00";
-        let textCol = "white";
-        if (n.includes("ola")) {
-          bg = "#bada55";
-          textCol = "black";
-        } else if (n.includes("uber")) {
-          bg = "black";
-          textCol = "white";
-        } else if (n.includes("rapido")) {
-          bg = "#f6d000";
-          textCol = "black";
-        }
-        el.className =
-          "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide shadow-md ring-2 ring-white/50";
-        el.style.backgroundColor = bg;
-        el.style.color = textCol;
-        el.textContent = name;
-        const m = new maplibregl.Marker({ element: el })
-          .setLngLat([at[0], at[1]])
-          .addTo(map);
-        markersRef.current.push(m);
-      });
+    for (const { name, at } of providerPositions(providers, routeGeometry)) {
+      const m = new maplibregl.Marker({ element: providerPillElement(name) })
+        .setLngLat([at[0], at[1]])
+        .addTo(map);
+      markersRef.current.push(m);
     }
 
     const drawRoute = () => {
@@ -213,18 +209,4 @@ export function RideMap({
   }, [pickup, drop, routeGeometry, pickupLabel, dropLabel, providers]);
 
   return <div ref={containerRef} className="size-full min-h-[260px]" />;
-}
-
-/**
- * A place name short enough to sit on a map.
- *
- * "Hitech city Madhapur road, Kothaguda" is a useful line in a form field and
- * a wall of text on a pin, so only the leading part is kept.
- */
-function shorten(name: string): string {
-  const head = name.split(",")[0]!.trim();
-  // Short enough that a label centred on a point near the edge still fits
-  // inside the map. The full name is in the field directly below, so this only
-  // has to be enough to tell the two ends apart at a glance.
-  return head.length > 15 ? `${head.slice(0, 14)}…` : head;
 }

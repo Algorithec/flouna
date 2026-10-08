@@ -137,11 +137,20 @@ complaintsRouter.post("/:id/resolution/:resolutionId/reject", async (req, res, n
 
 complaintsRouter.post(
   "/:id/escalate",
-  validateBody(z.object({ reason: z.string().trim().min(5).max(500) }).strict()),
+  validateBody(
+    z
+      .object({
+        reason: z.string().trim().min(5).max(500),
+        // The level the customer saw when they tapped. Optional so an older
+        // app still works, which then gets the weaker check below.
+        fromLevel: z.number().int().min(0).max(1).optional(),
+      })
+      .strict(),
+  ),
   async (req, res, next) => {
     try {
-      const { reason } = req.body as { reason: string };
-      res.json(await escalateComplaint(req.userId!, req.params.id!, reason));
+      const { reason, fromLevel } = req.body as { reason: string; fromLevel?: number };
+      res.json(await escalateComplaint(req.userId!, req.params.id!, reason, fromLevel));
     } catch (err) {
       next(err);
     }

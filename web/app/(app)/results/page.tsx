@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Sparkles, Share2, Check } from "lucide-react";
@@ -22,45 +23,61 @@ export default function ResultsPage() {
 }
 
 function Results() {
+  const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const chatId = params.get("chat");
   const msgId = params.get("msg");
 
+  // A link with no chat or message in it cannot be loaded, and that is known
+  // before any effect runs. Deciding it inside the effect meant setting state
+  // synchronously as the component mounted, which is a cascading render and is
+  // what the lint rule that turned CI red is there to catch.
+  const addressed = Boolean(chatId && msgId);
+
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(addressed);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [shared, setShared] = useState(false);
+  const loading = addressed && fetching;
+  const error = addressed ? fetchError : t("rs.missingId");
 
   useEffect(() => {
-    if (!chatId || !msgId) return;
+    if (!addressed) return;
+    let active = true;
 
     api<{ session: { id: string; messages: ChatMessage[] } }>(
       `/api/chat/sessions/${chatId}`,
     )
       .then((d) => {
+        if (!active) return;
         const msg = d.session.messages.find((m) => m.id === msgId);
         if (!msg?.recommendation) {
-          setError("Recommendation not found");
+          setFetchError("Recommendation not found");
         } else {
           setRec(msg.recommendation);
           setContent(msg.content);
         }
       })
-      .catch(() => setError("Could not load results"))
-      .finally(() => setLoading(false));
-  }, [chatId, msgId]);
+      // A reply that arrives after the reader has moved on must not write to a
+      // component that is gone.
+      .catch(() => active && setFetchError("Could not load results"))
+      .finally(() => active && setFetching(false));
+    return () => {
+      active = false;
+    };
+  }, [chatId, msgId, addressed]);
 
   if (!chatId || !msgId) {
     return (
       <div className="flex h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-4 px-4 lg:h-dvh">
-        <p className="text-[15px] text-cocoa">Missing chat or message ID</p>
+        <p className="text-[15px] text-cocoa">{t("rs.missingId")}</p>
         <button
           onClick={() => router.back()}
           className="rounded-pill bg-accent px-5 py-2.5 text-[14px] font-semibold text-white"
         >
-          Go back
+          {t("rs.goBack")}
         </button>
       </div>
     );
@@ -85,7 +102,7 @@ function Results() {
       <div className="flex h-[calc(100dvh-4rem)] items-center justify-center lg:h-dvh">
         <div className="flex flex-col items-center gap-3">
           <Sparkles size={28} className="animate-pulse text-accent" />
-          <p className="text-[14px] text-cocoa">Loading results&hellip;</p>
+          <p className="text-[14px] text-cocoa">{t("rs.loading")}</p>
         </div>
       </div>
     );
@@ -94,12 +111,12 @@ function Results() {
   if (error || !rec) {
     return (
       <div className="flex h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-4 px-4 lg:h-dvh">
-        <p className="text-[15px] text-cocoa">{error ?? "No results found"}</p>
+        <p className="text-[15px] text-cocoa">{error ?? t("fp.noResults")}</p>
         <button
           onClick={() => router.back()}
           className="rounded-pill bg-accent px-5 py-2.5 text-[14px] font-semibold text-white"
         >
-          Go back
+          {t("rs.goBack")}
         </button>
       </div>
     );
@@ -114,18 +131,26 @@ function Results() {
           className="tap-target flex items-center gap-2 text-[14px] font-medium text-ink transition-colors hover:text-accent"
         >
           <ArrowLeft size={18} />
-          <span className="hidden sm:inline">Back to chat</span>
+          <span className="hidden sm:inline">{t("rs.backToChat")}</span>
         </button>
 
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-[11px] font-bold tracking-wide text-accent">
             <Sparkles size={12} />
-            {rec.type === "combo" ? "FOOD + RIDE" : rec.type.toUpperCase()} RESULTS
+            <span className="uppercase">
+              {rec.type === "combo"
+                ? t("rs.comboResults")
+                : rec.type === "ride"
+                  ? t("rs.rideResults")
+                  : rec.type === "shop"
+                    ? t("rs.shopResults")
+                    : t("rs.foodResults")}
+            </span>
           </span>
           <button
             onClick={onShare}
             className="tap-target flex size-9 items-center justify-center rounded-full border border-line transition-colors hover:bg-beige/50"
-            aria-label="Share results"
+            aria-label={t("rs.share")}
           >
             {shared ? (
               <Check size={16} className="text-success" />
@@ -143,7 +168,7 @@ function Results() {
           {content && (
             <div className="rounded-card border border-accent/20 bg-accent-soft/30 p-4">
               <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent">
-                <Sparkles size={12} /> AI REASONING
+                <Sparkles size={12} /> <span className="uppercase">{t("rs.whyPick")}</span>
               </p>
               <p className="mt-2 text-[14px] leading-relaxed text-ink">
                 {content}

@@ -8,8 +8,10 @@ import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
 import { quotesForDish } from "../food/food.service.js";
+import { priceFoodCart, type CartItem } from "./cartPricing.js";
 import { quoteRides, fetchRoute } from "../rides/rides.service.js";
 import { quotesForProduct } from "../shop/shop.service.js";
+import { recordSelection } from "../advisor/decisionLog.service.js";
 import { env } from "../../config/env.js";
 import { rideProvider } from "../providers/index.js";
 import { catchUpDriverMessages } from "../rides/rideChat.service.js";
@@ -20,9 +22,10 @@ import {
   CONVENIENCE_FEE_PAISE,
 } from "../subscription/subscription.service.js";
 import { sendPushToUser } from "../notifications/push.service.js";
-import { evaluateCoupon, redeemCoupon } from "../coupons/coupons.service.js";
+import { evaluateCoupon, createOrderClaimingCoupon } from "../coupons/coupons.service.js";
 import { enqueueNotification } from "../notifications/outbox.service.js";
 import { emitOrderDiscovery } from "../backoffice/ondc.service.js";
+import { istTimeLabel } from "../../lib/istTime.js";
 
 export const ordersRouter = Router();
 ordersRouter.use(requireAuth);
@@ -67,11 +70,16 @@ async function requireDeliveryAddress(userId: string) {
   return address;
 }
 
+// Pairs the order back to the ranking that produced it, so the decision log
+// records the option taken and not only the option offered. Optional
+// throughout: an order placed from a screen that never ran a ranking, or by a
+// client that predates this, is still a perfectly good order.
 const createFoodOrder = z.object({
   domain: z.literal("food"),
   dishId: z.string().max(60),
   platform: z.enum(["ondc", "swiggy", "zomato"]),
   couponCode: z.string().trim().max(24).optional(),
+  decisionId: z.string().max(64).optional(),
 });
 
 // Multi-item cart checkout: one order with line items. Every price is
@@ -84,6 +92,10 @@ const createFoodCartOrder = z.object({
         dishId: z.string().max(60),
         platform: z.enum(["ondc", "swiggy", "zomato"]),
         qty: z.number().int().min(1).max(20),
+        // Per line, not per order: a cart can hold items from several
+        // recommendations, and one id on the order could be paired with only
+        // one of them with nothing to say which.
+        decisionId: z.string().max(64).optional(),
       }),
     )
     .min(1)
@@ -97,6 +109,11 @@ const createFoodCartOrder = z.object({
 // short trip. Labels (pickup/drop strings) are display-only.
 const createRideOrder = z.object({
   domain: z.literal("ride"),
+  decisionId: z.string().max(64).optional(),
+  // The fare the app showed. Never used as the price, which the server works
+  // out itself; only compared, so a fare that moved while the rider sat on the
+  // review screen is reported rather than charged.
+  expectedPaise: z.number().int().positive().optional(),
   provider: z.enum(["uber", "ola", "rapido", "ondc"]),
   productName: z.string().max(60),
   pickup: z.string().max(160),
@@ -187,62 +204,25 @@ ordersRouter.post(
 
       // ---------- multi-item cart ----------
       if (body.domain === "food" && "items" in body) {
-        type Line = {
-          dishId: string;
-          platform: string;
-          name: string;
-          restaurant: string;
-          qty: number;
-          pricePaise: number; // unit base price
-          offer: { label: string; discountPaise: number } | null;
-        };
-        const lines: Line[] = [];
-        let itemsTotal = 0;
-        let discount = 0;
-        let deliveryFeePaise = 0;
-        let savedPaise = 0;
-        const offers: { label: string; discountPaise: number }[] = [];
-
-        for (const item of body.items) {
-          const quotes = quotesForDish(item.dishId);
-          const quote = quotes.find((q) => q.platform === item.platform);
-          if (!quote) {
-            throw new ApiError(404, `An item in your cart is no longer available`);
-          }
-          itemsTotal += quote.basePaise * item.qty;
-          // One delivery per order — charge the highest fee among the lines,
-          // never a per-line stack.
-          deliveryFeePaise = Math.max(deliveryFeePaise, quote.deliveryFeePaise);
-          const lineOffer = quote.offers[0] ?? null;
-          if (lineOffer) {
-            discount += lineOffer.discountPaise;
-            offers.push(lineOffer);
-          }
-          const cheapestOther = Math.min(
-            ...quotes
-              .filter((q) => q.platform !== item.platform)
-              .map((q) => q.effectivePaise),
-          );
-          if (Number.isFinite(cheapestOther)) {
-            savedPaise += Math.max(0, cheapestOther - quote.effectivePaise);
-          }
-          lines.push({
-            dishId: item.dishId,
-            platform: item.platform,
-            name: quote.name,
-            restaurant: quote.restaurant,
-            qty: item.qty,
-            pricePaise: quote.basePaise,
-            offer: lineOffer,
-          });
-        }
-
-        const defaultAddress = await requireDeliveryAddress(req.userId!);
         const me = await prisma.user.findUniqueOrThrow({
           where: { id: req.userId! },
           select: { plusActive: true, plusUntil: true },
         });
         const convenienceFeePaise = !isPlusActive(me) ? CONVENIENCE_FEE_PAISE : 0;
+        // The same function the cart screen's preview answers with, so the
+        // total shown and the amount charged cannot drift apart. Priced before
+        // the address is required, which is the order the messages came in
+        // before: an item that has gone is worth saying first.
+        const bill = priceFoodCart(body.items, { convenienceFeePaise });
+        const defaultAddress = await requireDeliveryAddress(req.userId!);
+        const {
+          lines,
+          itemsTotalPaise: itemsTotal,
+          deliveryFeePaise,
+          offers,
+          offersDiscountPaise: discount,
+          savedPaise,
+        } = bill;
 
         // Promo code — re-evaluated here (never trusted from the client) and
         // applied to the item subtotal, on top of any per-line offers.
@@ -277,7 +257,12 @@ ordersRouter.post(
         const { restaurantLat, restaurantLng, deliveryLat, deliveryLng } =
           simulateDeliveryCoords(first.dishId);
 
-        const order = await prisma.order.create({
+        // One step: the code is claimed with the order or not at all.
+        const order = await createOrderClaimingCoupon(
+          coupon
+            ? { couponId: coupon.couponId, userId: req.userId!, discountPaise: couponDiscount }
+            : null,
+          (tx) => tx.order.create({
           data: {
             userId: req.userId!,
             ...(fingerprint ? { requestKey: fingerprint } : {}),
@@ -319,16 +304,25 @@ ordersRouter.post(
             savedPaise: savedPaise + couponDiscount,
             addressId: defaultAddress?.id ?? null,
           },
-        });
-        if (coupon) {
-          await redeemCoupon({
-            couponId: coupon.couponId,
-            userId: req.userId!,
+        }),
+        );
+        void emitOrderDiscovery(order);
+        // Pair each line that came from a recommendation with the ranking that
+        // produced it. The key is built here from the line being ordered, not
+        // taken from the caller, so nothing can plant a choice that was never
+        // made. Deduplicated by decision: a row records one chosen option, so
+        // two lines from the same ranking would otherwise race to be it.
+        const paired = new Set<string>();
+        for (const item of body.items) {
+          if (!item.decisionId || paired.has(item.decisionId)) continue;
+          paired.add(item.decisionId);
+          void recordSelection({
+            decisionId: item.decisionId,
+            selectedKey: `${item.dishId}@${item.platform}`,
             orderId: order.id,
-            discountPaise: couponDiscount,
+            userId: req.userId!,
           });
         }
-        void emitOrderDiscovery(order);
         return res.status(201).json({ order });
       }
 
@@ -385,7 +379,12 @@ ordersRouter.post(
         const { restaurantLat, restaurantLng, deliveryLat, deliveryLng } =
           simulateDeliveryCoords(body.dishId);
 
-        const order = await prisma.order.create({
+        // One step: the code is claimed with the order or not at all.
+        const order = await createOrderClaimingCoupon(
+          coupon
+            ? { couponId: coupon.couponId, userId: req.userId!, discountPaise: couponDiscount }
+            : null,
+          (tx) => tx.order.create({
           data: {
             userId: req.userId!,
             ...(fingerprint ? { requestKey: fingerprint } : {}),
@@ -417,18 +416,20 @@ ordersRouter.post(
             savedPaise: savedPaise + couponDiscount,
             addressId: defaultAddress?.id ?? null,
           },
-        });
-        if (coupon) {
-          await redeemCoupon({
-            couponId: coupon.couponId,
-            userId: req.userId!,
-            orderId: order.id,
-            discountPaise: couponDiscount,
-          });
-        }
+        }),
+        );
         // Record the simulated ONDC discovery flow (search/select) for the
         // developer transaction viewer. Fire-and-forget — never blocks the order.
         void emitOrderDiscovery(order);
+        if (body.decisionId) {
+          void recordSelection({
+            decisionId: body.decisionId,
+            // The trace's key space for food: which dish, on which listing.
+            selectedKey: `${body.dishId}@${body.platform}`,
+            orderId: order.id,
+            userId: req.userId!,
+          });
+        }
         return res.status(201).json({ order });
       }
 
@@ -472,7 +473,12 @@ ordersRouter.post(
           };
         }
 
-        const order = await prisma.order.create({
+        // One step: the code is claimed with the order or not at all.
+        const order = await createOrderClaimingCoupon(
+          coupon
+            ? { couponId: coupon.couponId, userId: req.userId!, discountPaise: couponDiscount }
+            : null,
+          (tx) => tx.order.create({
           data: {
             userId: req.userId!,
             ...(fingerprint ? { requestKey: fingerprint } : {}),
@@ -497,15 +503,8 @@ ordersRouter.post(
             savedPaise: savedPaise + couponDiscount,
             addressId: defaultAddress?.id ?? null,
           },
-        });
-        if (coupon) {
-          await redeemCoupon({
-            couponId: coupon.couponId,
-            userId: req.userId!,
-            orderId: order.id,
-            discountPaise: couponDiscount,
-          });
-        }
+        }),
+        );
         void emitOrderDiscovery(order);
         return res.status(201).json({ order });
       }
@@ -519,6 +518,7 @@ ordersRouter.post(
         body.dropLat,
         body.dropLng,
         env.ORS_KEY,
+        env.GOOGLE_MAPS_API_KEY,
       );
       const { distanceKm, rideMinutes } = route;
       const quotes = quoteRides({ distanceKm, rideMinutes });
@@ -526,6 +526,12 @@ ordersRouter.post(
         (q) => q.provider === body.provider && q.productName === body.productName,
       );
       if (!quote) throw new ApiError(404, "That ride option is no longer available");
+      if (body.expectedPaise !== undefined && body.expectedPaise !== quote.effectivePaise) {
+        throw new ApiError(
+          409,
+          `The fare has changed to ₹${Math.round(quote.effectivePaise / 100)}. Review it and book again.`,
+        );
+      }
 
       // Savings vs the cheapest other option of the same vehicle type.
       const cheapestOther = Math.min(
@@ -581,6 +587,15 @@ ordersRouter.post(
         },
       });
       void emitOrderDiscovery(order);
+      if (body.decisionId) {
+        // Rides are keyed by product name in the trace.
+        void recordSelection({
+          decisionId: body.decisionId,
+          selectedKey: body.productName,
+          orderId: order.id,
+          userId: req.userId!,
+        });
+      }
       res.status(201).json({ order });
     } catch (err) {
       // Two identical requests in flight together both pass the check above
@@ -599,6 +614,52 @@ ordersRouter.post(
           return;
         }
       }
+      next(err);
+    }
+  },
+);
+
+// What a cart will cost, before committing to it.
+//
+// The screen cannot work this out for itself: one delivery fee for the order,
+// each listing's offer once, and whether the convenience fee applies at all
+// are all properties of the order rather than of a line, and the last one
+// depends on the customer's subscription. It used to try, and at quantity two
+// it promised a total nobody was going to charge. This answers with the same
+// function the order is priced by.
+ordersRouter.post(
+  "/preview",
+  validateBody(
+    z
+      .object({
+        items: z
+          .array(
+            z.object({
+              dishId: z.string().max(60),
+              platform: z.enum(["ondc", "swiggy", "zomato"]),
+              qty: z.number().int().min(1).max(20),
+            }),
+          )
+          .min(1)
+          .max(30),
+      })
+      .strict(),
+  ),
+  async (req, res, next) => {
+    try {
+      const { items } = req.body as { items: CartItem[] };
+      const me = await prisma.user.findUniqueOrThrow({
+        where: { id: req.userId! },
+        select: { plusActive: true, plusUntil: true },
+      });
+      const bill = priceFoodCart(items, {
+        convenienceFeePaise: !isPlusActive(me) ? CONVENIENCE_FEE_PAISE : 0,
+      });
+      // A promo code is deliberately not applied here: the cart validates one
+      // through the coupons route, which is where a code is checked against
+      // the customer and their history.
+      res.json({ bill });
+    } catch (err) {
       next(err);
     }
   },
@@ -652,13 +713,20 @@ ordersRouter.get("/:id", async (req, res, next) => {
       order.trackingEvents.length > 0 &&
       order.trackingEvents.every((e) => e.createdAt <= new Date())
     ) {
-      order = {
-        ...order,
-        ...(await prisma.order.update({
-          where: { id: order.id },
-          data: { status: "completed" },
-        })),
-      };
+      // Only if it is still confirmed. This write used to be unconditional,
+      // so a cancellation landing between the read above and this line was
+      // overwritten: the order showed completed with a refund flagged against
+      // it and cashback paid on it.
+      const completed = await prisma.order.updateMany({
+        where: { id: order.id, status: "confirmed" },
+        data: { status: "completed" },
+      });
+      if (completed.count === 0) {
+        // Something else changed it first; show what it is now.
+        const current = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
+        return res.json({ order: { ...order, ...current, details: JSON.parse(current.details) } });
+      }
+      order = { ...order, status: "completed" };
 
       // Completing the order is what earns the buyer's cashback. The rate is
       // the platform's own configured numbers — the ONDC margin floor, and the
@@ -840,10 +908,7 @@ ordersRouter.get("/:id/track", async (req, res, next) => {
     // calm "scheduled" placeholder instead of a fake live search.
     const bookedAt = order.trackingEvents[0]?.createdAt ?? order.createdAt;
     if (bookedAt.getTime() > Date.now()) {
-      const when = bookedAt.toLocaleTimeString("en-IN", {
-        hour: "numeric",
-        minute: "2-digit",
-      });
+      const when = istTimeLabel(bookedAt);
       return res.json({
         tracking: {
           providerRef: `SIM-${order.id.slice(0, 8).toUpperCase()}`,
@@ -969,17 +1034,36 @@ ordersRouter.post(
       details.cancelledWithinFreeWindow = terms.freeWindow;
       details.cancelledAt = new Date().toISOString();
 
-      const updated = await prisma.order.update({
-        where: { id: order.id },
+      // Only if it is still open. This write used to be unconditional, so an
+      // order that completed between the checks above and here (food already
+      // delivered) was cancelled anyway and its payment flagged for a refund.
+      const cancelled = await prisma.order.updateMany({
+        where: { id: order.id, status: { notIn: ["completed", "cancelled"] } },
         data: { status: "cancelled", details: JSON.stringify(details) },
       });
+      if (cancelled.count === 0) {
+        throw new ApiError(
+          409,
+          isFood ? "This order has just been delivered" : "This trip has just finished",
+        );
+      }
+      const updated = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
 
       // Reward credit spent on this order goes straight back — it never left
       // Flouna, so there is nothing to wait on a gateway for. Best-effort: the
       // ledger's unique index rejects a second refund for the same order, and
       // a cancellation must not fail because the credit was already returned.
-      const walletApplied =
-        typeof details.walletAppliedPaise === "number" ? details.walletAppliedPaise : 0;
+      // Read from the ledger, not from the order's details. A payment with
+      // credit landing at the same moment wrote its record into details after
+      // this request had read them, and the copy written back above erased it,
+      // so the credit was never returned. The ledger's debit is the fact.
+      const spend = await prisma.walletEntry.findUnique({
+        where: {
+          userId_orderId_reason: { userId: order.userId, orderId: order.id, reason: "spend" },
+        },
+        select: { amountPaise: true },
+      });
+      const walletApplied = spend ? -spend.amountPaise : 0;
       if (walletApplied > 0) {
         await refundToWallet({
           userId: order.userId,
@@ -994,9 +1078,20 @@ ordersRouter.post(
       // ops would otherwise never learn money is owed back. Status-scoped so a
       // payment that isn't actually settled is left alone (cash on delivery
       // sits at "pending" — nothing to return).
+      //
+      // Only money that went through the gateway is owed back through it. An
+      // order the wallet covered in full has a zero rupee payment: its credit
+      // was returned just above, so that payment is simply closed. Flagging it
+      // used to tell the customer a refund was coming that they already had,
+      // and gave ops a queue item asking Cashfree to refund nothing on an
+      // order it never saw, which failed every time and could not be cleared.
       const refundFlagged = await prisma.payment.updateMany({
-        where: { orderId: order.id, status: "success" },
+        where: { orderId: order.id, status: "success", amount: { gt: 0 } },
         data: { status: "refund_pending" },
+      });
+      await prisma.payment.updateMany({
+        where: { orderId: order.id, status: "success", amount: 0 },
+        data: { status: "refunded" },
       });
 
       void sendPushToUser(order.userId, {
@@ -1060,16 +1155,24 @@ ordersRouter.post(
       const itemKey =
         order.domain === "food" ? (details.dishId ?? order.provider) : order.provider;
 
-      const rating = await prisma.orderRating.create({
-        data: {
-          orderId: order.id,
-          userId: req.userId!,
-          domain: order.domain,
-          itemKey,
-          stars,
-          comment: comment || null,
-        },
-      });
+      const rating = await prisma.orderRating
+        .create({
+          data: {
+            orderId: order.id,
+            userId: req.userId!,
+            domain: order.domain,
+            itemKey,
+            stars,
+            comment: comment || null,
+          },
+        })
+        .catch((err: { code?: string }) => {
+          // A second submission at the same moment passed the check above and
+          // hit the one-rating-per-order index. It is the same answer, not a
+          // server fault, and a 500 here put a false alarm in the error log.
+          if (err?.code === "P2002") throw new ApiError(409, "You've already rated this order");
+          throw err;
+        });
       res.status(201).json({ rating });
     } catch (err) {
       next(err);

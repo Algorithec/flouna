@@ -224,12 +224,9 @@ export function RideTracker({
           <Info size={15} className="mt-0.5 shrink-0" />
           <span>
             <strong className="font-semibold">
-              {isFood ? "Demo delivery." : "Demo ride."}
+              {isFood ? tr("rt.demoDelivery") : tr("rt.demoRide")}
             </strong>{" "}
-            Flouna is not yet connected to a live{" "}
-            {isFood ? "restaurant" : "driver"} network, so this{" "}
-            {isFood ? "delivery" : "trip"} is simulated — no{" "}
-            {isFood ? "food has been prepared" : "vehicle has been dispatched"}.
+            {isFood ? tr("rt.simFood") : tr("rt.simRide")}
           </span>
         </div>
       )}
@@ -269,9 +266,9 @@ export function RideTracker({
           <div className="mx-4 mt-3 flex items-start gap-2.5 rounded-card border border-success/40 bg-success/5 px-3.5 py-2.5">
             <ShieldCheck size={15} className="mt-0.5 shrink-0 text-success" />
             <div className="min-w-0">
-              <p className="text-[13px] font-bold text-success">Your ride is confirmed</p>
+              <p className="text-[13px] font-bold text-success">{tr("rt.confirmed")}</p>
               <p className="text-[11.5px] text-cocoa">
-                Track it live here, we&apos;ll notify you at every step.
+                {tr("rt.trackLive")}
               </p>
             </div>
           </div>
@@ -283,16 +280,16 @@ export function RideTracker({
         {!isFood && done && (
           <div className="mx-4 mt-3 rounded-card border border-line">
             <p className="flex items-center gap-1.5 border-b border-line px-3.5 py-3 text-[13px] font-bold text-ink">
-              <span className="size-1.5 rounded-full bg-ink" /> Trip Details
+              <span className="size-1.5 rounded-full bg-ink" /> {tr("rt.tripDetails")}
             </p>
             <div className="flex items-center gap-3 border-b border-line/70 px-3.5 py-3">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft">
                 <Navigation size={14} className="text-ink" />
               </span>
               <div className="min-w-0">
-                <p className="text-[11px] text-cocoa">Pickup</p>
+                <p className="text-[11px] text-cocoa">{tr("bill.pickup")}</p>
                 <p className="truncate text-[14px] font-bold text-ink">
-                  {pickupLabel ?? "Pickup"}
+                  {pickupLabel ?? tr("bill.pickup")}
                 </p>
               </div>
             </div>
@@ -301,7 +298,7 @@ export function RideTracker({
                 <Navigation size={14} className="rotate-180 text-ink" />
               </span>
               <div className="min-w-0">
-                <p className="text-[11px] text-cocoa">Drop</p>
+                <p className="text-[11px] text-cocoa">{tr("bill.drop")}</p>
                 <p className="truncate text-[14px] font-bold text-ink">{dropLabel}</p>
               </div>
             </div>
@@ -311,7 +308,7 @@ export function RideTracker({
                   <IndianRupee size={14} className="text-ink" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[11px] text-cocoa">Total Fare (Final amount)</p>
+                  <p className="text-[11px] text-cocoa">{tr("rt.totalFare")}</p>
                   <p className="text-[14px] font-bold text-ink">{rupees(farePaise)}</p>
                 </div>
               </div>
@@ -405,7 +402,7 @@ export function RideTracker({
                     href="tel:"
                     onClick={(e) => e.preventDefault()}
                     title={t.driver.phoneMasked}
-                    aria-label="Call"
+                    aria-label={tr("rt.call")}
                     className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ink text-white transition-transform hover:scale-105"
                   >
                     <Phone size={17} />

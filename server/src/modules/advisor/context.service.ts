@@ -9,7 +9,7 @@
 // deterministic seasonal fallback, so context is always available even with no
 // network and no keys (the rest of the app's demo-first contract).
 
-import { istHour } from "../../lib/istTime.js";
+import { istHour, istYearMonth } from "../../lib/istTime.js";
 
 export type TimeOfDay =
   | "early_morning" // 5–8
@@ -65,7 +65,7 @@ function isMeal(hour: number): boolean {
 // real rain chance, otherwise mostly clear. Never random, so demos and tests are
 // reproducible — it only stands in until live data is available.
 function offlineWeather(now: Date): Weather {
-  const month = now.getMonth(); // 0=Jan
+  const { month } = istYearMonth(now); // 0=Jan, in India
   const monsoon = month >= 5 && month <= 8; // Jun–Sep
   if (monsoon) {
     // Afternoon/evening showers are the regional pattern.

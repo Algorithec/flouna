@@ -1,6 +1,8 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nContext";
 import { useEffect, useState } from "react";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { Check, IndianRupee, Clock, XCircle } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api";
 
@@ -44,9 +46,11 @@ export function CancelOrderSheet({
   onClose: () => void;
   onCancelled: () => void;
 }) {
+  const { t } = useI18n();
   const [step, setStep] = useState<Step>("confirm");
   const [reason, setReason] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  useEscapeToClose(!busy, onClose);
   const [error, setError] = useState("");
   const [terms, setTerms] = useState<Terms | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -85,7 +89,6 @@ export function CancelOrderSheet({
   }, [secondsLeft]);
 
   const isRide = domain === "ride";
-  const noun = isRide ? "booking" : "order";
   const reasons = isRide ? RIDE_REASONS : FOOD_REASONS;
 
   async function cancel(withReason?: string) {
@@ -107,7 +110,9 @@ export function CancelOrderSheet({
           ? err.message
           : err instanceof Error
             ? err.message
-            : `Could not cancel this ${noun}`,
+            : isRide
+              ? t("co.failRide")
+              : t("co.failOrder"),
       );
       setStep("confirm");
     } finally {
@@ -120,7 +125,7 @@ export function CancelOrderSheet({
       className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
-      aria-label={`Cancel ${noun}`}
+      aria-label={isRide ? t("co.cancelRide") : t("co.cancelOrder")}
       onClick={(e) => {
         // Only a click on the backdrop itself dismisses.
         if (e.target === e.currentTarget && !busy) onClose();
@@ -130,11 +135,14 @@ export function CancelOrderSheet({
         {step === "confirm" && (
           <>
             <p className="text-center text-[24px] font-bold text-ink">
-              {isRide ? "Cancel Ride?" : "Cancel Order?"}
+              {isRide ? t("co.cancelRide") : t("co.cancelOrder")}
             </p>
             <p className="mx-auto mt-2 max-w-[280px] text-center text-[14px] text-cocoa">
-              Are you sure you want to cancel{" "}
-              {isRide && driverName ? `your ride with ${driverName}` : `this ${noun}`}?
+              {isRide && driverName
+                ? t("co.sureRideWith").replace("{name}", driverName)
+                : isRide
+                  ? t("co.sureRide")
+                  : t("co.sureOrder")}
             </p>
 
             {/* What the refund policy actually promises for this order.
@@ -148,7 +156,7 @@ export function CancelOrderSheet({
                   <IndianRupee size={14} className="text-ink" />
                 </span>
                 <span className="text-[14px] leading-snug text-ink">
-                  {terms ? terms.summary : "Checking your refund terms\u2026"}
+                  {terms ? terms.summary : t("co.checkingTerms")}
                 </span>
               </div>
               {secondsLeft !== null && secondsLeft > 0 && (
@@ -157,7 +165,7 @@ export function CancelOrderSheet({
                     <Clock size={14} className="text-ink" />
                   </span>
                   <span className="text-[14px] text-ink">
-                    Free cancellation for another{" "}
+                    {t("co.freeFor")}{" "}
                     <b>
                       {Math.floor(secondsLeft / 60)}:
                       {String(secondsLeft % 60).padStart(2, "0")}
@@ -171,13 +179,13 @@ export function CancelOrderSheet({
                     <Clock size={14} className="text-ink" />
                   </span>
                   <span className="text-[14px] text-ink">
-                    Driver is only {etaMinutes} min away from you
+                    {t("co.driverNear").replace("{n}", String(etaMinutes))}
                   </span>
                 </div>
               )}
             </div>
 
-            <p className="mt-4 text-[14px] font-bold text-ink">Reason for cancellation</p>
+            <p className="mt-4 text-[14px] font-bold text-ink">{t("co.reason")}</p>
             <div className="mt-2.5 flex flex-wrap gap-2">
               {reasons.map((r) => (
                 <button
@@ -208,7 +216,7 @@ export function CancelOrderSheet({
                 onClick={onClose}
                 className="flex-1 rounded-pill border border-line py-3 text-[14px] font-bold text-ink disabled:opacity-60"
               >
-                {isRide ? "Keep Ride" : `Keep ${noun}`}
+                {isRide ? t("co.keepRide") : t("track.food.keepOrder")}
               </button>
               <button
                 disabled={busy}
@@ -216,7 +224,7 @@ export function CancelOrderSheet({
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-pill border border-accent text-[14px] font-bold text-accent disabled:opacity-60"
               >
                 <XCircle size={16} />
-                {busy ? "Cancelling…" : "Yes, Cancel"}
+                {busy ? t("co.cancelling") : t("co.yesCancel")}
               </button>
             </div>
           </>
@@ -228,20 +236,19 @@ export function CancelOrderSheet({
               <Check size={32} className="text-success" strokeWidth={3} />
             </span>
             <h2 className="mt-5 text-[20px] font-bold text-ink">
-              {isRide ? "Booking cancelled" : "Order cancelled"}
+              {isRide ? t("co.bookingCancelled") : t("co.orderCancelled")}
             </h2>
             <p className="mt-2 max-w-[300px] text-[14px] leading-relaxed text-cocoa">
               {/* Deliberately not claiming the money is back. The server flags a
                   paid order for refund; when it actually lands is not something
                   this screen knows. */}
-              If you paid for this {noun}, your refund has been started and will
-              show in your original payment method.
+              {isRide ? t("co.refundRide") : t("co.refundOrder")}
             </p>
             <button
               onClick={onClose}
               className="mt-6 h-[52px] w-full rounded-pill bg-ink text-[16px] font-bold text-white transition-opacity hover:opacity-90"
             >
-              Done
+              {t("cx.done")}
             </button>
           </div>
         )}

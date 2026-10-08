@@ -1,4 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { CONTENDED_TX, withTxRetry } from "../../lib/txRetry.js";
+import { ApiError } from "../../middleware/error.js";
 
 // Promo codes. The client only ever sends a code string — every rupee of
 // discount is computed here from the coupon's own rules, so a tampered client
@@ -91,26 +94,63 @@ export async function evaluateCoupon(opts: {
 }
 
 // Called inside the order-creation transaction once the order exists.
-export async function redeemCoupon(opts: {
-  couponId: string;
-  userId: string;
-  orderId: string;
-  discountPaise: number;
-}) {
-  await prisma.$transaction([
-    prisma.couponRedemption.create({
-      data: {
-        couponId: opts.couponId,
-        userId: opts.userId,
-        orderId: opts.orderId,
-        discountPaise: opts.discountPaise,
+/**
+ * Creates an order and claims its promo code in one step, or neither.
+ *
+ * Both limits on a code used to be checked before the order existed and
+ * recorded after it, with nothing tying the two together. Two orders placed at
+ * the same moment both passed both checks: one customer used a
+ * once-per-customer code twice, and a code capped at one use was claimed three
+ * times. A double tap on a slow phone was enough.
+ *
+ * So the claim happens inside the order's own transaction, cap first. The cap
+ * is a conditional increment the database applies atomically, so it cannot be
+ * overtaken; it also takes the write lock on the code before the per-customer
+ * check reads anything, so that check sees any claim committed ahead of it.
+ * Serializable, so Postgres refuses a commit that raced another, and that
+ * refusal is retried. A refused code creates no order at all: an order must
+ * never exist with a discount its code did not grant.
+ *
+ * With no code there is nothing to claim, and the order is created exactly as
+ * it always was.
+ */
+export async function createOrderClaimingCoupon<T extends { id: string }>(
+  claim: { couponId: string; userId: string; discountPaise: number } | null,
+  create: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  if (!claim) return create(prisma);
+
+  return withTxRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        const claimed = await tx.$executeRaw`
+          UPDATE "Coupon" SET "usedCount" = "usedCount" + 1
+          WHERE "id" = ${claim.couponId}
+            AND ("usageLimit" IS NULL OR "usedCount" < "usageLimit")`;
+        if (claimed === 0) throw new ApiError(400, "This code has been fully claimed");
+
+        const already = await tx.couponRedemption.findFirst({
+          where: { couponId: claim.couponId, userId: claim.userId },
+          select: { id: true },
+        });
+        if (already) throw new ApiError(400, "You've already used this code");
+
+        const order = await create(tx);
+        await tx.couponRedemption.create({
+          data: {
+            couponId: claim.couponId,
+            userId: claim.userId,
+            orderId: order.id,
+            discountPaise: claim.discountPaise,
+          },
+        });
+        return order;
       },
-    }),
-    prisma.coupon.update({
-      where: { id: opts.couponId },
-      data: { usedCount: { increment: 1 } },
-    }),
-  ]);
+      // Nothing is committed when the database refuses or times out a
+      // claim, so withTxRetry runs the whole thing again.
+      CONTENDED_TX,
+    ),
+  );
 }
 
 // Codes worth showing on the checkout screen — active, unexpired, not
