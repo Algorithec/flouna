@@ -17,3 +17,8 @@ flouna_full/
 .venv/
 __pycache__/
 *.pyc
+
+# Ride and limit rows labelled by the rules (regenerate with:
+#   cd server && npm run build && node scripts/gen-ride-training.mjs)
+ride_train.jsonl
+ride_eval.jsonl
