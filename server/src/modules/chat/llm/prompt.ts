@@ -2,8 +2,8 @@
 export const SYSTEM_PROMPT = `You are the intent engine for Flouna, an Indian app that helps users order food, book rides, and shop for products at the best price.
 
 Your ONLY job is to classify each user message into the fixed JSON schema you are given. Rules:
-- domain "food": the user wants to order or find food. Extract the dish/cuisine, budget (convert rupees to paise, for example ₹300 = 30000), and dietary preference if stated. For "item", keep the user's own descriptive words (e.g. "spicy", "sweet", "light", "healthy", "cheesy", "biryani"), do NOT replace them with generic phrases like "popular dishes", "food", or "something to eat". If the user only gives a mood ("something spicy"), set item to that mood word ("spicy").
-- domain "ride": the user wants transport somewhere. Extract pickup (null if not stated), destination, and vehicle preference. If the user asks to book for a later time ("at 10pm", "tonight at 9"), set scheduleAt to that time as 24h "HH:mm"; else null. Keep time phrases out of the destination.
+- domain "food": the user wants to order or find food. Extract the dish/cuisine, budget (convert rupees to paise, for example ₹300 = 30000), and dietary preference if stated. For "item", keep the user's own descriptive words (e.g. "spicy", "sweet", "light", "healthy", "cheesy", "biryani"), do NOT replace them with generic phrases like "popular dishes", "food", or "something to eat". If the user only gives a mood ("something spicy"), set item to that mood word ("spicy"). If the user gives a delivery time limit ("within 35 minutes", "in under half an hour"), set maxEtaMinutes to that number of minutes; otherwise null.
+- domain "ride": the user wants transport somewhere. Extract pickup (null if not stated), destination, and vehicle preference. If the user asks to book for a later time ("at 10pm", "tonight at 9"), set scheduleAt to that time as 24h "HH:mm"; else null. Keep time phrases out of the destination. If the user states a maximum fare ("under ₹300"), set budgetPaise in paise (₹300 = 30000); otherwise null. If the user limits how long they will wait to be picked up ("don't want to wait more than 5 minutes", "pickup within 5 minutes"), set maxPickupMinutes to that number; otherwise null. maxPickupMinutes is only the wait for the vehicle to arrive: a limit on the whole trip ("get me there in 30 minutes") is NOT a pickup limit, so leave maxPickupMinutes null for it.
 - domain "shop": the user wants to BUY a product (electronics, fashion, appliances, home, for example "gaming laptop under ₹70000" or "running shoes"). Extract the product, budget in paise, and category if clear.
 - domain "combo": ONE message asks for BOTH food AND a ride (e.g. "order dinner and book a cab home"). Fill BOTH the food and ride objects.
 - domain "greeting": greetings, thanks, small talk about the app itself.
@@ -32,13 +32,14 @@ export const JSON_SCHEMA = {
       properties: {
         item: { type: "string" },
         budgetPaise: { type: ["number", "null"] },
+        maxEtaMinutes: { type: ["number", "null"] },
         dietary: { type: "string", enum: ["veg", "nonveg", "any"] },
         priority: {
           type: "string",
           enum: ["price", "rating", "speed", "balanced"],
         },
       },
-      required: ["item", "budgetPaise", "dietary", "priority"],
+      required: ["item", "budgetPaise", "maxEtaMinutes", "dietary", "priority"],
       additionalProperties: false,
     },
     ride: {
@@ -51,12 +52,14 @@ export const JSON_SCHEMA = {
           type: ["string", "null"],
           pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$",
         },
+        budgetPaise: { type: ["number", "null"] },
+        maxPickupMinutes: { type: ["number", "null"] },
         priority: {
           type: "string",
           enum: ["price", "rating", "speed", "balanced"],
         },
       },
-      required: ["pickup", "drop", "vehicle", "scheduleAt", "priority"],
+      required: ["pickup", "drop", "vehicle", "scheduleAt", "budgetPaise", "maxPickupMinutes", "priority"],
       additionalProperties: false,
     },
     shop: {
