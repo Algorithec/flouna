@@ -84,6 +84,10 @@ export function InlineRideBooking({
   // the step between: the distance, the time and the total in one place before
   // any money moves.
   const [reviewing, setReviewing] = useState(false);
+  // Comparison is the product, so the alternatives are capped for length and
+  // not by what is available: the cap used to be four with no way past it,
+  // under a header that counted all eight.
+  const [showAllOptions, setShowAllOptions] = useState(false);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Suggestion[]>([]);
   // One search session per pick; replaced once a place is chosen.
@@ -208,7 +212,9 @@ export function InlineRideBooking({
 
   return (
     <div className="flex w-full flex-col gap-3">
-      <ProvidersHeader count={Math.max(b.quotes.length, 1)} />
+      {/* Held back until there is something to count. A floor of one reported
+          "1 option found" before any quote had arrived. */}
+      {b.quotes.length > 0 && <ProvidersHeader count={b.quotes.length} />}
       <VehicleTabs
         vehicles={tabVehicles}
         value={b.vehicle}
@@ -347,23 +353,38 @@ export function InlineRideBooking({
             }}
           />
 
-          {b.quotes.length > 1 && (
-            <>
-              <p className="mt-0.5 text-[15px] font-bold text-ink">
-                {t("ib.youllLike")}
-              </p>
-              {b.quotes.slice(1, 4).map((q) => (
-                <RideOptionRow
-                  key={`${q.provider}-${q.productName}`}
-                  q={q}
-                  onSelect={() => {
-                    b.setSelected(q);
-                    setReviewing(true);
-                  }}
-                />
-              ))}
-            </>
-          )}
+          {b.quotes.length > 1 &&
+            (() => {
+              const alternatives = b.quotes.slice(1);
+              const shown = showAllOptions ? alternatives : alternatives.slice(0, 3);
+              const hidden = alternatives.length - shown.length;
+              return (
+                <>
+                  <p className="mt-0.5 text-[15px] font-bold text-ink">
+                    {t("ib.youllLike")}
+                  </p>
+                  {shown.map((q) => (
+                    <RideOptionRow
+                      key={`${q.provider}-${q.productName}`}
+                      q={q}
+                      onSelect={() => {
+                        b.setSelected(q);
+                        setReviewing(true);
+                      }}
+                    />
+                  ))}
+                  {hidden > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllOptions(true)}
+                      className="tap-target w-full rounded-full border border-accent/45 bg-accent-soft/20 px-4 py-2.5 text-[13px] font-semibold text-accent transition-colors hover:bg-accent-soft/50"
+                    >
+                      {t("hm.viewFull")}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
         </div>
       )}
 
