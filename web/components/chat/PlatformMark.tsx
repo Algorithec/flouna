@@ -24,10 +24,58 @@ const BRANDS: Record<
   ola: { label: "Ola", bg: "#1c1c1c", fg: "#c9f31d", short: "O" },
   rapido: { label: "Rapido", bg: "#f8d000", fg: "#1c1c1c", short: "R" },
   ondc: { label: "ONDC", bg: "#1a73a7", fg: "#ffffff", short: "O" },
+  amazon: { label: "Amazon", bg: "#232f3e", fg: "#ffffff", short: "A" },
+  flipkart: { label: "Flipkart", bg: "#2874f0", fg: "#ffffff", short: "F" },
+  myntra: { label: "Myntra", bg: "#ff3f6c", fg: "#ffffff", short: "M" },
+  croma: { label: "Croma", bg: "#1d1d1b", fg: "#f5c518", short: "C" },
 };
 
 export function platformLabel(id: string): string {
   return BRANDS[id.toLowerCase()]?.label ?? id;
+}
+
+/** Compact named pill used on alternative rows — brand colour, not a huge logo. */
+export function PlatformChip({
+  id,
+  variant = "solid",
+}: {
+  id: string;
+  variant?: "solid" | "outline";
+}) {
+  const key = id.toLowerCase();
+  const b = BRANDS[key] ?? {
+    label: id,
+    bg: "#8b5e3c",
+    fg: "#ffffff",
+    short: id.slice(0, 1).toUpperCase(),
+  };
+  if (variant === "outline") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-ink/20 bg-card px-2 py-[2px] text-[10px] font-semibold text-ink">
+        {b.label}
+      </span>
+    );
+  }
+  if (key === "zomato") {
+    return (
+      <span className="inline-flex items-center text-[12px] font-extrabold tracking-tight text-[#e23744]">
+        {b.label}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 rounded-full px-2 py-[2px] text-[10px] font-bold tracking-wide"
+      style={{ background: b.bg, color: b.fg }}
+    >
+      {(key === "swiggy" || key === "ondc") && (
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" aria-hidden>
+          <path d="M4 0a3 3 0 0 1 3 3c0 2.2-3 5-3 5S1 5.2 1 3a3 3 0 0 1 3-3Zm0 4.1A1.1 1.1 0 1 0 4 1.9a1.1 1.1 0 0 0 0 2.2Z" />
+        </svg>
+      )}
+      {b.label}
+    </span>
+  );
 }
 
 /** A single round mark. Falls back to the first letter of anything unknown. */

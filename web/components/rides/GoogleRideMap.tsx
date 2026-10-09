@@ -42,6 +42,7 @@ export function GoogleRideMap({
   dropLabel,
   providers = [],
   onPick,
+  className,
 }: {
   pickup: LatLng | null;
   drop: LatLng | null;
@@ -50,6 +51,7 @@ export function GoogleRideMap({
   dropLabel?: string | null;
   providers?: string[];
   onPick?: ((p: LatLng) => void) | null;
+  className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapsRef = useRef<GMaps | null>(null);
@@ -150,9 +152,9 @@ export function GoogleRideMap({
         lineRef.current = new maps.Polyline({
           map,
           path: toLatLngs(routeGeometry),
-          strokeColor: "#e8651a",
-          strokeWeight: 4,
-          strokeOpacity: 0.85,
+          strokeColor: "#3b82f6",
+          strokeWeight: 3.5,
+          strokeOpacity: 0.95,
         });
       }
 
@@ -169,5 +171,7 @@ export function GoogleRideMap({
     if (readyRef.current) draw();
   }, [pickup, drop, routeGeometry, pickupLabel, dropLabel, providers]);
 
-  return <div ref={containerRef} className="size-full min-h-[260px]" />;
+  return (
+    <div ref={containerRef} className={`size-full min-h-[260px] ${className ?? ""}`} />
+  );
 }
