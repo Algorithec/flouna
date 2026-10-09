@@ -31,6 +31,7 @@ export function RideResultMap({
   const [from, setFrom] = useState<Place | null>(null);
   const [to, setTo] = useState<Place | null>(null);
   const [geometry, setGeometry] = useState<[number, number][] | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -48,30 +49,16 @@ export function RideResultMap({
       }
     }
 
-    async function here(): Promise<Place | null> {
-      if (!navigator.geolocation) return null;
-      return new Promise((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          (pos) =>
-            resolve({
-              name: pickup?.trim() || "",
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-            }),
-          () => resolve(null),
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 },
-        );
-      });
-    }
-
     void (async () => {
       const dest = await locate(drop);
       if (!active) return;
       if (dest) setTo(dest);
 
-      const origin = (await locate(pickup)) ?? (await here());
+      const origin = await locate(pickup);
       if (!active) return;
       if (origin) setFrom(origin);
+
+      if (!dest && !origin) setFailed(true);
     })();
 
     return () => {
@@ -98,7 +85,14 @@ export function RideResultMap({
 
   const pickupPt: LatLng | null = from ? { lat: from.lat, lng: from.lng } : null;
   const dropPt: LatLng | null = to ? { lat: to.lat, lng: to.lng } : null;
-  if (!pickupPt && !dropPt) return null;
+
+  if (failed || (!pickupPt && !dropPt)) {
+    return (
+      <div className="flex h-[120px] items-center justify-center rounded-[18px] border border-line bg-beige/30 text-[13px] text-cocoa">
+        Route map unavailable
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-hidden rounded-[18px] border border-line shadow-soft">
