@@ -328,12 +328,17 @@ export function InlineRideBooking({
             const vehicleHack = cheaperVehicleHack(b.quotes[0]!, b.quotes);
             return (
               <FlounaInsights
+                tiles
                 hacks={[vehicleHack].filter((h): h is NonNullable<typeof h> => h !== null)}
                 offers={b.quotes[0]?.offers ?? []}
               />
             );
           })()}
 
+          {/* The engine's pick, stated as a pick. A list of near-identical
+              prices makes the reader do the comparing again; naming the best
+              one and showing what it is bought with is the whole point of
+              having compared them. */}
           <RideBestCard
             q={b.quotes[0]!}
             onSelect={() => {

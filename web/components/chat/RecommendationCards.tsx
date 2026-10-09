@@ -239,6 +239,7 @@ function FoodAltRow({ q, decisionId }: { q: FoodQuote; decisionId?: string }) {
                 restaurant: q.restaurant,
                 image: q.image,
                 pricePaise: q.effectivePaise,
+                decisionId,
               },
               1,
             );
@@ -342,6 +343,10 @@ export function RideRecommendation({
           )}
           {best && (
             <FlounaInsights
+              // Tiles, as the ride frames draw them. Stated here rather than
+              // inferred from the hacks, which flipped this screen to the food
+              // layout whenever no cheaper vehicle happened to be available.
+              tiles
               hacks={[
                 cheaperVehicleHack(
                   {
