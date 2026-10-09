@@ -921,7 +921,7 @@ export const dictionaries = {
     "fi.bestPayment": "Best Payment",
     "fi.offers": "Available offers and coupons",
     "fi.more": "More",
-    "pm.comparedN": "Checked {n}+ providers for you",
+    "pm.comparedN": "Checked {n} providers for you",
     "pm.comparedAcross": "Compared across {names}",
     "pm.andMore": " and {n} more",
     "hm.viewFull": "View full results",
