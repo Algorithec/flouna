@@ -174,7 +174,11 @@ export function FoodRecommendation({
         <div className="flex flex-col gap-2">
           <p className="text-[15px] font-bold text-ink">{t("ib.youllLike")}</p>
           {alts.map((q) => (
-            <FoodAltRow key={`${q.dishId}-${q.platform}`} q={q} />
+            <FoodAltRow
+              key={`${q.dishId}-${q.platform}`}
+              q={q}
+              decisionId={rec.decisionId}
+            />
           ))}
         </div>
       )}
@@ -197,7 +201,11 @@ export function FoodRecommendation({
   );
 }
 
-function FoodAltRow({ q }: { q: FoodQuote }) {
+// The ranking this row came from travels with the line into the cart. Without
+// it the decision log records only the customers who took the top pick, and
+// nothing at all about the ones who rejected it for the third option — which
+// is the signal the whole feature exists to collect.
+function FoodAltRow({ q, decisionId }: { q: FoodQuote; decisionId?: string }) {
   const { t } = useI18n();
   const { add } = useCart();
   const [added, setAdded] = useState(false);
