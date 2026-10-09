@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { Sparkles } from "lucide-react";
+import { rupees } from "@/lib/money";
 import { DisagreeSheet } from "./DisagreeSheet";
 import { SearchedPlatforms } from "./PlatformMark";
 import type { FoodQuote, RideQuote, ProductQuote } from "./types";
@@ -75,21 +76,42 @@ export function ReasoningCard({
 
 export function foodReasons(best: FoodQuote, alternatives: FoodQuote[], t: (k: "wb.sooner" | "wb.rated" | "wb.cheaper" | "wb.value" | "wb.balanced") => string): string[] {
   const reasons: string[] = [];
+  const total = alternatives.length + 1;
 
   if (alternatives.length > 0) {
     const slower = alternatives.filter((a) => a.etaMinutes > best.etaMinutes).length;
-    if (slower > 0) reasons.push(t("wb.sooner"));
+    if (slower > 0) {
+      reasons.push(
+        (t("wb.sooner") as string)
+          .replace("{min}", String(best.etaMinutes))
+          .replace("{n}", String(slower))
+          .replace("{total}", String(total)),
+      );
+    }
 
     const lowerRated = alternatives.filter((a) => a.rating < best.rating).length;
-    if (lowerRated > 0) reasons.push(t("wb.rated"));
+    if (lowerRated > 0) {
+      reasons.push(
+        (t("wb.rated") as string)
+          .replace("{rating}", String(best.rating))
+          .replace("{n}", String(lowerRated)),
+      );
+    }
 
     const dearer = alternatives.filter((a) => a.effectivePaise > best.effectivePaise);
-    if (dearer.length > 0) reasons.push(t("wb.cheaper"));
+    if (dearer.length > 0) {
+      const cheapest = dearer.reduce((min, a) => Math.min(min, a.effectivePaise), Infinity);
+      reasons.push(
+        (t("wb.cheaper") as string).replace("{amount}", rupees(cheapest - best.effectivePaise)),
+      );
+    }
   }
 
   const discount = best.offers.reduce((s, o) => s + o.discountPaise, 0);
-  if (discount > 0 && !reasons.includes(t("wb.cheaper"))) {
-    reasons.push(t("wb.value"));
+  if (discount > 0 && !reasons.some((r) => r.includes(rupees(discount)))) {
+    reasons.push(
+      (t("wb.value") as string).replace("{amount}", rupees(discount)),
+    );
   }
 
   return reasons;
