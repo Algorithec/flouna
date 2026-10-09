@@ -4,93 +4,183 @@ import { useState } from "react";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { Sparkles } from "lucide-react";
 import { DisagreeSheet } from "./DisagreeSheet";
-import { rupees } from "@/lib/money";
-import type { FoodQuote } from "./types";
+import { SearchedPlatforms } from "./PlatformMark";
+import type { FoodQuote, RideQuote, ProductQuote } from "./types";
 
-// "Why this is the best choice" — the reasoning panel from the Figma result
-// screen.
-//
-// The design shows four fixed lines. Fixed copy would be a claim rather than a
-// reason: it would say a pick was faster even when it was the slowest of the
-// set. So each line is earned by comparing the winner against the options it
-// actually beat, and a line that is not true is simply not shown.
-export function WhyBest({
-  best,
-  alternatives,
+// Shared reasoning surface from the Flouna result frames: the engine's
+// summary, the earned "why this is the best choice" lines, and the platforms
+// actually compared. Copy is never invented — a line that is not true of the
+// returned data is simply not shown.
+
+export function ReasoningCard({
+  summary,
+  reasons,
+  platforms,
+  onDisagree,
 }: {
-  best: FoodQuote;
-  alternatives: FoodQuote[];
+  summary?: string | null;
+  reasons: string[];
+  platforms?: string[];
+  onDisagree?: () => void;
 }) {
   const { t } = useI18n();
-  const [disagreeing, setDisagreeing] = useState(false);
+  if (!summary && reasons.length === 0 && !platforms?.length) return null;
+
+  return (
+    <div className="rounded-[18px] border border-line bg-card px-3.5 py-3.5 shadow-soft">
+      {summary && (
+        <>
+          <p className="flex items-center gap-1.5 mb-2">
+            <Sparkles size={13} className="text-accent shrink-0" />
+          </p>
+          <p className="text-[13px] leading-[1.55] text-ink/90">{summary}</p>
+        </>
+      )}
+
+      {reasons.length > 0 && (
+        <>
+          <p className="mt-3 text-[13.5px] font-bold text-ink">{t("wb.title")}:</p>
+          <ul className="mt-1.5 flex flex-col gap-1.5">
+            {reasons.map((r) => (
+              <li
+                key={r}
+                className="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink/80"
+              >
+                <span className="mt-[5px] size-[10px] shrink-0 rounded-full bg-accent" />
+                <span>{r}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {platforms && platforms.length > 0 && (
+        <div className="mt-3">
+          <SearchedPlatforms platforms={platforms} copy="checked-count" />
+        </div>
+      )}
+
+      {onDisagree && (
+        <button
+          type="button"
+          onClick={onDisagree}
+          className="tap-target mt-2.5 self-start text-[12px] font-medium text-accent underline underline-offset-2"
+        >
+          {t("wb.disagree")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function foodReasons(best: FoodQuote, alternatives: FoodQuote[], t: (k: "wb.sooner" | "wb.rated" | "wb.cheaper" | "wb.value" | "wb.balanced") => string): string[] {
   const reasons: string[] = [];
 
   if (alternatives.length > 0) {
     const slower = alternatives.filter((a) => a.etaMinutes > best.etaMinutes).length;
-    if (slower > 0) {
-      reasons.push(
-        t("wb.sooner")
-          .replace("{min}", String(best.etaMinutes))
-          .replace("{n}", String(slower))
-          .replace("{total}", String(alternatives.length)),
-      );
-    }
+    if (slower > 0) reasons.push(t("wb.sooner"));
 
     const lowerRated = alternatives.filter((a) => a.rating < best.rating).length;
-    if (lowerRated > 0) {
-      reasons.push(
-        t("wb.rated").replace("{rating}", String(best.rating)).replace("{n}", String(lowerRated)),
-      );
-    }
+    if (lowerRated > 0) reasons.push(t("wb.rated"));
 
     const dearer = alternatives.filter((a) => a.effectivePaise > best.effectivePaise);
-    if (dearer.length > 0) {
-      const cheapestAlt = Math.min(...dearer.map((a) => a.effectivePaise));
-      reasons.push(
-        t("wb.cheaper").replace("{amount}", rupees(cheapestAlt - best.effectivePaise)),
-      );
-    }
+    if (dearer.length > 0) reasons.push(t("wb.cheaper"));
   }
 
   const discount = best.offers.reduce((s, o) => s + o.discountPaise, 0);
-  if (discount > 0) {
-    reasons.push(
-      t("wb.value").replace("{amount}", rupees(discount)),
-    );
+  if (discount > 0 && !reasons.includes(t("wb.cheaper"))) {
+    reasons.push(t("wb.value"));
   }
 
-  if (reasons.length === 0) {
-    reasons.push(t("wb.balanced"));
+  return reasons;
+}
+
+export function WhyBest({
+  best,
+  alternatives,
+  why,
+}: {
+  best: FoodQuote;
+  alternatives: FoodQuote[];
+  why?: string | null;
+}) {
+  const { t } = useI18n();
+  const [disagreeing, setDisagreeing] = useState(false);
+
+  return (
+    <>
+      <ReasoningCard
+        summary={why}
+        reasons={foodReasons(best, alternatives, t)}
+        platforms={[best.platform, ...alternatives.map((a) => a.platform)]}
+        onDisagree={() => setDisagreeing(true)}
+      />
+      {disagreeing && <DisagreeSheet onClose={() => setDisagreeing(false)} />}
+    </>
+  );
+}
+
+export function RideWhyBest({
+  why,
+  quotes,
+}: {
+  why?: string | null;
+  quotes: RideQuote[];
+}) {
+  const { t } = useI18n();
+  const reasons: string[] = [];
+  const best = quotes[0];
+
+  if (best && quotes.length > 1) {
+    const rest = quotes.slice(1);
+    if (
+      rest.every((q) => q.pickupEtaMinutes >= best.pickupEtaMinutes) &&
+      rest.some((q) => q.pickupEtaMinutes > best.pickupEtaMinutes)
+    ) {
+      reasons.push(t("wb.ridePickup"));
+    }
+    if (
+      rest.every((q) => q.effectivePaise >= best.effectivePaise) &&
+      rest.some((q) => q.effectivePaise > best.effectivePaise)
+    ) {
+      reasons.push(t("wb.ridePrice"));
+    }
+    if (rest.some((q) => q.driverRating < best.driverRating)) {
+      reasons.push(t("wb.rideQuality"));
+    }
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="flex items-center gap-1.5 text-[14px] font-bold text-ink">
-        <Sparkles size={14} className="text-accent" />
-        {t("wb.title")}
-      </p>
-      <ul className="flex flex-col gap-1.5">
-        {reasons.map((r) => (
-          <li key={r} className="flex items-start gap-2 text-[13px] leading-relaxed text-cocoa">
-            <span className="mt-[6px] size-1.5 shrink-0 rounded-full bg-accent" />
-            <span>{r}</span>
-          </li>
-        ))}
-      </ul>
+    <ReasoningCard
+      summary={why}
+      reasons={reasons}
+      platforms={quotes.map((q) => q.provider)}
+    />
+  );
+}
 
-      {/* The other half of showing your reasoning is accepting that it can be
-          wrong. AI policy 2.5 promises a way to say so and 2.6 promises a
-          person will look if you ask, and neither was reachable from anywhere
-          in the app. This is the entry point, next to the claim it disputes. */}
-      <button
-        type="button"
-        onClick={() => setDisagreeing(true)}
-        className="tap-target self-start text-[13px] font-medium text-accent underline underline-offset-2"
-      >
-        {t("wb.disagree")}
-      </button>
+export function ShopWhyBest({
+  why,
+  best,
+  alternatives,
+}: {
+  why?: string | null;
+  best: ProductQuote;
+  alternatives: ProductQuote[];
+}) {
+  const { t } = useI18n();
+  const reasons: string[] = [];
 
-      {disagreeing && <DisagreeSheet onClose={() => setDisagreeing(false)} />}
-    </div>
+  if (alternatives.length > 0) {
+    const dearer = alternatives.filter((a) => a.effectivePaise > best.effectivePaise);
+    if (dearer.length > 0) reasons.push(t("wb.cheaper"));
+  }
+
+  return (
+    <ReasoningCard
+      summary={why}
+      reasons={reasons}
+      platforms={[best.platform, ...alternatives.map((a) => a.platform)]}
+    />
   );
 }

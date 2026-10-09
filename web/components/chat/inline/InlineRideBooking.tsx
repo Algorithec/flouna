@@ -3,12 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nContext";
 import dynamic from "next/dynamic";
-import { Crosshair, MapPin, Loader2, Search, Sparkles } from "lucide-react";
+import { Crosshair, MapPin, Loader2, Search } from "lucide-react";
 import { newSearchSession, resolvePlace, searchPlaces, type Suggestion } from "@/lib/places";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
-import { VehicleArt } from "@/components/rides/VehicleArt";
-import { RideBestCard, RideOptionRow } from "@/components/rides/RideOptionCard";
+import {
+  RideBestCard,
+  RideOptionRow,
+  VehicleTabs,
+  ProvidersHeader,
+} from "@/components/rides/RideOptionCard";
 import { TripSummary } from "@/components/rides/TripSummary";
 import { useRideBooking, VEHICLES, type Vehicle } from "@/lib/rides/useRideBooking";
 import { FlounaInsights, cheaperVehicleHack } from "@/components/chat/FlounaInsights";
@@ -32,16 +36,9 @@ const RideMap = dynamic(
   () => import("@/components/rides/RideMap").then((m) => m.RideMap),
   {
     ssr: false,
-    loading: () => <div className="h-[190px] animate-pulse rounded-2xl bg-beige/50" />,
+    loading: () => <div className="h-[200px] animate-pulse rounded-2xl bg-beige/50" />,
   },
 );
-
-const VEHICLE_LABEL: Record<Vehicle, string> = {
-  any: "Any",
-  bike: "Bike",
-  auto: "Auto",
-  cab: "Cab",
-};
 
 export function InlineRideBooking({
   drop,
@@ -207,12 +204,19 @@ export function InlineRideBooking({
     );
   }
 
+  const tabVehicles = VEHICLES.filter((v) => showAny || v !== "any");
+
   return (
-    <div className="w-full rounded-card border border-line bg-card p-3.5 shadow-soft">
-      <div className="relative overflow-hidden rounded-2xl">
-        {/* Tall enough for a route and two named ends. At 190px the
-            destination label was pushed off the top edge. */}
-        <div className="h-[225px]">
+    <div className="flex w-full flex-col gap-3">
+      <ProvidersHeader count={Math.max(b.quotes.length, 1)} />
+      <VehicleTabs
+        vehicles={tabVehicles}
+        value={b.vehicle}
+        onChange={(v) => b.setVehicle(v as Vehicle)}
+      />
+
+      <div className="relative overflow-hidden rounded-[18px] border border-line">
+        <div className="h-[220px]">
           <RideMap
             pickup={b.mapPoints.pickup}
             drop={b.mapPoints.drop}
@@ -221,6 +225,7 @@ export function InlineRideBooking({
             dropLabel={b.drop?.name ?? null}
             providers={b.quotes.map((q) => q.provider)}
             onPick={b.picking ? b.pickOnMap : null}
+            className="!min-h-0 h-full"
           />
         </div>
 
@@ -243,7 +248,7 @@ export function InlineRideBooking({
         </button>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         {endpoint("pickup", b.pickup)}
         {endpoint("drop", b.drop)}
       </div>
@@ -308,27 +313,6 @@ export function InlineRideBooking({
         </div>
       )}
 
-      <div className="mt-3 flex gap-1.5 rounded-pill bg-accent-soft/40 p-1">
-        {VEHICLES.filter((v) => showAny || v !== "any").map((v) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => b.setVehicle(v)}
-            className={cn(
-              "tap-target flex-1 rounded-pill py-1.5 text-[13px] font-semibold capitalize transition-colors",
-              b.vehicle === v
-                ? "bg-white text-accent shadow-soft"
-                : "text-cocoa hover:text-ink",
-            )}
-          >
-            <span className="flex items-center justify-center gap-1.5">
-              {v !== "any" && <VehicleArt vehicle={v} className="h-4 w-6 shrink-0" />}
-              {VEHICLE_LABEL[v]}
-            </span>
-          </button>
-        ))}
-      </div>
-
       {b.route && (
         <p className="mt-2.5 text-[12px] text-cocoa">
           {t("ib.routeLine")
@@ -350,20 +334,6 @@ export function InlineRideBooking({
             );
           })()}
 
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[15px] font-bold text-ink">{t("rc.availableProviders")}</p>
-            <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent">
-              <Sparkles size={11} />
-              {b.quotes.length === 1
-                ? t("rc.oneOptionFound")
-                : t("rc.optionsFound").replace("{n}", String(b.quotes.length))}
-            </span>
-          </div>
-
-          {/* The engine's pick, stated as a pick. A list of near-identical
-              prices makes the reader do the comparing again; naming the best
-              one and showing what it is bought with is the whole point of
-              having compared them. */}
           <RideBestCard
             q={b.quotes[0]!}
             onSelect={() => {
@@ -374,10 +344,10 @@ export function InlineRideBooking({
 
           {b.quotes.length > 1 && (
             <>
-              <p className="mt-0.5 text-[14px] font-bold text-ink">
+              <p className="mt-0.5 text-[15px] font-bold text-ink">
                 {t("ib.youllLike")}
               </p>
-              {b.quotes.slice(1).map((q) => (
+              {b.quotes.slice(1, 4).map((q) => (
                 <RideOptionRow
                   key={`${q.provider}-${q.productName}`}
                   q={q}

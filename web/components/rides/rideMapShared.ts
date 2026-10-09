@@ -8,15 +8,15 @@
 export function placeLabelElement(text: string, kind: "pickup" | "drop"): HTMLElement {
   const el = document.createElement("div");
   el.className =
-    "flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-[#3d1c00] shadow-md whitespace-nowrap";
+    "flex items-center gap-1 rounded-full bg-white px-2 py-[3px] text-[10px] font-semibold text-[#1a1a2e] shadow-sm whitespace-nowrap ring-1 ring-black/5";
   if (kind === "drop") {
     const flag = document.createElement("span");
     flag.textContent = "🏁";
-    flag.className = "text-[10px]";
-    el.append(flag, document.createTextNode(text));
+    flag.className = "text-[9px]";
+    el.append(document.createTextNode(text), flag);
   } else {
     const dot = document.createElement("span");
-    dot.className = "size-2 shrink-0 rounded-full";
+    dot.className = "size-1.5 shrink-0 rounded-full";
     dot.style.background = "#1ca65c";
     el.append(dot, document.createTextNode(text));
   }
@@ -29,21 +29,24 @@ export function providerPillElement(name: string): HTMLElement {
   const n = name.toLowerCase();
   let bg = "#3d1c00";
   let textCol = "white";
+  let ring = "ring-white/80";
   if (n.includes("ola")) {
-    bg = "#bada55";
-    textCol = "black";
+    bg = "#ffffff";
+    textCol = "#1a1a1a";
+    ring = "ring-black/10";
   } else if (n.includes("uber")) {
-    bg = "black";
+    bg = "#111111";
     textCol = "white";
   } else if (n.includes("rapido")) {
     bg = "#f6d000";
-    textCol = "black";
+    textCol = "#1a1a1a";
   }
-  el.className =
-    "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide shadow-md ring-2 ring-white/50";
+  const label =
+    n.includes("ola") ? "OLA" : n.includes("uber") ? "Uber" : n.includes("rapido") ? "Rapido" : name;
+  el.className = `rounded-full px-2 py-[3px] text-[10px] font-bold shadow-sm ring-1 ${ring}`;
   el.style.backgroundColor = bg;
   el.style.color = textCol;
-  el.textContent = name;
+  el.textContent = label;
   return el;
 }
 
