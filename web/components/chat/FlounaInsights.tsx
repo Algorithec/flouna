@@ -31,14 +31,9 @@ export function FlounaInsights({
 
   const visibleOffers = expanded ? offers : offers.slice(0, 2);
   const hasMore = offers.length > 2 && !expanded;
-  const isRide = hacks.some((h) => h.label === "fi.rideHack");
-  const payment = isRide ? offers[0] : undefined;
-  const tileCount = hacks.length + (payment ? 1 : 0);
-  const listOffers = isRide ? [] : offers;
-  const listed = isRide ? [] : visibleOffers;
 
   return (
-    <div className="rounded-[18px] border border-accent/30 bg-[#fff1e8] p-3.5">
+    <div className="rounded-[18px] border border-accent/30 bg-accent-soft/50 p-3.5">
       <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
         <Sparkles size={12} /> {t("rc.insights")}
       </p>
