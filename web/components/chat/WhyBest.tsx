@@ -195,7 +195,15 @@ export function ShopWhyBest({
 
   if (alternatives.length > 0) {
     const dearer = alternatives.filter((a) => a.effectivePaise > best.effectivePaise);
-    if (dearer.length > 0) reasons.push(t("wb.cheaper"));
+    if (dearer.length > 0) {
+      // wb.cheaper carries an {amount}, so pushing it unsubstituted printed the
+      // placeholder in braces to the customer in all six languages.
+      const cheapest = dearer.reduce((min, a) => Math.min(min, a.effectivePaise), Infinity);
+      const diff = cheapest - best.effectivePaise;
+      if (diff > 0) {
+        reasons.push(t("wb.cheaper").replace("{amount}", rupees(diff)));
+      }
+    }
   }
 
   return (
