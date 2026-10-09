@@ -159,9 +159,14 @@ let browser = null;
     // on the claim being made rather than on one sentence: keying a smoke
     // check to exact copy is what made this one fail on a redesign that broke
     // nothing.
+    //
+    // The count is deliberately exact: a "+" after it has to fail here. The
+    // display cap is about how many marks fit on a phone, so "8+ providers"
+    // claims more were checked than were, and a regex that tolerated the plus
+    // let that copy back in once already.
     check(
       "shows how widely it looked",
-      /(Checked|Compared) \d+\+? providers/i.test(text) || /Compared across/i.test(text),
+      /(Checked|Compared) \d+ providers/i.test(text) || /Compared across/i.test(text),
     );
     check("shows the reasoning", /Why this is the best choice/i.test(text));
     check("shows the insights panel", /FLOUNA INSIGHTS/i.test(text));
