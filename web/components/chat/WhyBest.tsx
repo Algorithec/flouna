@@ -144,17 +144,29 @@ export function WhyBest({
 
 export function RideWhyBest({
   why,
+  best,
   quotes,
 }: {
   why?: string | null;
+  /**
+   * The quote the card actually labels the best option, and the set it is
+   * presented against — both as the screen shows them, filtered to the chosen
+   * vehicle and sorted by price.
+   *
+   * The server ranks quotes for the stated priority rather than by price, so
+   * quotes[0] is routinely a different ride from the one on the card, and
+   * reasoning about it described an option nobody could see. The caller has to
+   * re-derive these when the vehicle tab changes, or the pick moves and the
+   * reasons stay where they were.
+   */
+  best?: RideQuote;
   quotes: RideQuote[];
 }) {
   const { t } = useI18n();
   const reasons: string[] = [];
-  const best = quotes[0];
 
-  if (best && quotes.length > 1) {
-    const rest = quotes.slice(1);
+  const rest = best ? quotes.filter((q) => q !== best) : [];
+  if (best && rest.length > 0) {
     if (
       rest.every((q) => q.pickupEtaMinutes >= best.pickupEtaMinutes) &&
       rest.some((q) => q.pickupEtaMinutes > best.pickupEtaMinutes)

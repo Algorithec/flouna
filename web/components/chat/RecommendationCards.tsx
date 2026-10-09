@@ -286,7 +286,10 @@ export function RideRecommendation({
 
   return (
     <ResultStack>
-      <RideWhyBest why={rec.why} quotes={rec.quotes} />
+      {/* Reasoned about the list on the screen, not rec.quotes: the card shows
+          the chosen vehicle sorted by price, so the reasons have to move when
+          the tab does. */}
+      <RideWhyBest why={rec.why} best={best} quotes={shown} />
 
       {rec.advice && <AdviceBanner advice={rec.advice} />}
 
