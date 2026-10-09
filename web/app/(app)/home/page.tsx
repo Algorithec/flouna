@@ -419,13 +419,14 @@ function ChatHome() {
                   <p className="text-[14px] leading-relaxed text-ink">{m.content}</p>
                   {m.recommendation?.type === "food" && (
                     <div className="mt-3">
-                      <FoodRecommendation rec={m.recommendation} />
+                      <FoodRecommendation rec={m.recommendation} compact />
                     </div>
                   )}
                   {m.recommendation?.type === "ride" && (
                     <div className="mt-3">
                       <RideRecommendation
                         rec={m.recommendation}
+                        compact
                         onBook={(orderId) =>
                           setOrdered((o) => ({ ...o, [m.id]: orderId }))
                         }

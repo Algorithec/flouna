@@ -2,6 +2,7 @@
 
 import { useI18n } from "@/components/i18n/I18nContext";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Tag, Award, Zap, Gift } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -11,17 +12,6 @@ type PlusStatus = {
   perks: string[];
 };
 
-// Shown once per result to free users, outlining the benefits of upgrading.
-// Disappears completely if the user is already subscribed, or if the status
-// fetch fails (so it doesn't flash on a slow connection for a subscriber).
-/**
- * One request per page, however many results are on it.
- *
- * This renders once under every recommendation, so a conversation with ten
- * results asked the same question ten times. The promise is shared, so the
- * first card to mount fetches and the rest read the same answer. Cleared on a
- * failure so a later card can try again rather than caching the outage.
- */
 let statusRequest: Promise<PlusStatus> | null = null;
 
 function subscriptionStatus(): Promise<PlusStatus> {
@@ -32,7 +22,7 @@ function subscriptionStatus(): Promise<PlusStatus> {
   return statusRequest;
 }
 
-export function RadiusUpsell() {
+export function RadiusUpsell({ href = "/profile/rewards" }: { href?: string }) {
   const { t } = useI18n();
   const [status, setStatus] = useState<PlusStatus | null>(null);
 
@@ -51,34 +41,37 @@ export function RadiusUpsell() {
     };
   }, []);
 
-  // Show nothing while loading, or if active.
   if (!status || status.active) return null;
 
   return (
-    <div className="mt-4 rounded-card border border-accent/30 bg-accent-soft/40 p-4">
-      <div className="mb-3">
-        <h3 className="text-[15px] font-bold text-ink">{t("ru.title")}</h3>
-        <p className="text-[13px] text-cocoa">{t("ru.sub")}</p>
-      </div>
-      
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-          <Tag size={14} className="text-accent" /> {t("ru.bestPrices")}
-        </div>
-        <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-          <Award size={14} className="text-accent" /> {t("ru.topRated")}
-        </div>
-        <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-          <Zap size={14} className="text-accent" /> {t("ru.fast")}
-        </div>
-        <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-          <Gift size={14} className="text-accent" /> {t("ru.offers")}
-        </div>
+    <div className="rounded-[18px] border border-accent/25 bg-card px-4 py-5 text-center">
+      <h3 className="text-[16px] font-bold text-ink">{t("ru.title")}</h3>
+      <p className="mt-1 text-[12.5px] text-cocoa">{t("ru.sub")}</p>
+
+      <div className="mt-4 grid grid-cols-4 gap-1">
+        <Perk icon={Tag} label={t("ru.bestPrices")} />
+        <Perk icon={Award} label={t("ru.topRated")} />
+        <Perk icon={Zap} label={t("ru.fast")} />
+        <Perk icon={Gift} label={t("ru.offers")} />
       </div>
 
-      <button className="tap-target w-full rounded-pill bg-accent py-2.5 text-[14px] font-bold text-white transition-colors hover:bg-accent/90">
+      <Link
+        href={href}
+        className="tap-target mt-4 flex w-full items-center justify-center rounded-full border border-accent/60 py-2.5 text-[14px] font-semibold text-accent transition-colors hover:bg-accent-soft/50"
+      >
         {t("ru.explore")}
-      </button>
+      </Link>
+    </div>
+  );
+}
+
+function Perk({ icon: Icon, label }: { icon: typeof Tag; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 text-center">
+      <span className="flex size-9 items-center justify-center rounded-full border border-accent/30 text-accent">
+        <Icon size={16} />
+      </span>
+      <span className="text-[10px] font-semibold leading-tight text-ink">{label}</span>
     </div>
   );
 }

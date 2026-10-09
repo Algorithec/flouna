@@ -2,21 +2,13 @@
 
 import { useState } from "react";
 import { useI18n } from "@/components/i18n/I18nContext";
-import { Star, Heart, Share2, ShoppingCart, Minus, Plus, Store, Check } from "lucide-react";
+import { Star, Heart, Share2, ShoppingCart, Minus, Plus, Check } from "lucide-react";
 import { DishArt } from "@/components/food/DishArt";
 import { useCart } from "@/lib/cart";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import { formatCount } from "@/lib/format";
 import type { FoodQuote } from "./types";
-
-// The winning pick, drawn as the Figma result card: a hero image with the
-// discount called out, the price shown against what it would otherwise cost,
-// and the two things a person does next — add it, or share it.
-//
-// Everything here comes from the quote. Where the design shows catalogue
-// detail we do not hold (gram weight, rating counts), the card uses what we
-// actually know rather than inventing numbers for a screenshot.
 
 export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: string }) {
   const { t } = useI18n();
@@ -26,8 +18,6 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
   const [saved, setSaved] = useState(false);
   const [shared, setShared] = useState(false);
 
-  // effectivePaise = base + delivery − offers, so the pre-offer total is the
-  // honest "was" price and the difference is the real saving.
   const originalPaise = q.basePaise + q.deliveryFeePaise;
   const savingPaise = Math.max(0, originalPaise - q.effectivePaise);
   const discountPct = originalPaise > 0 ? Math.round((savingPaise / originalPaise) * 100) : 0;
@@ -63,123 +53,151 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
     }
   };
 
+  const meta = q.portion && q.portion.length > 0 ? q.portion : q.tag ? [q.tag] : [];
+
   return (
-    <div className="overflow-hidden rounded-[18px] border border-line bg-card shadow-card">
-      <div className="relative">
-        <DishArt name={q.name} image={q.image} fill className="h-[168px] w-full" />
+    <div className="overflow-hidden rounded-[20px] border border-line bg-card p-2.5 shadow-soft">
+      <div className="flex items-start gap-3">
+        <div className="relative w-[40%] min-w-[120px] max-w-[156px] shrink-0 overflow-hidden rounded-[14px]">
+          <div className="aspect-square w-full overflow-hidden rounded-[16px]">
+            <DishArt name={q.name} image={q.image} fill className="size-full object-cover" />
+          </div>
 
-        {discountPct > 0 && (
-          <span className="absolute left-0 top-3 rounded-r-full bg-accent px-3 py-1.5 text-[12px] font-bold text-white shadow-sm">
-            {t("fh.off").replace("{n}", String(discountPct))}
-          </span>
-        )}
+          {discountPct > 0 && (
+            <span className="absolute left-0 top-0 max-w-[3.6rem] rounded-br-[14px] bg-[#b45309] px-2 py-1.5 text-center text-[11px] font-bold leading-[1.15] text-white">
+              {t("fh.off").replace("{n}", String(discountPct))}
+            </span>
+          )}
 
+          <button
+            onClick={() => setSaved((v) => !v)}
+            aria-label={saved ? t("fh.unsave") : t("fh.save")}
+            className="absolute -right-1 top-2 z-10 flex size-8 items-center justify-center rounded-full bg-card shadow-sm"
+          >
+            <Heart
+              size={15}
+              className={cn(
+                "transition-colors",
+                saved ? "fill-accent text-accent" : "text-accent",
+              )}
+            />
+          </button>
+        </div>
+
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="text-[17px] font-bold leading-snug tracking-tight text-ink">{q.name}</p>
+          <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-ink/85">
+            <span className="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+              <UtensilMark />
+            </span>
+            <span className="truncate font-medium">{q.restaurant}</span>
+          </p>
+
+          <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[12.5px] text-cocoa">
+            <span className="flex items-center gap-0.5 font-semibold text-ink">
+              <Star size={13} className="fill-[#f5a524] text-[#f5a524]" />
+              {q.rating}
+            </span>
+            {q.ratingsCount != null && q.ratingsCount > 0 && (
+              <>
+                <span className="text-cocoa/35">|</span>
+                <span>
+                  {formatCount(q.ratingsCount)}+ {t("fh.ratings")}
+                </span>
+              </>
+            )}
+          </p>
+
+          <div className="mt-2.5 border-t border-line/80 pt-2.5">
+            <div className="flex items-end justify-between gap-2">
+              <div className="min-w-0">
+                <p className="flex items-baseline gap-1.5">
+                  <span className="text-[22px] font-extrabold tracking-tight text-ink">
+                    {rupees(q.effectivePaise)}
+                  </span>
+                  {savingPaise > 0 && (
+                    <span className="text-[13px] text-cocoa/50 line-through">
+                      {rupees(originalPaise)}
+                    </span>
+                  )}
+                </p>
+                {savingPaise > 0 && (
+                  <p className="mt-0.5 text-[12px] font-semibold text-accent">
+                    {t("fh.youSave").replace("{amount}", rupees(savingPaise))}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex h-[34px] shrink-0 items-center gap-2.5 rounded-[12px] border-[1.5px] border-accent px-2.5">
+                <button
+                  onClick={() => setQty((n) => Math.max(1, n - 1))}
+                  disabled={qty === 1}
+                  aria-label={t("fh.less")}
+                  className="text-ink disabled:opacity-30"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="min-w-3.5 text-center text-[14px] font-bold text-ink">{qty}</span>
+                <button
+                  onClick={() => setQty((n) => Math.min(20, n + 1))}
+                  aria-label={t("fh.more")}
+                  className="text-ink"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {meta.length > 0 && (
+            <p className="mt-2 flex flex-wrap items-center gap-x-1.5 border-t border-line/80 pt-2 text-[11.5px] text-cocoa">
+              <BoxMark />
+              {meta.join("  |  ")}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2.5">
         <button
-          onClick={() => setSaved((v) => !v)}
-          aria-label={saved ? t("fh.unsave") : t("fh.save")}
-          className="absolute right-3 top-3 flex size-9 items-center justify-center rounded-full bg-card/95 shadow-sm transition-colors hover:bg-card"
+          onClick={onShare}
+          className="flex flex-1 items-center justify-center gap-2 rounded-[16px] border border-line py-[11px] text-[14px] font-semibold text-ink transition-colors hover:bg-beige/40"
         >
-          <Heart
-            size={17}
-            className={cn("transition-colors", saved ? "fill-danger text-danger" : "text-cocoa")}
-          />
+          {shared ? <Check size={16} className="text-success" /> : <Share2 size={16} />}
+          {shared ? t("grp.copied") : t("fh.share")}
+        </button>
+        <button
+          onClick={onAdd}
+          className="flex flex-[1.55] items-center justify-center gap-2 rounded-[16px] bg-accent py-[11px] text-[14px] font-semibold text-white transition-colors hover:bg-[#d4570f]"
+        >
+          {added ? <Check size={16} /> : <ShoppingCart size={16} />}
+          {added ? t("fh.addedToCart") : t("fh.addToCart")}
         </button>
       </div>
-
-      <div className="flex flex-col gap-2.5 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-[17px] font-bold text-ink">{q.name}</p>
-            <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-accent">
-              <Store size={13} className="shrink-0" />
-              <span className="truncate">{q.restaurant}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[12px] font-semibold text-success">
-            <Star size={12} className="fill-success" /> {q.rating}
-            {/* Written as a comparison, not a truthiness check: a dish with
-                zero ratings would otherwise render a bare "0" beside the
-                stars, because React prints the number that `&&` returns. No
-                catalogue entry has zero today; every new one will. */}
-            {q.ratingsCount != null && q.ratingsCount > 0 && (
-              <span className="text-[12px] text-cocoa">
-                · {formatCount(q.ratingsCount)} {t("fh.ratings")}
-              </span>
-            )}
-          </span>
-          <span className="rounded-full bg-beige px-2 py-0.5 text-[11px] font-medium text-cocoa">
-            {q.tag}
-          </span>
-          <span className="rounded-full bg-beige px-2 py-0.5 text-[11px] font-medium text-cocoa">
-            {q.dietary === "veg" ? t("fh.veg") : t("fh.nonVeg")}
-          </span>
-          {q.portion?.map((p) => (
-            <span
-              key={p}
-              className="rounded-full bg-beige px-2 py-0.5 text-[11px] font-medium text-cocoa"
-            >
-              {p}
-            </span>
-          ))}
-        </div>
-
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p className="flex items-baseline gap-2">
-              <span className="text-[22px] font-bold text-ink">{rupees(q.effectivePaise)}</span>
-              {savingPaise > 0 && (
-                <span className="text-[14px] text-cocoa/70 line-through">
-                  {rupees(originalPaise)}
-                </span>
-              )}
-            </p>
-            {savingPaise > 0 && (
-              <p className="text-[12px] font-semibold text-success">
-                {t("fh.offWithOffers").replace("{amount}", rupees(savingPaise))}
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 rounded-full border border-line px-3 py-1.5">
-            <button
-              onClick={() => setQty((n) => Math.max(1, n - 1))}
-              disabled={qty === 1}
-              aria-label={t("fh.less")}
-              className="text-cocoa disabled:opacity-30"
-            >
-              <Minus size={15} />
-            </button>
-            <span className="min-w-4 text-center text-[14px] font-bold text-ink">{qty}</span>
-            <button
-              onClick={() => setQty((n) => Math.min(20, n + 1))}
-              aria-label={t("fh.more")}
-              className="text-accent"
-            >
-              <Plus size={15} />
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-1 flex items-center gap-2.5">
-          <button
-            onClick={onShare}
-            className="flex flex-1 items-center justify-center gap-2 rounded-pill border border-line py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-beige/50"
-          >
-            {shared ? <Check size={16} className="text-success" /> : <Share2 size={16} />}
-            {shared ? t("grp.copied") : t("fh.share")}
-          </button>
-          <button
-            onClick={onAdd}
-            className="flex flex-[1.4] items-center justify-center gap-2 rounded-pill bg-accent py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#d4570f]"
-          >
-            {added ? <Check size={16} /> : <ShoppingCart size={16} />}
-            {added ? t("fh.addedToCart") : t("fh.addToCart")}
-          </button>
-        </div>
-      </div>
     </div>
+  );
+}
+
+function UtensilMark() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <path
+        d="M3 1v4.5c0 .8.4 1.5 1 1.9V11H3.2V7.4A2.4 2.4 0 0 1 2 5.5V1h1Zm2 0v4.5c0 .8.4 1.5 1 1.9V11H5.2V7.4A2.4 2.4 0 0 1 4 5.5V1h1Zm4 0c.6 1.8.8 3.2.8 4.5 0 .9-.5 1.6-1.2 2V11H7.8V7.5c-.7-.4-1.2-1.1-1.2-2C6.6 4.2 6.8 2.8 7.4 1h.6c.4 1.6.6 2.9.6 4.2 0 .4.2.8.6.8s.6-.4.6-.8C9.8 3.9 10 2.6 10.4 1H10Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function BoxMark() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden className="shrink-0">
+      <path
+        d="M1.5 3.8 6 1.5l4.5 2.3v4.4L6 10.5 1.5 8.2V3.8Z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+      />
+      <path d="M6 1.5v9M1.5 3.8 10.5 8.2" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
   );
 }

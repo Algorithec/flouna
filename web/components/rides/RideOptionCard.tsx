@@ -1,20 +1,87 @@
 "use client";
 
 import { useI18n } from "@/components/i18n/I18nContext";
-import { Star, Users, Clock3, Snowflake, Route, Zap } from "lucide-react";
+import { Bike, Car, Star, Users, Clock3, Snowflake, Route, Zap } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { rupees } from "@/lib/money";
-import { PlatformMark } from "@/components/chat/PlatformMark";
+import { PlatformChip } from "@/components/chat/PlatformMark";
 import { VehicleArt, vehicleFacts } from "./VehicleArt";
 import type { RideQuote } from "@/components/chat/types";
 
+export function VehicleTabs({
+  vehicles,
+  value,
+  onChange,
+}: {
+  vehicles: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const order = ["bike", "cab", "auto", "any"];
+  const shown = order.filter((v) => vehicles.includes(v));
+  if (shown.length <= 1) return null;
+
+  return (
+    <div className="flex gap-1.5 rounded-[18px] bg-[#ebe6e0] p-1.5">
+      {shown.map((v) => {
+        const selected = v === value;
+        return (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onChange(v)}
+            className={cn(
+              "flex flex-1 flex-col items-center gap-1 rounded-[14px] py-2.5 transition-colors",
+              selected
+                ? "border-[1.5px] border-ink/70 bg-card text-ink shadow-soft"
+                : "text-[#9a9590]",
+            )}
+          >
+            <VehicleTabIcon vehicle={v} selected={selected} />
+            <span className="text-[12px] font-semibold capitalize">{v}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function VehicleTabIcon({ vehicle, selected }: { vehicle: string; selected: boolean }) {
+  const color = selected ? "#e8651a" : "#9a9590";
+  if (vehicle === "bike") return <Bike size={22} color={color} strokeWidth={1.75} />;
+  if (vehicle === "cab") return <Car size={22} color={color} strokeWidth={1.75} />;
+  if (vehicle === "any") return <Zap size={22} color={color} strokeWidth={1.75} />;
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M7 18h8.5a3.5 3.5 0 0 0 0-7H14l-1.5-5H8L7 11H5.5A2.5 2.5 0 0 0 3 13.5V16a2 2 0 0 0 2 2h2Z"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="7.5" cy="18" r="1.6" fill={color} />
+      <circle cx="16.5" cy="18" r="1.6" fill={color} />
+    </svg>
+  );
+}
+
+export function ProvidersHeader({ count }: { count: number }) {
+  const { t } = useI18n();
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-[16px] font-bold text-ink">{t("rc.availableProviders")}</p>
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#fff1e8] px-2.5 py-1 text-[12px] font-semibold text-accent">
+        <Zap size={13} className="fill-accent" />
+        {count === 1
+          ? t("rc.oneOptionFound")
+          : t("rc.optionsFound").replace("{n}", String(count))}
+      </span>
+    </div>
+  );
+}
+
 /**
  * The fare the engine is recommending, stated the way the frames state it.
- *
- * A ride is not chosen on price alone, which is why the picture, the wait, the
- * seats and the rating sit together on one card: those are the four things
- * somebody weighs before tapping, and a row that shows only a number makes
- * them open four apps to find the rest.
  */
 export function RideBestCard({
   q,
@@ -28,69 +95,74 @@ export function RideBestCard({
   const { t } = useI18n();
   const { seats, ac } = vehicleFacts(q.vehicle);
   return (
-    <div className="overflow-hidden rounded-card border-2 border-accent bg-gradient-to-b from-accent-soft/60 to-card">
-      {/* The ribbon, and the reason it earned the place. */}
-      <div className="flex items-center justify-between gap-2 bg-accent px-3.5 py-1.5">
-        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-white">
-          <Zap size={12} className="fill-white" />
-          {t("rd.bestOption")}
-        </p>
-        {q.badge && (
-          <span className="rounded-pill bg-white/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-            {q.badge}
+    <div className="rounded-[18px] border border-accent/40 bg-gradient-to-b from-[#fff1e8] to-card p-3.5 shadow-soft">
+      <div className="flex items-start gap-3">
+        <div className="flex w-[4.75rem] shrink-0 flex-col items-center">
+          <span className="inline-flex items-center gap-0.5 rounded-md bg-accent px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+            <Zap size={9} className="fill-white" />
+            {t("rd.bestOption")}
           </span>
-        )}
-      </div>
-
-      <div className="flex items-start gap-3 p-3.5">
-        <div className="relative shrink-0">
-          <VehicleArt vehicle={q.vehicle} className="h-14 w-20" />
-          {/* The driver rating, tucked under the vehicle the way the frame
-              has it, so the two are read as one thing. */}
-          <span className="absolute -bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-pill bg-card px-1.5 py-0.5 text-[10px] font-bold text-ink shadow-soft">
-            <Star size={9} className="fill-warning text-warning" />
+          <VehicleArt vehicle={q.vehicle} className="mt-2 h-11 w-[4.4rem]" />
+          <span className="mt-1 flex items-center gap-0.5 text-[11px] font-bold text-ink">
+            <Star size={11} className="fill-[#f5a524] text-[#f5a524]" />
             {q.driverRating.toFixed(1)}
           </span>
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-bold text-ink">{q.displayName}</p>
-              <span className="mt-0.5 inline-flex">
-                <PlatformMark id={q.provider} />
+        <div className="min-w-0 flex-1 pt-0.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="truncate text-[16px] font-bold capitalize text-ink">
+              {q.displayName || q.vehicle}
+            </p>
+            {q.badge && (
+              <span className="rounded-md bg-accent px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                {q.badge}
               </span>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-cocoa">
-                {t("rd.estFare")}
-              </p>
-              <p className="text-[20px] font-extrabold leading-tight text-accent">
-                {rupees(q.effectivePaise)}
-              </p>
-            </div>
+            )}
           </div>
+          <ul className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[11.5px] text-cocoa">
+            <Fact
+              icon={Users}
+              text={
+                seats === 1
+                  ? t("rd.seat")
+                  : t("rd.seats").replace("{n}", String(seats))
+              }
+            />
+            <Fact
+              icon={Clock3}
+              text={t("rd.minAway").replace("{n}", String(q.pickupEtaMinutes))}
+            />
+            {ac && <Fact icon={Snowflake} text={t("rd.ac")} />}
+            <Fact
+              icon={Route}
+              text={t("rd.minTrip").replace("{n}", String(q.rideMinutes))}
+            />
+          </ul>
+        </div>
 
-          <Facts seats={seats} ac={ac} eta={q.pickupEtaMinutes} trip={q.rideMinutes} />
+        <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
+          <div className="text-right">
+            <p className="text-[10px] font-medium text-cocoa">{t("rd.estFare")}</p>
+            <p className="text-[22px] font-extrabold leading-tight text-ink">
+              {rupees(q.effectivePaise)}
+            </p>
+          </div>
+          {onSelect && (
+            <button
+              onClick={onSelect}
+              disabled={busy}
+              className="tap-target rounded-full bg-accent px-5 py-2 text-[13px] font-bold text-white transition-opacity disabled:opacity-60"
+            >
+              {busy ? t("rides.booking") : t("rc.select")}
+            </button>
+          )}
         </div>
       </div>
-
-      {onSelect && (
-        <div className="px-3.5 pb-3.5">
-          <button
-            onClick={onSelect}
-            disabled={busy}
-            className="tap-target w-full rounded-pill bg-accent px-4 py-2.5 text-[14px] font-bold text-white transition-opacity disabled:opacity-60"
-          >
-            {busy ? t("rides.booking") : t("rc.select")}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
-/** One of the also-rans, in the compact shape the frame lists them in. */
 export function RideOptionRow({
   q,
   onSelect,
@@ -102,39 +174,22 @@ export function RideOptionRow({
 }) {
   const { t } = useI18n();
   return (
-    <div className="flex items-center gap-2.5 rounded-card border border-line bg-card p-2.5">
-      <VehicleArt vehicle={q.vehicle} className="h-9 w-12 shrink-0" />
+    <div className="flex items-center gap-2.5 rounded-[18px] border border-line bg-card px-3 py-2.5 shadow-soft">
+      <VehicleArt vehicle={q.vehicle} className="h-10 w-14 shrink-0" />
 
-      {/* One column that is allowed to shrink, so the price and the button
-          keep their room. Everything here was wrapping onto three lines at
-          390px, which is most of the phones this ships to. */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <PlatformMark id={q.provider} />
-          <p className="min-w-0 truncate text-[13px] font-semibold text-ink">
-            {q.displayName}
-          </p>
-        </div>
-        <p className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-[11px] text-cocoa">
-          <span className="flex items-center gap-0.5">
-            <Clock3 size={10} className="shrink-0" />
-            {q.pickupEtaMinutes} {t("u.min")}
-          </span>
-          <span className="flex items-center gap-0.5">
-            <Star size={10} className="shrink-0 fill-warning text-warning" />
-            {q.driverRating.toFixed(1)}
-          </span>
-        </p>
+        <PlatformChip id={q.provider} variant="outline" />
+        <p className="mt-0.5 truncate text-[13px] font-medium text-ink">{q.displayName}</p>
       </div>
 
-      <p className="shrink-0 whitespace-nowrap text-[15px] font-extrabold text-ink">
+      <p className="shrink-0 text-[18px] font-extrabold text-ink">
         {rupees(q.effectivePaise)}
       </p>
       {onSelect && (
         <button
           onClick={onSelect}
           disabled={busy}
-          className="tap-target shrink-0 rounded-pill border border-accent px-3 py-1.5 text-[12px] font-bold text-accent transition-colors hover:bg-accent-soft disabled:opacity-60"
+          className="tap-target shrink-0 rounded-full border border-accent px-3.5 py-1.5 text-[13px] font-semibold text-accent transition-colors hover:bg-accent-soft disabled:opacity-60"
         >
           {t("rc.select")}
         </button>
@@ -143,31 +198,10 @@ export function RideOptionRow({
   );
 }
 
-function Facts({
-  seats,
-  ac,
-  eta,
-  trip,
-}: {
-  seats: number;
-  ac: boolean;
-  eta: number;
-  trip: number;
-}) {
-  return (
-    <ul className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-cocoa">
-      <Fact icon={Users} text={`${seats} seat${seats === 1 ? "" : "s"}`} />
-      <Fact icon={Clock3} text={`${eta} min away`} />
-      {ac && <Fact icon={Snowflake} text="AC" />}
-      <Fact icon={Route} text={`${trip} min trip`} />
-    </ul>
-  );
-}
-
 function Fact({ icon: Icon, text }: { icon: typeof Users; text: string }) {
   return (
     <li className="flex items-center gap-1">
-      <Icon size={11} className={cn("shrink-0 text-accent")} />
+      <Icon size={12} className="shrink-0 text-accent" />
       {text}
     </li>
   );

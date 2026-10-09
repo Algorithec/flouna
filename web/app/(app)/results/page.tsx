@@ -36,7 +36,6 @@ function Results() {
   const addressed = Boolean(chatId && msgId);
 
   const [rec, setRec] = useState<Recommendation | null>(null);
-  const [content, setContent] = useState("");
   const [fetching, setFetching] = useState(addressed);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [shared, setShared] = useState(false);
@@ -57,7 +56,6 @@ function Results() {
           setFetchError("Recommendation not found");
         } else {
           setRec(msg.recommendation);
-          setContent(msg.content);
         }
       })
       // A reply that arrives after the reader has moved on must not write to a
@@ -123,9 +121,9 @@ function Results() {
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-4rem)] max-w-3xl flex-col px-4 lg:h-dvh lg:max-w-5xl lg:px-6">
+    <div className="mx-auto flex h-[calc(100dvh-4rem)] w-full max-w-[560px] flex-col px-4 lg:h-dvh lg:max-w-[640px] lg:px-6">
       {/* Sticky header with back + share */}
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-page py-3">
+      <div className="sticky top-0 z-10 flex items-center justify-between bg-cream py-3">
         <button
           onClick={() => router.back()}
           className="tap-target flex items-center gap-2 text-[14px] font-medium text-ink transition-colors hover:text-accent"
@@ -161,22 +159,9 @@ function Results() {
         </div>
       </div>
 
-      {/* Scrollable results body */}
+      {/* Scrollable results body — same cards as chat, not a second explanation */}
       <div className="flex-1 overflow-y-auto pb-8">
-        <FadeIn y={10} className="flex flex-col gap-4">
-          {/* AI reasoning summary */}
-          {content && (
-            <div className="rounded-card border border-accent/20 bg-accent-soft/30 p-4">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent">
-                <Sparkles size={12} /> <span className="uppercase">{t("rs.whyPick")}</span>
-              </p>
-              <p className="mt-2 text-[14px] leading-relaxed text-ink">
-                {content}
-              </p>
-            </div>
-          )}
-
-          {/* Recommendation content */}
+        <FadeIn y={10} className="flex flex-col gap-3">
           {rec.type === "food" && <FoodRecommendation rec={rec} />}
           {rec.type === "ride" && <RideRecommendation rec={rec} />}
           {rec.type === "shop" && <ShopRecommendation rec={rec} />}

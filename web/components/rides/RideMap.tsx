@@ -33,6 +33,7 @@ type RideMapProps = {
   // Set while the user is choosing a point by tapping the map. Kept in a ref
   // so toggling it doesn't tear the map down and rebuild it.
   onPick?: ((p: LatLng) => void) | null;
+  className?: string;
 };
 
 /**
@@ -43,7 +44,8 @@ type RideMapProps = {
 export function RideMap(props: RideMapProps) {
   const engine = useMapEngine();
   if (engine === "google") return <GoogleRideMap {...props} />;
-  if (engine === "loading") return <div className="size-full min-h-[260px] bg-beige/40" />;
+  if (engine === "loading")
+    return <div className={`size-full min-h-[260px] bg-beige/40 ${props.className ?? ""}`} />;
   return <MapLibreRideMap {...props} />;
 }
 
@@ -55,6 +57,7 @@ function MapLibreRideMap({
   dropLabel,
   providers = [],
   onPick,
+  className,
 }: {
   pickup: LatLng | null;
   drop: LatLng | null;
@@ -68,6 +71,7 @@ function MapLibreRideMap({
   // Set while the user is choosing a point by tapping the map. Kept in a ref
   // so toggling it doesn't tear the map down and rebuild it.
   onPick?: ((p: LatLng) => void) | null;
+  className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
@@ -179,9 +183,9 @@ function MapLibreRideMap({
         type: "line",
         source: "route",
         paint: {
-          "line-color": "#e8651a",
-          "line-width": 4,
-          "line-opacity": 0.85,
+          "line-color": "#3b82f6",
+          "line-width": 3.5,
+          "line-opacity": 0.95,
         },
       });
     };
@@ -208,5 +212,7 @@ function MapLibreRideMap({
     }
   }, [pickup, drop, routeGeometry, pickupLabel, dropLabel, providers]);
 
-  return <div ref={containerRef} className="size-full min-h-[260px]" />;
+  return (
+    <div ref={containerRef} className={`size-full min-h-[260px] ${className ?? ""}`} />
+  );
 }
