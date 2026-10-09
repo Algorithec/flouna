@@ -1109,6 +1109,7 @@ export const dictionaries = {
     "rd.minAway": "{n} min away",
     "rd.minTrip": "{n} min trip",
     "rd.ac": "AC",
+    "rd.mapUnavailable": "Route map unavailable",
     "py.tooLong": "Taking too long? Go back to payment options",
     "py.orderId": "Order ID: #{id}",
     "py.estDeliveryTime": "Estimated delivery time",
@@ -1355,6 +1356,7 @@ export const dictionaries = {
     "rd.minAway": "{n} मिनट दूर",
     "rd.minTrip": "{n} मिनट यात्रा",
     "rd.ac": "AC",
+    "rd.mapUnavailable": "रूट मैप उपलब्ध नहीं है",
     "cx.ride": "सवारी",
     // Ride complaints. Kept apart from the food reasons on
     // purpose: a rider has no item to be damaged.
@@ -2680,6 +2682,7 @@ export const dictionaries = {
     "rd.minAway": "{n} मिनिटे लांब",
     "rd.minTrip": "{n} मिनिटे प्रवास",
     "rd.ac": "AC",
+    "rd.mapUnavailable": "रूट नकाशा उपलब्ध नाही",
     "cx.ride": "प्रवास",
     // Ride complaints. Kept apart from the food reasons on
     // purpose: a rider has no item to be damaged.
@@ -4005,6 +4008,7 @@ export const dictionaries = {
     "rd.minAway": "{n} ನಿಮಿಷ ದೂರ",
     "rd.minTrip": "{n} ನಿಮಿಷ ಪ್ರಯಾಣ",
     "rd.ac": "AC",
+    "rd.mapUnavailable": "ರೂಟ್ ಮ್ಯಾಪ್ ಲಭ್ಯವಿಲ್ಲ",
     "cx.ride": "ಪ್ರಯಾಣ",
     // Ride complaints. Kept apart from the food reasons on
     // purpose: a rider has no item to be damaged.
@@ -5330,6 +5334,7 @@ export const dictionaries = {
     "rd.minAway": "{n} நிமிடம் தொலைவில்",
     "rd.minTrip": "{n} நிமிடம் பயணம்",
     "rd.ac": "AC",
+    "rd.mapUnavailable": "வழி வரைபடம் கிடைக்கவில்லை",
     "cx.ride": "பயணம்",
     // Ride complaints. Kept apart from the food reasons on
     // purpose: a rider has no item to be damaged.
@@ -6655,6 +6660,7 @@ export const dictionaries = {
     "rd.minAway": "{n} నిమిషాల దూరం",
     "rd.minTrip": "{n} నిమిషాల ప్రయాణం",
     "rd.ac": "AC",
+    "rd.mapUnavailable": "రూట్ మ్యాప్ అందుబాటులో లేదు",
     "cx.ride": "ప్రయాణం",
     // Ride complaints. Kept apart from the food reasons on
     // purpose: a rider has no item to be damaged.
