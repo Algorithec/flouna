@@ -22,7 +22,7 @@ export function VehicleTabs({
   if (shown.length <= 1) return null;
 
   return (
-    <div className="flex gap-1.5 rounded-[18px] bg-[#ebe6e0] p-1.5">
+    <div className="flex gap-1.5 rounded-[18px] bg-beige p-1.5">
       {shown.map((v) => {
         const selected = v === value;
         return (
@@ -70,7 +70,11 @@ export function ProvidersHeader({ count }: { count: number }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <p className="text-[16px] font-bold text-ink">{t("rc.availableProviders")}</p>
-      <span className="inline-flex items-center gap-1 rounded-full bg-[#fff1e8] px-2.5 py-1 text-[12px] font-semibold text-accent">
+      {/* Tinted from the token, so the chip darkens with the theme instead of
+          staying a light-mode cream under light ink. The count is ink rather
+          than accent: orange on the tint is about 3:1, which is under the
+          4.5:1 a number this size has to clear. */}
+      <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[12px] font-semibold text-ink">
         <Zap size={13} className="fill-accent" />
         {count === 1
           ? t("rc.oneOptionFound")
@@ -82,6 +86,10 @@ export function ProvidersHeader({ count }: { count: number }) {
 
 /**
  * The fare the engine is recommending, stated the way the frames state it.
+ *
+ * The warm wash at the top comes from the accent token, not a fixed cream:
+ * a fixed one keeps its light-mode value in dark mode, which would leave the
+ * fare printed in light ink on a near-white band.
  */
 export function RideBestCard({
   q,
@@ -95,7 +103,7 @@ export function RideBestCard({
   const { t } = useI18n();
   const { seats, ac } = vehicleFacts(q.vehicle);
   return (
-    <div className="rounded-[18px] border border-accent/40 bg-gradient-to-b from-[#fff1e8] to-card p-3.5 shadow-soft">
+    <div className="rounded-[18px] border border-accent/40 bg-gradient-to-b from-accent-soft/60 to-card p-3.5 shadow-soft">
       <div className="flex items-start gap-3">
         <div className="flex w-[4.75rem] shrink-0 flex-col items-center">
           <span className="inline-flex items-center gap-0.5 rounded-md bg-accent px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
