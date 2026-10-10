@@ -69,10 +69,17 @@ export async function rotateRefreshToken(raw: string) {
   if (!existing || existing.revokedAt || existing.expiresAt < new Date()) {
     return null;
   }
-  await prisma.refreshToken.update({
-    where: { id: existing.id },
+  // Claim the token before replacing it. The revoke used to be unconditional,
+  // so two requests presenting the same refresh token both read it as live,
+  // both revoked it and both were issued a new one: one token became two
+  // independent sessions, and a captured token racing the real client got a
+  // durable session of its own out of a single use. Scoped to revokedAt being
+  // null, only one of them wins and the loser is told the session is over.
+  const claimed = await prisma.refreshToken.updateMany({
+    where: { id: existing.id, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+  if (claimed.count === 0) return null;
   // Carry the step-up status and the device details onto the rotated token, so
   // a verified operator session keeps its 2FA standing and Login Activity keeps
   // naming the device instead of resetting to "Unknown" every fifteen minutes.
