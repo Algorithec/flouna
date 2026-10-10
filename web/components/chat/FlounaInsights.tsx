@@ -20,10 +20,18 @@ export function FlounaInsights({
   quote,
   hacks = [],
   offers = [],
+  tiles = false,
 }: {
   quote?: string | null;
   hacks?: Hack[];
   offers?: { label: string; discountPaise: number }[];
+  /**
+   * Draw the suggestions as bordered tiles in a grid, the way the ride frames
+   * draw them. Stated by the caller: it used to be inferred from whether a
+   * cheaper-vehicle suggestion happened to exist, so a ride with no cheaper
+   * vehicle silently rendered the food layout instead.
+   */
+  tiles?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { t } = useI18n();
@@ -31,14 +39,9 @@ export function FlounaInsights({
 
   const visibleOffers = expanded ? offers : offers.slice(0, 2);
   const hasMore = offers.length > 2 && !expanded;
-  const isRide = hacks.some((h) => h.label === "fi.rideHack");
-  const payment = isRide ? offers[0] : undefined;
-  const tileCount = hacks.length + (payment ? 1 : 0);
-  const listOffers = isRide ? [] : offers;
-  const listed = isRide ? [] : visibleOffers;
 
   return (
-    <div className="rounded-[18px] border border-accent/30 bg-[#fff1e8] p-3.5">
+    <div className="rounded-[18px] border border-accent/30 bg-accent-soft/50 p-3.5">
       <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
         <Sparkles size={12} /> {t("rc.insights")}
       </p>
@@ -49,8 +52,8 @@ export function FlounaInsights({
         </p>
       )}
 
-      {isRide && tileCount > 0 && (
-        <div className={`mt-3 grid gap-2 ${tileCount > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+      {tiles && hacks.length > 0 && (
+        <div className={`mt-3 grid gap-2 ${hacks.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
           {hacks.map((h) => (
             <div
               key={h.label}
@@ -62,19 +65,10 @@ export function FlounaInsights({
               </p>
             </div>
           ))}
-          {payment && (
-            <div className="rounded-[14px] border border-line/90 bg-card px-3 py-2.5">
-              <p className="text-[13px] font-bold text-ink">{t("fi.bestPayment")}</p>
-              <p className="mt-0.5 text-[12px] leading-snug text-cocoa">
-                {payment.label}
-                {payment.discountPaise > 0 && ` ${rupees(payment.discountPaise)}`}
-              </p>
-            </div>
-          )}
         </div>
       )}
 
-      {!isRide && hacks.length > 0 && (
+      {!tiles && hacks.length > 0 && (
         <div className="mt-3 flex flex-col gap-2">
           {hacks.map((h) => (
             <div key={h.label}>
@@ -87,11 +81,15 @@ export function FlounaInsights({
         </div>
       )}
 
-      {listOffers.length > 0 && (
+      {/* Every offer, whatever is being bought. Rides used to drop the list
+          entirely and promote offer one into a tile titled "Best Payment",
+          which both hid offers two onwards and claimed a comparison of
+          payment methods that this product does not make. */}
+      {offers.length > 0 && (
         <div className="mt-3">
           <p className="text-[13px] font-bold text-ink">{t("fi.offers")}</p>
           <div className="mt-1.5 flex flex-col gap-1">
-            {listed.map((o) => (
+            {visibleOffers.map((o) => (
               <p key={o.label} className="flex items-start gap-2 text-[12px] text-ink">
                 <span className="mt-[5px] size-1.5 shrink-0 rounded-full bg-ink" />
                 <span>

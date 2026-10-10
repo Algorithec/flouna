@@ -174,7 +174,11 @@ export function FoodRecommendation({
         <div className="flex flex-col gap-2">
           <p className="text-[15px] font-bold text-ink">{t("ib.youllLike")}</p>
           {alts.map((q) => (
-            <FoodAltRow key={`${q.dishId}-${q.platform}`} q={q} />
+            <FoodAltRow
+              key={`${q.dishId}-${q.platform}`}
+              q={q}
+              decisionId={rec.decisionId}
+            />
           ))}
         </div>
       )}
@@ -197,7 +201,11 @@ export function FoodRecommendation({
   );
 }
 
-function FoodAltRow({ q }: { q: FoodQuote }) {
+// The ranking this row came from travels with the line into the cart. Without
+// it the decision log records only the customers who took the top pick, and
+// nothing at all about the ones who rejected it for the third option — which
+// is the signal the whole feature exists to collect.
+function FoodAltRow({ q, decisionId }: { q: FoodQuote; decisionId?: string }) {
   const { t } = useI18n();
   const { add } = useCart();
   const [added, setAdded] = useState(false);
@@ -231,6 +239,7 @@ function FoodAltRow({ q }: { q: FoodQuote }) {
                 restaurant: q.restaurant,
                 image: q.image,
                 pricePaise: q.effectivePaise,
+                decisionId,
               },
               1,
             );
@@ -286,7 +295,10 @@ export function RideRecommendation({
 
   return (
     <ResultStack>
-      <RideWhyBest why={rec.why} quotes={rec.quotes} />
+      {/* Reasoned about the list on the screen, not rec.quotes: the card shows
+          the chosen vehicle sorted by price, so the reasons have to move when
+          the tab does. */}
+      <RideWhyBest why={rec.why} best={best} quotes={shown} />
 
       {rec.advice && <AdviceBanner advice={rec.advice} />}
 
@@ -331,6 +343,10 @@ export function RideRecommendation({
           )}
           {best && (
             <FlounaInsights
+              // Tiles, as the ride frames draw them. Stated here rather than
+              // inferred from the hacks, which flipped this screen to the food
+              // layout whenever no cheaper vehicle happened to be available.
+              tiles
               hacks={[
                 cheaperVehicleHack(
                   {
