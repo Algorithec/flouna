@@ -5,7 +5,7 @@
 // checkout. Quantities, optional cooking instructions, price details, and a
 // sticky checkout bar.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -31,6 +31,13 @@ import { useToast } from "@/components/ui/Toast";
 import { FadeIn, MOTION } from "@/components/ui/motion";
 
 type AppliedCoupon = { code: string; description: string; discountPaise: number };
+
+/** Random enough that two devices cannot collide on one. */
+function newAttemptKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `k-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 /**
  * The bill, priced by the server from the same code the order route uses.
@@ -75,6 +82,10 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState("");
   const [offers, setOffers] = useState<OfferedCoupon[]>([]);
   const [bill, setBill] = useState<CartBill | null>(null);
+  // One key per checkout attempt; replaced once an order exists.
+  const attemptKey = useRef<string>(newAttemptKey());
+  // The subtotal the applied code was last priced against.
+  const couponPricedFor = useRef<number | null>(null);
 
   useEffect(() => {
     api<{ addresses: AddressLine[] }>("/api/users/addresses")
@@ -99,11 +110,16 @@ export default function CartPage() {
           subtotalPaise: itemsTotal,
         },
       });
+      couponPricedFor.current = itemsTotal;
       setCoupon(d);
-      toast(`${d.code} applied, you save ${rupees(d.discountPaise)}`);
+      toast(
+        t("ct.appliedToast")
+          .replace("{code}", d.code)
+          .replace("{amount}", rupees(d.discountPaise)),
+      );
     } catch (e) {
       setCoupon(null);
-      setCouponError(e instanceof Error ? e.message : "Could not apply that code");
+      setCouponError(e instanceof Error ? e.message : t("ct.applyFailed"));
     } finally {
       setCouponBusy(false);
     }
@@ -142,13 +158,56 @@ export default function CartPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartKey]);
 
+  /**
+   * Re-prices an applied code when the cart changes under it.
+   *
+   * A discount is a function of the subtotal: a percentage code is worth more
+   * on a bigger cart, and a code with a minimum order stops applying when an
+   * item is removed. The discount was taken once, at the moment the code was
+   * typed, and then subtracted from every later total — so the line read
+   * "To pay" while the server was going to charge something else, or refuse
+   * the order outright at the last step.
+   */
+  const couponCode = coupon?.code;
+  useEffect(() => {
+    if (!couponCode || lines.length === 0) return;
+    if (couponPricedFor.current === itemsTotal) return;
+    let active = true;
+    api<AppliedCoupon>("/api/coupons/validate", {
+      method: "POST",
+      json: { code: couponCode, domain: "food", subtotalPaise: itemsTotal },
+    })
+      .then((d) => {
+        if (!active) return;
+        couponPricedFor.current = itemsTotal;
+        setCoupon(d);
+      })
+      .catch((e) => {
+        if (!active) return;
+        // No longer valid for this cart: dropped rather than left showing a
+        // saving that will not be given.
+        couponPricedFor.current = null;
+        setCoupon(null);
+        setCouponError(e instanceof Error ? e.message : t("ct.applyFailed"));
+      });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couponCode, cartKey, itemsTotal]);
+
   async function checkout() {
-    if (lines.length === 0) return;
+    if (lines.length === 0 || busy) return;
     setBusy(true);
     setError("");
     try {
       const d = await api<{ order: { id: string } }>("/api/orders", {
         method: "POST",
+        // One key per attempt, so a double tap or a request the connection
+        // retried comes back as the order already placed instead of a second
+        // one. The ride booking has had this since the duplicate-order bug;
+        // the cart, which takes the larger payment, did not.
+        headers: { "Idempotency-Key": attemptKey.current },
         json: {
           domain: "food",
           items: lines.map((l) => ({
@@ -164,6 +223,7 @@ export default function CartPage() {
         },
       });
       clear();
+      attemptKey.current = newAttemptKey();
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("ct.placeFailed"));
@@ -241,7 +301,7 @@ export default function CartPage() {
                         {rupees(l.pricePaise * l.qty)}
                       </p>
                       <button
-                        aria-label={`Remove ${l.name}`}
+                        aria-label={`${t("ct.remove")} ${l.name}`}
                         onClick={() => remove(l.dishId, l.platform)}
                         className="rounded-full p-1 text-cocoa/60 hover:bg-danger/10 hover:text-danger"
                       >
@@ -398,7 +458,9 @@ export default function CartPage() {
                   <div className="flex justify-between">
                     <span className="text-cocoa">{t("cart.deliveryFees")}</span>
                     <span className="font-medium text-ink">
-                      {bill.deliveryFeePaise === 0 ? "FREE" : rupees(bill.deliveryFeePaise)}
+                      {bill.deliveryFeePaise === 0
+                        ? t("bill.free")
+                        : rupees(bill.deliveryFeePaise)}
                     </span>
                   </div>
                   {bill.convenienceFeePaise > 0 && (
