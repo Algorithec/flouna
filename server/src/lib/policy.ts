@@ -159,15 +159,22 @@ export const BREACH_NOTIFY_MS = 72 * HOUR;
  * would move the deadline in the customer's disfavour.
  */
 export function addBusinessDays(from: Date, days: number): Date {
-  const d = new Date(from.getTime());
+  // Stepped in plain milliseconds. setDate walks the HOST's calendar, which
+  // moves by 23 or 25 hours across a daylight-saving boundary the customer
+  // does not observe — and the weekday it is then compared against is India's,
+  // so an hour of drift near midnight can misclassify a day and move the
+  // published deadline by a whole one. India keeps no DST, so a fixed day is
+  // correct here rather than a simplification.
+  const DAY_MS = 24 * 60 * 60_000;
+  let at = from.getTime();
   let left = days;
   while (left > 0) {
-    d.setDate(d.getDate() + 1);
+    at += DAY_MS;
     // Weekends are the rider's weekends, not the host's.
-    const day = istWeekday(d);
+    const day = istWeekday(new Date(at));
     if (day !== 0 && day !== 6) left -= 1;
   }
-  return d;
+  return new Date(at);
 }
 
 /**
