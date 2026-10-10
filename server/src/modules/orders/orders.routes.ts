@@ -437,10 +437,22 @@ ordersRouter.post(
         const allQuotes = quotesForProduct(body.productId);
         const quote = allQuotes.find((q) => q.platform === body.platform);
         if (!quote) throw new ApiError(404, "That product option is no longer available");
+        // Out of stock is a listing nobody can be sold. The search filters
+        // these out, but quotesForProduct does not, and this route only
+        // matched on the platform — so the one out-of-stock seller in the
+        // catalogue could be ordered from and paid for, and the buyer was
+        // charged for something that was never going to ship.
+        if (!quote.inStock) {
+          throw new ApiError(409, "That seller is out of stock, pick another option");
+        }
 
+        // Against the alternatives the buyer could actually have taken. An
+        // out-of-stock seller is not one, and counting a dearer unbuyable
+        // listing as the next-best price inflated the savings this order adds
+        // to the customer's lifetime total.
         const cheapestOther = Math.min(
           ...allQuotes
-            .filter((q) => q.platform !== body.platform)
+            .filter((q) => q.platform !== body.platform && q.inStock)
             .map((q) => q.effectivePaise),
         );
         const savedPaise = Number.isFinite(cheapestOther)
