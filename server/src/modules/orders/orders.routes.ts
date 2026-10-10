@@ -745,8 +745,17 @@ ordersRouter.get("/:id", async (req, res, next) => {
       // share of it handed back — so nothing about the reward is invented here.
       // The ledger's unique index makes a repeat call a no-op, which matters
       // because this route is polled.
+      //
+      // Only on money actually collected. Cash on delivery confirms the order
+      // and leaves its payment at "pending" until the money is taken in
+      // person, and nothing ever marks it taken — so every COD order reached
+      // here and paid out a share of a margin Flouna had not earned. A buyer
+      // could place COD orders, refuse them at the door, and still be credited
+      // real spendable balance. The cashback follows the payment, and a COD
+      // order earns it once collection is recorded.
+      const paid = order.payment?.status === "success";
       const { ondcMinMarginBps, cashbackUserSharePct } = await getConfig();
-      if (cashbackUserSharePct > 0) {
+      if (paid && cashbackUserSharePct > 0) {
         await creditCashback({
           userId: order.userId,
           orderId: order.id,
