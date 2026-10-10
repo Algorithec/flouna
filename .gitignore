@@ -43,3 +43,8 @@ server/uploads/
 
 # Generated Postgres baseline preview (regenerate with npm run db:deploy:check)
 server/prisma/pg-init.preview.sql
+
+# Model weights (too large for git)
+model/flouna-fused-*/
+model/flouna-lora-*/
+.vscode/

@@ -30,13 +30,7 @@ export class OllamaProvider implements LlmProvider {
         messages: [
           {
             role: "system",
-            // The shared shape, imported rather than pasted. The pasted copy was
-            // already out of date, missing food.maxEtaMinutes, ride.budgetPaise
-            // and ride.maxPickupMinutes, so limits a customer states could not
-            // come back from this provider at all.
-            content: `${SYSTEM_PROMPT}
-
-${JSON_SHAPE}`,
+            content: `${SYSTEM_PROMPT}\n\n${JSON_SHAPE}`,
           },
           { role: "user", content: userMessage },
         ],
@@ -61,12 +55,18 @@ ${JSON_SHAPE}`,
       if (raw[part] === null) delete raw[part];
     }
 
+    // Normalize domain: the 1.5B model sometimes outputs "out of scope"
+    // (with spaces) instead of "out_of_scope".
+    if (typeof raw.domain === "string") {
+      raw.domain = raw.domain.replace(/\s+/g, "_").toLowerCase();
+    }
+
     // The 0.5B model reliably outputs the right sub-objects but sometimes
     // omits the domain field. Infer it from whichever keys are present.
     if (!raw.domain) {
-      const hasFood = "food" in raw;
-      const hasRide = "ride" in raw;
-      const hasShop = "shop" in raw;
+      const hasFood = "food" in raw && raw.food != null;
+      const hasRide = "ride" in raw && raw.ride != null;
+      const hasShop = "shop" in raw && raw.shop != null;
       if (hasFood && hasRide) raw.domain = "combo";
       else if (hasFood) raw.domain = "food";
       else if (hasRide) raw.domain = "ride";
