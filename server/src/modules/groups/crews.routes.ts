@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
@@ -22,6 +23,15 @@ import { sendPushToUser } from "../notifications/push.service.js";
 
 export const crewsRouter = Router();
 crewsRouter.use(requireAuth);
+
+/** Short, unambiguous join code (no 0/O/1/I), from the CSPRNG. */
+function generateJoinCode(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.randomBytes(6);
+  let code = "";
+  for (let i = 0; i < 6; i++) code += alphabet[bytes[i]! % alphabet.length];
+  return code;
+}
 
 const nameSchema = z.string().trim().min(1).max(40);
 // One emoji, not a decorative string: the design puts it beside the name.
@@ -290,23 +300,34 @@ crewsRouter.post(
         .map((m) => m.userId)
         .filter((id) => id === req.userId! || !excluded.has(id));
 
-      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      const code = Array.from({ length: 6 }, () =>
-        alphabet[Math.floor(Math.random() * alphabet.length)],
-      ).join("");
-
-      const cart = await prisma.groupCart.create({
-        data: {
-          code,
-          hostId: req.userId!,
-          domain: "food",
-          platform: crew.platform,
-          name: crew.name,
-          emoji: crew.emoji,
-          crewId: crew.id,
-          members: { create: invited.map((userId) => ({ userId })) },
-        },
-      });
+      // A join code is the only thing standing between a stranger and a cart's
+      // member names and items, so it comes from the CSPRNG — the same way the
+      // create route mints one. Math.random is a seeded xorshift whose state is
+      // recoverable from a handful of outputs, and a host can see as many codes
+      // as they like by reopening, so the next crew's code was predictable.
+      // Retried on the rare collision, because `code` is unique and the create
+      // route's loop was missing here: a clash answered the host with a 500.
+      let cart;
+      for (let attempt = 0; attempt < 5 && !cart; attempt++) {
+        cart = await prisma.groupCart
+          .create({
+            data: {
+              code: generateJoinCode(),
+              hostId: req.userId!,
+              domain: "food",
+              platform: crew.platform,
+              name: crew.name,
+              emoji: crew.emoji,
+              crewId: crew.id,
+              members: { create: invited.map((userId) => ({ userId })) },
+            },
+          })
+          .catch((err: { code?: string }) => {
+            if (err?.code !== "P2002") throw err;
+            return undefined;
+          });
+      }
+      if (!cart) throw new ApiError(503, "Could not reopen the group order, try again");
 
       // Re-add last time's items, repriced. Anything delisted is dropped rather
       // than guessed at, and the response says how many so the screen can be
