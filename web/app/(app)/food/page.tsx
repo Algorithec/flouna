@@ -90,14 +90,22 @@ export default function FoodLandingPage() {
 
   useEffect(() => {
     if (!activeQuery) return;
-    const t = setTimeout(() => {
+    // `active` as well as the debounce: typing "pizza" fires one request, but
+    // changing the category while one is in flight fires another, and the two
+    // do not have to come back in order. The late answer used to win, leaving
+    // the results list showing dishes for a query nobody had asked for.
+    let active = true;
+    const timer = setTimeout(() => {
       api<{ quotes: FoodQuote[] }>(
         `/api/food/search?q=${encodeURIComponent(activeQuery)}`,
       )
-        .then((d) => setResults(d.quotes))
-        .catch(() => setResults([]));
+        .then((d) => active && setResults(d.quotes))
+        .catch(() => active && setResults([]));
     }, 250);
-    return () => clearTimeout(t);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [activeQuery]);
 
   const showSearch = activeQuery !== "" && results !== null;

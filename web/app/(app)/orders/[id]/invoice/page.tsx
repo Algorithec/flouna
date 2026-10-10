@@ -163,7 +163,9 @@ export default function InvoicePage({
       </div>
 
       {/* The receipt document */}
-      <div className="print-document rounded-card border border-line bg-white p-6 sm:p-8">
+      {/* bg-card, not a fixed white: every line inside is a token colour, so
+          in dark mode the whole receipt was near-white type on white. */}
+      <div className="print-document rounded-card border border-line bg-card p-6 sm:p-8">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-line pb-5">
           <div>

@@ -1,12 +1,20 @@
 "use client";
 
 import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { Bike, Car, Star, Users, Clock3, Snowflake, Route, Zap } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { rupees } from "@/lib/money";
 import { PlatformChip } from "@/components/chat/PlatformMark";
 import { VehicleArt, vehicleFacts } from "./VehicleArt";
 import type { RideQuote } from "@/components/chat/types";
+
+const VEHICLE_LABEL: Record<string, TranslationKey> = {
+  any: "veh.any",
+  bike: "veh.bike",
+  auto: "veh.auto",
+  cab: "veh.cab",
+};
 
 export function VehicleTabs({
   vehicles,
@@ -17,28 +25,36 @@ export function VehicleTabs({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const { t } = useI18n();
   const order = ["bike", "cab", "auto", "any"];
   const shown = order.filter((v) => vehicles.includes(v));
   if (shown.length <= 1) return null;
 
   return (
-    <div className="flex gap-1.5 rounded-[18px] bg-beige p-1.5">
+    <div role="tablist" className="flex gap-1.5 rounded-[18px] bg-beige p-1.5">
       {shown.map((v) => {
         const selected = v === value;
         return (
           <button
             key={v}
             type="button"
+            role="tab"
+            aria-selected={selected}
             onClick={() => onChange(v)}
             className={cn(
               "flex flex-1 flex-col items-center gap-1 rounded-[14px] py-2.5 transition-colors",
               selected
                 ? "border-[1.5px] border-ink/70 bg-card text-ink shadow-soft"
-                : "text-[#9a9590]",
+                : // Was a literal #9a9590: 2.4:1 on the beige track it sits on,
+                  // so the unselected vehicles failed in light mode, not only
+                  // in dark. The token clears 4.5:1 in both.
+                  "text-cocoa",
             )}
           >
             <VehicleTabIcon vehicle={v} selected={selected} />
-            <span className="text-[12px] font-semibold capitalize">{v}</span>
+            <span className="text-[12px] font-semibold">
+              {t(VEHICLE_LABEL[v] ?? "veh.cab")}
+            </span>
           </button>
         );
       })}
@@ -46,21 +62,23 @@ export function VehicleTabs({
   );
 }
 
+// Takes its colour from the button rather than a hex prop, so the icon cannot
+// drift away from the label beside it.
 function VehicleTabIcon({ vehicle, selected }: { vehicle: string; selected: boolean }) {
-  const color = selected ? "#e8651a" : "#9a9590";
-  if (vehicle === "bike") return <Bike size={22} color={color} strokeWidth={1.75} />;
-  if (vehicle === "cab") return <Car size={22} color={color} strokeWidth={1.75} />;
-  if (vehicle === "any") return <Zap size={22} color={color} strokeWidth={1.75} />;
+  const tone = selected ? "text-accent" : "text-cocoa";
+  if (vehicle === "bike") return <Bike size={22} className={tone} strokeWidth={1.75} />;
+  if (vehicle === "cab") return <Car size={22} className={tone} strokeWidth={1.75} />;
+  if (vehicle === "any") return <Zap size={22} className={tone} strokeWidth={1.75} />;
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden className={tone}>
       <path
         d="M7 18h8.5a3.5 3.5 0 0 0 0-7H14l-1.5-5H8L7 11H5.5A2.5 2.5 0 0 0 3 13.5V16a2 2 0 0 0 2 2h2Z"
-        stroke={color}
+        stroke="currentColor"
         strokeWidth="1.7"
         strokeLinejoin="round"
       />
-      <circle cx="7.5" cy="18" r="1.6" fill={color} />
-      <circle cx="16.5" cy="18" r="1.6" fill={color} />
+      <circle cx="7.5" cy="18" r="1.6" fill="currentColor" />
+      <circle cx="16.5" cy="18" r="1.6" fill="currentColor" />
     </svg>
   );
 }
