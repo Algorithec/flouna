@@ -61,7 +61,31 @@ export function priceFoodCart(
   let offersDiscountPaise = 0;
   let savedPaise = 0;
 
+  // One line per listing, quantities added together.
+  //
+  // Each listing's offer comes off once per LINE, so the same dish on the same
+  // platform sent as several lines took its offer off several times. Three
+  // separate lines of one pasta were billed at ₹527 where a single line of
+  // three was ₹587, and the request shape is the caller's to choose: thirty
+  // lines of a ₹30-off dish were ₹870 of discount that does not exist. Merging
+  // first makes the bill a function of what is in the cart rather than of how
+  // it was written down, and leaves a genuine two-dish cart priced exactly as
+  // before.
+  const merged: CartItem[] = [];
+  const lineAt = new Map<string, CartItem>();
   for (const item of items) {
+    const key = `${item.dishId}@${item.platform}`;
+    const seen = lineAt.get(key);
+    if (seen) {
+      seen.qty += item.qty;
+      continue;
+    }
+    const line = { ...item };
+    lineAt.set(key, line);
+    merged.push(line);
+  }
+
+  for (const item of merged) {
     const quotes = quotesForDish(item.dishId);
     const quote = quotes.find((q) => q.platform === item.platform);
     if (!quote) {
