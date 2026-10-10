@@ -87,8 +87,18 @@ async function startSession(
   // cleared operator 2FA — set only by the console verify flow.
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true },
+    select: { role: true, suspendedAt: true },
   });
+  // A suspended account gets no new session, whatever route asked for one.
+  //
+  // Suspension was enforced in exactly two places: requireRole, which only
+  // operators ever reach, and /refresh. An ordinary customer suspended from
+  // the admin console could therefore still sign in and keep ordering — the
+  // refresh fifteen minutes later was refused, and logging in again handed
+  // them another fifteen. Checked here rather than in each route because this
+  // is the single door every session comes through: password login, the
+  // two-factor second step, email verification, Google, and the console.
+  if (user?.suspendedAt) throw new ApiError(403, "Account suspended");
   const access = signAccessToken(userId, normalizeRole(user?.role), stepUp);
   const refresh = await issueRefreshToken(userId, stepUp, {
     userAgent: req?.get("user-agent") ?? null,
