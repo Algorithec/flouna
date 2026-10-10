@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 
 // One checkout machine, two surfaces.
@@ -91,6 +91,16 @@ export function useCheckout(
   const [failed, setFailed] = useState<FailedAttempt | null>(null);
   const [paidWithCash, setPaidWithCash] = useState(false);
   const [error, setError] = useState("");
+  /**
+   * True while a checkout request is out.
+   *
+   * `stage` is not enough on its own: the processing screen offers a "taking
+   * too long?" way back to the method picker, and from there the buyer can tap
+   * Pay again while the first request is still open — two payment sessions for
+   * one order. A ref rather than state because the guard has to hold within a
+   * single tick.
+   */
+  const inFlight = useRef(false);
 
   // Verify, then load.
   //
@@ -114,6 +124,8 @@ export function useCheckout(
   useEffect(load, [load]);
 
   async function pay(payOpts: { useWallet?: boolean } = {}) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError("");
     setFailed(null);
     setStage("processing");
@@ -218,6 +230,8 @@ export function useCheckout(
             : (opts.genericError ?? "Something went wrong taking the payment."),
       });
       setStage("failed");
+    } finally {
+      inFlight.current = false;
     }
   }
 
