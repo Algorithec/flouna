@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
 import { GRIEVANCE_SLA } from "../../lib/policy.js";
 import { ApiError } from "../../middleware/error.js";
@@ -15,6 +16,10 @@ import { igmAdapter } from "./igm.adapter.js";
 export const COMPLAINT_STATUSES = [
   "OPEN",
   "PROCESSING",
+  // Written by the grievance console when the one internal appeal is opened,
+  // and shown to the customer as its own label. It was missing from this list
+  // and from RANK below, which is what let a case get stuck: see RANK.
+  "ESCALATED",
   "RESOLVED",
   "CLOSED",
 ] as const;
@@ -72,10 +77,21 @@ const STATUS_AFTER: Partial<Record<ActionCode, ComplaintStatus>> = {
   CLOSED: "CLOSED",
 };
 
-/** Never move backwards: a resolved case isn't reopened by a late callback. */
+/**
+ * Never move backwards: a resolved case isn't reopened by a late callback.
+ *
+ * ESCALATED ranks alongside PROCESSING. It used to be absent entirely, so an
+ * appealed case compared every incoming action against `undefined` — and
+ * `RANK[target] > undefined` is false for every target. The status machine had
+ * no exit: a seller's RESOLUTION_ACCEPTED or a CLOSED callback arriving after
+ * an appeal was opened recorded its action and left the case ESCALATED for
+ * ever, with resolvedAt and closedAt never set and the grievance queue still
+ * counting it as owed.
+ */
 const RANK: Record<ComplaintStatus, number> = {
   OPEN: 0,
   PROCESSING: 1,
+  ESCALATED: 1,
   RESOLVED: 2,
   CLOSED: 3,
 };
@@ -101,10 +117,24 @@ const DEFAULT_DESCRIPTION: Record<ActionCode, string> = {
   CLOSED: "Complaint closed",
 };
 
-/** ALG-000123 — the reference the customer quotes and the issue id we send. */
+/**
+ * ALG-000123 — the reference the customer quotes and the issue id we send.
+ *
+ * Derived from the highest code already issued, not from how many rows exist.
+ * A count has two faults on a UNIQUE column: two complaints raised at the same
+ * moment both counted the same number and the second insert failed, so a
+ * double tap on Raise Complaint lost one of them to a 500; and once any
+ * complaint was ever deleted the count fell back onto a code already taken,
+ * which wedges every subsequent complaint rather than one.
+ */
 async function nextComplaintCode(): Promise<string> {
-  const count = await prisma.complaint.count();
-  return `ALG-${String(count + 1).padStart(6, "0")}`;
+  const latest = await prisma.complaint.findFirst({
+    where: { code: { startsWith: "ALG-" } },
+    orderBy: { code: "desc" },
+    select: { code: true },
+  });
+  const highest = Number(latest?.code.slice(4)) || 0;
+  return `ALG-${String(highest + 1).padStart(6, "0")}`;
 }
 
 /**
@@ -129,8 +159,19 @@ export async function recordAction(input: {
   });
   if (!complaint) throw new ApiError(404, "Complaint not found");
 
+  // A millisecond is not unique enough to key our own actions on.
+  //
+  // actionId is the idempotency key, and an id built from the clock alone
+  // collided whenever two actions landed in the same millisecond — which the
+  // accept path does on purpose, recording RESOLUTION_ACCEPTED and then
+  // REFUND_INITIATED back to back. The second was treated as a duplicate
+  // delivery and silently dropped, so the customer's timeline lost the line
+  // saying their refund had started. Random bytes make our own ids unique;
+  // an id supplied by the protocol is still used exactly as given, because
+  // that is the one that has to deduplicate a repeated callback.
   const actionId =
-    input.actionId ?? `ACT-${input.complaintId.slice(-6)}-${Date.now()}`;
+    input.actionId ??
+    `ACT-${input.complaintId.slice(-6)}-${Date.now()}-${randomBytes(4).toString("hex")}`;
 
   const existing = await prisma.complaintAction.findUnique({
     where: { actionId },
@@ -203,22 +244,35 @@ export async function createComplaint(input: {
   // "are we late" is a question the row can answer by itself.
   const now = Date.now();
 
-  const complaint = await prisma.complaint.create({
-    data: {
-      code: await nextComplaintCode(),
-      userId: input.userId,
-      orderId: input.orderId,
-      fulfillmentId: input.fulfillmentId,
-      itemIds: JSON.stringify(input.itemIds ?? []),
-      category: input.category,
-      subCategory: input.subCategory,
-      description: input.description,
-      status: "OPEN",
-      assignBy: new Date(now + GRIEVANCE_SLA.assignMs),
-      contactBy: new Date(now + GRIEVANCE_SLA.contactMs),
-      investigateBy: new Date(now + GRIEVANCE_SLA.investigateMs),
-    },
-  });
+  const data = {
+    userId: input.userId,
+    orderId: input.orderId,
+    fulfillmentId: input.fulfillmentId,
+    itemIds: JSON.stringify(input.itemIds ?? []),
+    category: input.category,
+    subCategory: input.subCategory,
+    description: input.description,
+    status: "OPEN",
+    assignBy: new Date(now + GRIEVANCE_SLA.assignMs),
+    contactBy: new Date(now + GRIEVANCE_SLA.contactMs),
+    investigateBy: new Date(now + GRIEVANCE_SLA.investigateMs),
+  };
+
+  // The reference is read and then written, so two complaints raised together
+  // can still pick the same one. The unique index stops the second, and
+  // without this retry that customer's complaint was simply lost behind a 500.
+  let complaint: Awaited<ReturnType<typeof prisma.complaint.create>> | null = null;
+  for (let attempt = 0; attempt < 5 && !complaint; attempt++) {
+    complaint = await prisma.complaint
+      .create({ data: { ...data, code: await nextComplaintCode() } })
+      .catch((err: { code?: string }) => {
+        if (err?.code !== "P2002") throw err;
+        return null;
+      });
+  }
+  if (!complaint) {
+    throw new ApiError(503, "We could not file that complaint just now, please try again");
+  }
 
   await prisma.complaintActor.createMany({
     data: [
