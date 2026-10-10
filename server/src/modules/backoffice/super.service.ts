@@ -9,7 +9,9 @@
 //   - You cannot demote or suspend YOURSELF — prevents an accidental self-lockout
 //     and forces a second super_admin to make that change deliberately.
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { CONTENDED_TX, withTxRetry } from "../../lib/txRetry.js";
 import { env, isProd } from "../../config/env.js";
 import { enqueueNotification } from "../notifications/outbox.service.js";
 import { ROLES, type Role } from "../../lib/rbac.js";
@@ -47,14 +49,32 @@ type RoleResult =
   | { ok: true; previous: Role; next: Role }
   | { ok: false; reason: "not_found" | "self" | "last_super_admin" | "invalid_role" };
 
-async function activeSuperAdminCount(excludeId?: string): Promise<number> {
-  return prisma.user.count({
+async function activeSuperAdminCount(
+  excludeId?: string,
+  tx: Pick<typeof prisma, "user"> = prisma,
+): Promise<number> {
+  return tx.user.count({
     where: {
       role: "super_admin",
       suspendedAt: null,
       ...(excludeId ? { id: { not: excludeId } } : {}),
     },
   });
+}
+
+/**
+ * Counting the remaining super-admins and then writing are two steps, and the
+ * whole point of the guard is that the pair cannot interleave. With two active
+ * super-admins, two demotions sent at the same moment each counted "one other
+ * still active" and each went through — leaving nobody who can grant a role,
+ * which is the one state this module exists to make unreachable, and which no
+ * amount of console access can repair.
+ *
+ * Serializable, so the database refuses one of the two, and the refusal is
+ * retried and then sees the committed change. Same shape as the money paths.
+ */
+function lockoutSafe<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  return withTxRetry(() => prisma.$transaction(work, CONTENDED_TX));
 }
 
 // Grant or change an operator role. `actorId` is the super_admin making the
@@ -69,26 +89,28 @@ export async function setOperatorRole(
   }
   const role = nextRole as Role;
 
-  const target = await prisma.user.findUnique({
-    where: { id: targetId },
-    select: { id: true, role: true, suspendedAt: true },
+  return lockoutSafe(async (tx): Promise<RoleResult> => {
+    const target = await tx.user.findUnique({
+      where: { id: targetId },
+      select: { id: true, role: true, suspendedAt: true },
+    });
+    if (!target) return { ok: false, reason: "not_found" };
+
+    // Don't let a super_admin change their own role (prevents self-lockout; a
+    // second super_admin must do it deliberately).
+    if (targetId === actorId && role !== "super_admin") {
+      return { ok: false, reason: "self" };
+    }
+
+    // Demoting the target away from super_admin: ensure another active one remains.
+    if (target.role === "super_admin" && role !== "super_admin") {
+      const others = await activeSuperAdminCount(targetId, tx);
+      if (others === 0) return { ok: false, reason: "last_super_admin" };
+    }
+
+    await tx.user.update({ where: { id: targetId }, data: { role } });
+    return { ok: true, previous: target.role as Role, next: role };
   });
-  if (!target) return { ok: false, reason: "not_found" };
-
-  // Don't let a super_admin change their own role (prevents self-lockout; a
-  // second super_admin must do it deliberately).
-  if (targetId === actorId && role !== "super_admin") {
-    return { ok: false, reason: "self" };
-  }
-
-  // Demoting the target away from super_admin: ensure another active one remains.
-  if (target.role === "super_admin" && role !== "super_admin") {
-    const others = await activeSuperAdminCount(targetId);
-    if (others === 0) return { ok: false, reason: "last_super_admin" };
-  }
-
-  await prisma.user.update({ where: { id: targetId }, data: { role } });
-  return { ok: true, previous: target.role as Role, next: role };
 }
 
 type SuspendResult =
@@ -102,24 +124,26 @@ export async function setOperatorSuspended(
   targetId: string,
   suspended: boolean,
 ): Promise<SuspendResult> {
-  const target = await prisma.user.findUnique({
-    where: { id: targetId },
-    select: { id: true, role: true },
-  });
-  if (!target) return { ok: false, reason: "not_found" };
-  if (target.role === "user") return { ok: false, reason: "not_operator" };
-  if (targetId === actorId && suspended) return { ok: false, reason: "self" };
+  return lockoutSafe(async (tx): Promise<SuspendResult> => {
+    const target = await tx.user.findUnique({
+      where: { id: targetId },
+      select: { id: true, role: true },
+    });
+    if (!target) return { ok: false, reason: "not_found" };
+    if (target.role === "user") return { ok: false, reason: "not_operator" };
+    if (targetId === actorId && suspended) return { ok: false, reason: "self" };
 
-  if (suspended && target.role === "super_admin") {
-    const others = await activeSuperAdminCount(targetId);
-    if (others === 0) return { ok: false, reason: "last_super_admin" };
-  }
+    if (suspended && target.role === "super_admin") {
+      const others = await activeSuperAdminCount(targetId, tx);
+      if (others === 0) return { ok: false, reason: "last_super_admin" };
+    }
 
-  await prisma.user.update({
-    where: { id: targetId },
-    data: { suspendedAt: suspended ? new Date() : null },
+    await tx.user.update({
+      where: { id: targetId },
+      data: { suspendedAt: suspended ? new Date() : null },
+    });
+    return { ok: true, suspended };
   });
-  return { ok: true, suspended };
 }
 
 // --- Revenue / subscriptions --------------------------------------------
