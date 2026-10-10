@@ -1,12 +1,14 @@
-"""Fine-tune Qwen2.5-3B-Instruct with LoRA on Apple Silicon using MLX.
+"""Fine-tune Qwen2.5-1.5B-Instruct with LoRA on Apple Silicon using MLX.
 
 Usage:
     cd model
     source .venv/bin/activate
-    python train_3b.py
+    python train_1.5b.py
 
 Takes ~1.5-2 hours on M3 16GB for 1000 iterations.
 Peak memory ~10-12GB — close to the limit on 16GB, so close other apps.
+
+NOTE: For NVIDIA GPUs, use train_peft_win.py instead (QLoRA, works on 4 GB VRAM).
 """
 import json
 import os
@@ -55,7 +57,7 @@ def train():
     print("\n=== Step 1: Converting data ===")
     convert_data()
 
-    print("\n=== Step 2: Starting LoRA fine-tuning (3B) ===")
+    print("\n=== Step 2: Starting LoRA fine-tuning (1.5B) ===")
     print(f"  Model: {MODEL}")
     print(f"  Output: {OUTPUT_DIR}/")
     print(f"  This will take ~1.5-2 hours on M3 16GB")
@@ -99,9 +101,9 @@ def train():
     print(f"  Fused model:   {FUSED_DIR}/")
     print(f"\n  Next steps:")
     print(f"  1. Create Ollama model:")
-    print(f"     Update Modelfile: FROM ./flouna-fused-3b")
-    print(f"     ollama create flouna-3b -f Modelfile --quantize q8_0")
-    print(f"  2. Test: ollama run flouna-3b")
+    print(f"     Update Modelfile: FROM ./flouna-fused-1.5b")
+    print(f"     ollama create flouna -f Modelfile --quantize q8_0")
+    print(f"  2. Test: ollama run flouna")
 
 
 if __name__ == "__main__":

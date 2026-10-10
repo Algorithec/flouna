@@ -56,6 +56,9 @@ def encode(messages):
 def load_jsonl(path):
     with open(path, encoding="utf-8") as f:
         rows = [encode(json.loads(line)["messages"]) for line in f if line.strip()]
+    clipped = sum(1 for r in rows if len(r["input_ids"]) == MAX_LEN)
+    if clipped:
+        print(f"  WARNING: {clipped}/{len(rows)} examples truncated at {MAX_LEN} tokens")
     return Dataset.from_list(rows)
 
 

@@ -1,16 +1,16 @@
 #!/bin/bash
-# Deploy Flouna's Ollama model to an EC2 instance.
+# Deploy Flouna's Ollama model to a Linux VM (Oracle Ampere A1, EC2, etc.).
 #
 # Usage (from your Mac):
-#   1. Launch EC2: t3.small, Ubuntu 24.04, 20GB disk, open port 11434
-#   2. Copy files to EC2:
-#        scp -i your-key.pem -r model/flouna-fused model/Modelfile ubuntu@<EC2_IP>:~/
+#   1. Launch VM: Ubuntu 24.04, 20GB disk, open port 11434
+#   2. Copy files to the VM:
+#        scp -i your-key.pem -r model/flouna-fused model/Modelfile ubuntu@<VM_IP>:~/
 #   3. SSH in and run this script:
-#        ssh -i your-key.pem ubuntu@<EC2_IP>
-#        chmod +x deploy-ec2.sh && ./deploy-ec2.sh
+#        ssh -i your-key.pem ubuntu@<VM_IP>
+#        chmod +x deploy-ollama.sh && ./deploy-ollama.sh
 #
 # After it finishes, set in your backend env:
-#   OLLAMA_URL=http://<EC2_IP>:11434
+#   OLLAMA_URL=http://<VM_IP>:11434
 
 set -e
 

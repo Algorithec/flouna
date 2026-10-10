@@ -1,7 +1,8 @@
 """Generate training and eval data for Flouna's intent parser.
 
-Produces train.jsonl (~3000 rows) and eval.jsonl (~300 rows) aligned with the
-production JSON schema in server/src/modules/chat/llm/prompt.ts.
+Produces train.jsonl and eval.jsonl aligned with the production JSON schema
+in server/src/modules/chat/llm/prompt.ts. Default: 3000 base examples + 2400
+ride examples from ride_train.jsonl = 5400 train, 540 eval.
 
 Key fixes over the original gen_data.py:
 - budget is ONLY set when the user explicitly states one (no hallucination)
