@@ -65,7 +65,7 @@ export function LanguageSelector({ className }: { className?: string }) {
           "hover:-translate-y-0.5 hover:border-accent/40 hover:bg-card hover:shadow-[0_6px_20px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.9)]",
           "active:scale-[0.97] active:translate-y-0",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
-          open && "border-accent/50 bg-accent-soft text-accent shadow-[0_4px_16px_rgba(180,83,9,0.15)]",
+          open && "border-accent/50 bg-accent-soft text-accent-ink shadow-[0_4px_16px_rgba(180,83,9,0.15)]",
         )}
       >
         <Globe

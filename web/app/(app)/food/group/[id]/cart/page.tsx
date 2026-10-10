@@ -121,7 +121,7 @@ export default function GroupCartPage({
           {groups.map(({ member, items }) => (
             <Card key={member.userId} className="py-3.5">
               <div className="flex items-center gap-2.5">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[14px] font-bold text-accent">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[14px] font-bold text-accent-ink">
                   {member.name.trim().charAt(0).toUpperCase() || "?"}
                 </span>
                 <p className="min-w-0 flex-1 truncate text-[15px] font-bold text-ink">

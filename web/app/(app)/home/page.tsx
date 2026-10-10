@@ -456,7 +456,7 @@ function ChatHome() {
                     <>
                       <Link
                         href={`/results?chat=${sessionId}&msg=${m.id}`}
-                        className="mt-2 flex items-center justify-center gap-1.5 rounded-pill border border-accent/40 bg-accent-soft/30 px-4 py-2.5 text-[13px] font-semibold text-accent transition-colors hover:bg-accent-soft/60"
+                        className="mt-2 flex items-center justify-center gap-1.5 rounded-pill border border-accent/40 bg-accent-soft/30 px-4 py-2.5 text-[13px] font-semibold text-accent-ink transition-colors hover:bg-accent-soft/60"
                       >
                         <Sparkles size={13} />
                         {t("hm.viewFull")}

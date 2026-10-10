@@ -141,7 +141,7 @@ export default function HistoryPage() {
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 rounded-pill py-3 text-[13px] font-semibold transition-colors",
                 active
-                  ? "bg-accent-soft text-accent"
+                  ? "bg-accent-soft text-accent-ink"
                   : "text-cocoa hover:bg-beige/40",
               )}
             >

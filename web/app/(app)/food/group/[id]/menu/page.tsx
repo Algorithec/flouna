@@ -216,7 +216,7 @@ export default function GroupMenuPage({
                 <button
                   onClick={applyDeal}
                   disabled={applying}
-                  className="tap-target h-[46px] flex-1 rounded-pill border border-accent bg-accent-soft text-[14px] font-bold text-accent transition-colors hover:bg-accent hover:text-white disabled:opacity-60"
+                  className="tap-target h-[46px] flex-1 rounded-pill border border-accent bg-accent-soft text-[14px] font-bold text-accent-ink transition-colors hover:bg-accent hover:text-white disabled:opacity-60"
                 >
                   {applying ? t("grp.applying") : t("grp.applyAndSave")}
                 </button>

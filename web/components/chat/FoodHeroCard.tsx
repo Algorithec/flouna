@@ -87,7 +87,7 @@ export function FoodHeroCard({ q, decisionId }: { q: FoodQuote; decisionId?: str
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="text-[17px] font-bold leading-snug tracking-tight text-ink">{q.name}</p>
           <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-ink/85">
-            <span className="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <span className="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
               <UtensilMark />
             </span>
             <span className="truncate font-medium">{q.restaurant}</span>

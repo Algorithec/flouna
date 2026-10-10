@@ -133,7 +133,7 @@ function Results() {
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-[11px] font-bold tracking-wide text-accent">
+          <span className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-[11px] font-bold tracking-wide text-accent-ink">
             <Sparkles size={12} />
             <span className="uppercase">
               {rec.type === "combo"

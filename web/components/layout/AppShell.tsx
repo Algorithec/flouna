@@ -114,7 +114,7 @@ export function AppShell({
               <Link
                 href="/profile"
                 aria-label={t("as.profile")}
-                className="tap-target flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[14px] font-bold text-accent"
+                className="tap-target flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[14px] font-bold text-accent-ink"
               >
                 {user.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element

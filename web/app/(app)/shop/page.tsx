@@ -66,7 +66,7 @@ export default function ShopLandingPage() {
               onClick={() => setCategory(c)}
               className={
                 c === category
-                  ? "shrink-0 rounded-[14px] border border-accent bg-accent-soft px-4 py-2.5 text-[13px] font-semibold text-accent"
+                  ? "shrink-0 rounded-[14px] border border-accent bg-accent-soft px-4 py-2.5 text-[13px] font-semibold text-accent-ink"
                   : "shrink-0 rounded-[14px] border border-line bg-card px-4 py-2.5 text-[13px] text-cocoa transition-colors hover:bg-beige/40"
               }
             >
@@ -119,7 +119,7 @@ function ProductCard({ q }: { q: ProductQuote }) {
           <CategoryTile icon={Package} theme="purple" size={48} />
         </span>
         <div className="min-w-0 flex-1">
-          <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
+          <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-ink">
             {q.tag}
           </span>
           <p className="mt-1 truncate text-[15px] font-bold text-ink">{q.name}</p>

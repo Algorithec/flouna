@@ -268,7 +268,7 @@ export default function ComplaintPage() {
                       "flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-bold",
                       refundDone
                         ? "bg-success-soft text-success"
-                        : "bg-accent-soft text-accent",
+                        : "bg-accent-soft text-accent-ink",
                     )}
                   >
                     {refundDone && <Check size={11} strokeWidth={3} />}

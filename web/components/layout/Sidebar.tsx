@@ -152,7 +152,7 @@ export function Sidebar({
           </Link>
           <button
             onClick={toggleCollapsed}
-            className="hidden size-10 shrink-0 items-center justify-center rounded-[12px] bg-accent-soft text-accent transition-colors hover:bg-accent/15 lg:flex"
+            className="hidden size-10 shrink-0 items-center justify-center rounded-[12px] bg-accent-soft text-accent-ink transition-colors hover:bg-accent/15 lg:flex"
             aria-label={collapsed ? t("sb.expand") : t("sb.collapse")}
           >
             {collapsed ? <PanelLeft size={19} /> : <PanelLeftClose size={19} />}
@@ -300,7 +300,7 @@ export function Sidebar({
                 collapsed && "lg:w-full lg:flex-none lg:justify-center lg:border-none lg:bg-transparent lg:p-0 lg:shadow-none",
               )}
             >
-              <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[15px] font-bold text-accent">
+              <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[15px] font-bold text-accent-ink">
                 {user.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.avatarUrl} alt="" className="size-full object-cover" />

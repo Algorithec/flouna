@@ -6,6 +6,14 @@
   --color-ink: #3d1c00; /* headings / primary text (deep brown) */
   --color-accent: #e8651a; /* brand orange */
   --color-accent-soft: #ffe9db; /* orange tint for chips/badges */
+  /* Accent *text*, for labels and pills drawn on accent-soft.
+     The brand orange is a fill colour: at #e8651a on #ffe9db it reads about
+     3.1:1, under the 4.5:1 normal text needs, which is most of the result
+     surface (BEST PRICE, the scheduled-for pill, "view the full list"). This
+     is the same hue carried to a weight that passes, and it has its own dark
+     value below — a darkened orange on the dark tint would be worse than what
+     it replaced. */
+  --color-accent-ink: #b33b06;
   --color-cocoa: #8b5e3c; /* secondary text + primary buttons */
   --color-beige: #f0e6de; /* secondary buttons / muted surfaces */
   --color-card: #ffffff; /* cards */
@@ -159,6 +167,8 @@
      tints below — a pale advisory banner over light ink text, unreadable on
      a dark ground. */
   --color-accent-soft: #3a2a1f;
+  /* Lightened rather than darkened: the tint it sits on is now near-black. */
+  --color-accent-ink: #ff9a5c;
   --color-success-soft: #16301f;
   --color-warning-soft: #332a10;
   --color-danger-soft: #331512;
