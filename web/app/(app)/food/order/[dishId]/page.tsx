@@ -202,7 +202,7 @@ export default function FoodOrderPage({
       <Card className="mt-2 border-accent/70 ring-1 ring-accent/30">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="inline-flex items-center rounded-pill bg-accent-soft px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent">
+            <p className="inline-flex items-center rounded-pill bg-accent-soft px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent-ink">
               {t("foodOrder.bestDeal")}
             </p>
             <p className="mt-1.5 text-[12px] text-cocoa">

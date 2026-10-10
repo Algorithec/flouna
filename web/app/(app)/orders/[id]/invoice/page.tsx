@@ -254,7 +254,7 @@ export default function InvoicePage({
 
       {/* Marketing line — screen only, kept OUT of the printed receipt. */}
       {order.savedPaise > 0 && (
-        <div className="mt-3 rounded-card bg-accent-soft/60 px-4 py-2.5 text-[12px] font-medium text-accent print:hidden">
+        <div className="mt-3 rounded-card bg-accent-soft/60 px-4 py-2.5 text-[12px] font-medium text-accent-ink print:hidden">
           {t("inv.saved").replace("{amount}", rupees(order.savedPaise))}
         </div>
       )}

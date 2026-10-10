@@ -183,7 +183,7 @@ export default function GroupInvitePage({
         />
         <ShareTile
           label="SMS"
-          tint="bg-accent-soft text-accent"
+          tint="bg-accent-soft text-accent-ink"
           icon={<MessageCircle size={18} />}
           href={joinUrl ? `sms:?body=${encodeURIComponent(`${t("grp.shareMessage")} ${joinUrl}`)}` : undefined}
         />

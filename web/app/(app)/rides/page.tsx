@@ -606,7 +606,7 @@ function RidesInner() {
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 rounded-pill border py-2.5 text-[13px] font-semibold transition-colors",
                 picking
-                  ? "border-accent bg-accent-soft text-accent"
+                  ? "border-accent bg-accent-soft text-accent-ink"
                   : "border-line bg-card text-ink hover:bg-beige/40",
               )}
             >
@@ -676,7 +676,7 @@ function RidesInner() {
                     className={cn(
                       "flex-1 rounded-pill border px-3 py-2 text-[12px] font-semibold capitalize transition-colors",
                       v === vehicle
-                        ? "border-accent bg-accent-soft text-accent"
+                        ? "border-accent bg-accent-soft text-accent-ink"
                         : "border-line bg-card text-cocoa hover:bg-beige/40",
                     )}
                   >
@@ -736,7 +736,7 @@ function RidesInner() {
                                 {rupees(q.effectivePaise)}
                               </p>
                               {q.badge && (
-                                <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent">
+                                <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent-ink">
                                   {q.badge}
                                 </span>
                               )}
@@ -762,7 +762,7 @@ function RidesInner() {
                   className={cn(
                     "rounded-pill px-3 py-1.5 text-[12px] font-semibold transition-colors",
                     !scheduledAt
-                      ? "bg-accent-soft text-accent"
+                      ? "bg-accent-soft text-accent-ink"
                       : "bg-beige/50 text-cocoa hover:text-ink",
                   )}
                 >
@@ -789,7 +789,7 @@ function RidesInner() {
                   className={cn(
                     "flex-1 rounded-pill border px-3 py-1.5 text-[12px] font-medium outline-none transition-colors",
                     scheduledAt
-                      ? "border-accent bg-accent-soft/50 text-accent"
+                      ? "border-accent bg-accent-soft/50 text-accent-ink"
                       : "border-line bg-card text-cocoa",
                   )}
                 />

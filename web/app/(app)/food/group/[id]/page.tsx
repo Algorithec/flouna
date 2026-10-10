@@ -237,7 +237,7 @@ export default function GroupStatusPage({
                 i < cart.members.length - 1 && "border-b border-line",
               )}
             >
-              <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[15px] font-bold text-accent">
+              <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[15px] font-bold text-accent-ink">
                 {m.name.trim().charAt(0).toUpperCase() || "?"}
                 {m.active && (
                   <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-card bg-success" />
@@ -254,7 +254,7 @@ export default function GroupStatusPage({
                 )}
               </span>
               {m.isHost && (
-                <span className="shrink-0 rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent">
+                <span className="shrink-0 rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent-ink">
                   {t("grp.admin")}
                 </span>
               )}

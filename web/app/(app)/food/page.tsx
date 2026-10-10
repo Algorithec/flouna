@@ -199,7 +199,7 @@ export default function FoodLandingPage() {
                   className={cn(
                     "flex size-[52px] items-center justify-center rounded-[16px] border transition-colors",
                     active
-                      ? "border-accent bg-accent-soft text-accent"
+                      ? "border-accent bg-accent-soft text-accent-ink"
                       : "border-line bg-card text-cocoa hover:bg-beige/40",
                   )}
                 >
@@ -473,7 +473,7 @@ function DishRow({ q }: { q: FoodQuote }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <DishArt name={q.name} image={q.image} size={48} />
         <div className="min-w-0 flex-1 basis-36">
-          <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
+          <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-ink">
             {q.tag}
           </span>
           <p className="mt-1 truncate text-[15px] font-bold text-ink">{q.name}</p>

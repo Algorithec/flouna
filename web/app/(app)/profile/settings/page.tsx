@@ -149,7 +149,7 @@ export default function SettingsPage() {
               onClick={() => setLang(l.code)}
               className={
                 l.code === lang
-                  ? "tap-target rounded-pill border border-accent bg-accent-soft px-3.5 py-2 text-[13px] font-semibold text-accent"
+                  ? "tap-target rounded-pill border border-accent bg-accent-soft px-3.5 py-2 text-[13px] font-semibold text-accent-ink"
                   : "tap-target rounded-pill border border-line bg-card px-3.5 py-2 text-[13px] text-cocoa hover:bg-beige/40"
               }
             >

@@ -561,7 +561,7 @@ export default function GroupChatPage({
                     </span>
                   </span>
                   {d.isYou && myDeviceCount >= 1 && (
-                    <span className="shrink-0 rounded-pill bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent">
+                    <span className="shrink-0 rounded-pill bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent-ink">
                       {d.deviceId === myDeviceId
                         ? t("chat.thisDevice")
                         : t("chat.yourOther")}
