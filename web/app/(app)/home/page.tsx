@@ -501,7 +501,7 @@ function ChatHome() {
               onChange={(e) => setInput(e.target.value)}
               placeholder={t("chat.placeholder")}
               maxLength={500}
-              className="h-9 min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-[#a09890]"
+              className="h-9 min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-muted"
             />
             <VoiceButton onTranscript={setInput} onFinal={send} />
           </div>
