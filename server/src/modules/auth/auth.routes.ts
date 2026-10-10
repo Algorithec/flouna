@@ -782,7 +782,19 @@ authRouter.post("/refresh", sessionLimiter, async (req, res, next) => {
 
 authRouter.post("/logout", sessionLimiter, async (req, res) => {
   const raw = req.cookies?.refresh_token as string | undefined;
-  if (raw) await revokeRefreshToken(raw);
+  // Express 4 does not await a handler, so a rejection here reached nothing:
+  // the caller got no response at all and the process counted an unhandled
+  // rejection. Signing out must also never be refusable — if the revoke write
+  // fails, the cookies still go, so the browser is out of the session either
+  // way and the server-side token expires on its own.
+  if (raw) {
+    await revokeRefreshToken(raw).catch((err: unknown) =>
+      console.error(
+        "[auth] could not revoke the refresh token on logout:",
+        err instanceof Error ? err.message : String(err),
+      ),
+    );
+  }
   clearAuthCookies(res);
   res.json({ ok: true });
 });
