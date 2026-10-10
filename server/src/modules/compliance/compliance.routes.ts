@@ -328,7 +328,14 @@ complianceRouter.post(
           humanReview?: boolean;
         }),
       });
-      if (!result.ok) throw new ApiError(404, "Order not found");
+      if (!result.ok) {
+        throw new ApiError(
+          404,
+          result.reason === "decision_not_found"
+            ? "That recommendation could not be found on your account"
+            : "Order not found",
+        );
+      }
       res.status(201).json(result.appeal);
     } catch (err) {
       next(err);
