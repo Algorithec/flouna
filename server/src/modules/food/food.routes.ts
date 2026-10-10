@@ -14,6 +14,7 @@ import { dishes } from "../../data/restaurants.js";
 import { adviseFood } from "../advisor/advisor.service.js";
 import { recordObservation } from "../advisor/priceHistory.service.js";
 import { prisma } from "../../lib/prisma.js";
+import { istDayKey } from "../../lib/istTime.js";
 
 export const foodRouter = Router();
 foodRouter.use(requireAuth);
@@ -133,9 +134,15 @@ foodRouter.get("/dishes/:dishId/price-history", async (req, res, next) => {
     });
 
     // Bucket by calendar day → that day's minimum observed price.
+    //
+    // The customer's calendar day, not the host's. toISOString() is UTC, so on
+    // the Railway servers every price seen between midnight and half past five
+    // in the morning IST was filed under the previous day: the chart's last
+    // point was yesterday's low labelled as today's, which is exactly the
+    // reading a "wait, it usually drops tomorrow" decision is made on.
     const byDay = new Map<string, number>();
     for (const r of rows) {
-      const day = r.createdAt.toISOString().slice(0, 10);
+      const day = istDayKey(r.createdAt);
       const cur = byDay.get(day);
       if (cur === undefined || r.bestPaise < cur) byDay.set(day, r.bestPaise);
     }

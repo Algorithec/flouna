@@ -87,6 +87,17 @@ export function istDateLabel(
   return at.toLocaleDateString("en-IN", { ...opts, timeZone: "Asia/Kolkata" });
 }
 
+/**
+ * YYYY-MM-DD in India, for anything keyed or bucketed by calendar day.
+ *
+ * The obvious `toISOString().slice(0, 10)` is the UTC day, which on a UTC host
+ * puts the first five and a half hours of every Indian day under the day
+ * before.
+ */
+export function istDayKey(at: Date = new Date()): string {
+  return new Date(at.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
 /** Year and month (0 = January) in India, for anything keyed by calendar month. */
 export function istYearMonth(at: Date = new Date()): { year: number; month: number } {
   const shifted = new Date(at.getTime() + IST_OFFSET_MS);
