@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -26,6 +26,13 @@ import { useI18n } from "@/components/i18n/I18nContext";
 import { useCart } from "@/lib/cart";
 import { cn } from "@/lib/cn";
 import type { FoodQuote } from "@/components/chat/types";
+
+/** Random enough that two devices cannot collide on one. */
+function newAttemptKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `k-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 // Charts are client-only and heavy — load on demand.
 const PriceHistoryChart = dynamic(
@@ -54,13 +61,20 @@ export default function FoodOrderPage({
   const cart = useCart();
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertTarget, setAlertTarget] = useState("");
+  // One key per order attempt; replaced once an order exists.
+  const attemptKey = useRef<string>(newAttemptKey());
   const [alertDone, setAlertDone] = useState(false);
   const [alertBusy, setAlertBusy] = useState(false);
+  // The comment here used to say the failure was "surfaced inline below". It
+  // was not: the catch was empty, so a refused alert looked exactly like a
+  // button that did nothing.
+  const [alertError, setAlertError] = useState("");
 
   async function createAlert() {
     const target = Number(alertTarget);
-    if (!Number.isInteger(target) || target < 10) return;
+    if (!Number.isInteger(target) || target < 10 || alertBusy) return;
     setAlertBusy(true);
+    setAlertError("");
     try {
       await api("/api/alerts", {
         method: "POST",
@@ -68,30 +82,45 @@ export default function FoodOrderPage({
       });
       setAlertDone(true);
       setAlertOpen(false);
-    } catch {
-      // surfaced inline below if it fails
+    } catch (e) {
+      setAlertError(e instanceof Error ? e.message : t("dp.alertFailed"));
     } finally {
       setAlertBusy(false);
     }
   }
 
   useEffect(() => {
+    let active = true;
     api<{ addresses: Array<{ label: string; line1: string; city: string; isDefault: boolean }> }>(
       "/api/users/addresses",
     )
-      .then((d) => setAddress(d.addresses.find((a) => a.isDefault) ?? d.addresses[0] ?? null))
-      .catch(() => setAddress(null));
+      .then((d) =>
+        active &&
+        setAddress(d.addresses.find((a) => a.isDefault) ?? d.addresses[0] ?? null),
+      )
+      .catch(() => active && setAddress(null));
+    return () => {
+      active = false;
+    };
   }, []);
 
+  // Guarded: opening a second dish from a recommendation reuses this component,
+  // so the first dish's quotes could land afterwards and repaint the page with
+  // the prices of a dish nobody is looking at.
   useEffect(() => {
+    let active = true;
     api<{ quotes: FoodQuote[] }>(`/api/food/dishes/${dishId}`)
       .then((d) => {
+        if (!active) return;
         setQuotes(d.quotes);
         if (!d.quotes.some((q) => q.platform === platform)) {
           setPlatform(d.quotes[0]?.platform ?? "");
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed")));
+      .catch((e) => active && setError(e instanceof Error ? e.message : t("od.loadFailed")));
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dishId]);
 
@@ -131,12 +160,15 @@ export default function FoodOrderPage({
   const payable = bill?.totalPaise ?? selected?.effectivePaise ?? 0;
 
   async function placeOrder() {
-    if (!selected) return;
+    if (!selected || busy) return;
     setBusy(true);
     setError("");
     try {
       const d = await api<{ order: { id: string } }>("/api/orders", {
         method: "POST",
+        // Same attempt, same key: a second tap or a retried request returns
+        // the order already placed rather than placing another one.
+        headers: { "Idempotency-Key": attemptKey.current },
         json: {
           domain: "food",
           dishId,
@@ -146,6 +178,7 @@ export default function FoodOrderPage({
           ...(decisionId ? { decisionId } : {}),
         },
       });
+      attemptKey.current = newAttemptKey();
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("dp.placeFailed"));
@@ -380,6 +413,9 @@ export default function FoodOrderPage({
                 {t("dp.setAlert")}
               </Button>
             </div>
+            {alertError && (
+              <p className="mt-2 text-[12px] text-danger">{alertError}</p>
+            )}
           </div>
         ) : (
           <button
