@@ -80,31 +80,45 @@ export default function OrderDetailPage({
   // top of that made the back control add an entry instead of removing one.
   const back = useBackTo("/history");
 
+  // A finished order cannot change again, so neither timer below is started
+  // once it has. Opening last month's delivered order used to poll it every 15
+  // seconds and tick a clock every second for as long as the tab stayed open —
+  // on a phone, on mobile data, for nothing.
+  const settled = order?.status === "completed" || order?.status === "cancelled";
+
   useEffect(() => {
+    let active = true;
     const load = () =>
       api<{ order: OrderDetail }>(`/api/orders/${id}`)
         .then((d) => {
+          if (!active) return;
           setOrder(d.order);
           setError("");
         })
-        .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed")));
+        .catch((e) => active && setError(e instanceof Error ? e.message : t("od.loadFailed")));
     load();
+    if (settled) {
+      return () => {
+        active = false;
+      };
+    }
     const fetchTimer = setInterval(load, POLL_MS);
     // A faster local clock advances the driver marker smoothly between fetches.
     const tickTimer = setInterval(() => setNow(Date.now()), 1000);
     return () => {
+      active = false;
       clearInterval(fetchTimer);
       clearInterval(tickTimer);
     };
     // t only words the error; a change of language restarts polling once.
-  }, [id, t]);
+  }, [id, t, settled]);
 
   if (!order) {
     return error ? (
       <ErrorView
         notFound
         title={t("order.notFound")}
-        message="We couldn't find this order, it may have been removed."
+        message={t("od.notFoundMsg")}
         backHref="/history"
         backLabel={t("order.backToHistory")}
       />
