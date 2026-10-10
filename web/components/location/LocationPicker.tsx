@@ -59,18 +59,32 @@ export function LocationPicker({
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  /**
+   * Which pin we are naming.
+   *
+   * Every settle of the map starts a lookup, and on a slow connection a person
+   * dragging the pin twice has two running. The older answer could come back
+   * last and hand the caller the address of a place the pin had already left —
+   * which is the address that gets written into the delivery form, against the
+   * newer coordinates. Only the newest lookup is allowed to answer.
+   */
+  const resolveRun = useRef(0);
+
   // Reverse-geocode the current centre and hand the parts back up.
   const resolve = useCallback(async (lat: number, lng: number) => {
+    const run = ++resolveRun.current;
     setResolving(true);
     setError("");
     try {
       const d = await api<{ address: ResolvedAddress }>(
         `/api/rides/reverse?lat=${lat}&lng=${lng}`,
       );
+      if (run !== resolveRun.current) return;
       const address = d.address;
       setLabel(address.formatted || t("lp.pinned"));
       onChangeRef.current({ lat, lng, address });
     } catch {
+      if (run !== resolveRun.current) return;
       // Keep the coordinates usable even if naming failed — the user can type
       // the address themselves rather than being blocked.
       setLabel(t("lp.couldntName"));
@@ -80,7 +94,7 @@ export function LocationPicker({
         address: { line1: "", area: "", city: "", state: "", pincode: "", formatted: "" },
       });
     } finally {
-      setResolving(false);
+      if (run === resolveRun.current) setResolving(false);
     }
   }, [t]);
 
