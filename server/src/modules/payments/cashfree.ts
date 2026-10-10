@@ -8,6 +8,22 @@ const BASE_URL =
 
 const API_VERSION = "2023-08-01";
 
+/**
+ * How long to wait on the gateway before giving up.
+ *
+ * fetch() has no timeout of its own, and these three calls had none either.
+ * A Cashfree connection that opens and then stalls therefore held the request
+ * open indefinitely: /payments/checkout and /payments/verify never answered,
+ * the buyer's payment screen span for ever, and every retry added another
+ * stuck socket. Refund approval had the same shape on the operator's side.
+ *
+ * Generous, because this is a payment rather than a map lookup, but bounded.
+ * A timeout surfaces as the error each caller already handles — checkout
+ * reports a failure the buyer can retry, verify answers UNREACHABLE and lets
+ * the webhook settle it, and a refund goes back in the queue unsettled.
+ */
+const CASHFREE_TIMEOUT_MS = 15_000;
+
 export const cashfreeConfigured = Boolean(
   env.CASHFREE_APP_ID && env.CASHFREE_SECRET_KEY,
 );
@@ -22,6 +38,7 @@ export async function createCashfreeOrder(opts: {
 }) {
   const res = await fetch(`${BASE_URL}/orders`, {
     method: "POST",
+    signal: AbortSignal.timeout(CASHFREE_TIMEOUT_MS),
     headers: {
       "Content-Type": "application/json",
       "x-api-version": API_VERSION,
@@ -65,6 +82,7 @@ export async function createCashfreeOrder(opts: {
 // the buyer returns from the gateway (independent of webhook delivery).
 export async function getCashfreeOrder(orderId: string) {
   const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
+    signal: AbortSignal.timeout(CASHFREE_TIMEOUT_MS),
     headers: {
       "x-api-version": API_VERSION,
       "x-client-id": env.CASHFREE_APP_ID!,
@@ -96,6 +114,7 @@ export async function createCashfreeRefund(opts: {
 }) {
   const res = await fetch(`${BASE_URL}/orders/${opts.orderId}/refunds`, {
     method: "POST",
+    signal: AbortSignal.timeout(CASHFREE_TIMEOUT_MS),
     headers: {
       "Content-Type": "application/json",
       "x-api-version": API_VERSION,
