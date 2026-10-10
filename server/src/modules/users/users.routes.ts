@@ -154,6 +154,20 @@ usersRouter.patch(
         dateOfBirth?: string | null;
         gender?: string | null;
       };
+      // A phone number is unique across accounts, so saving one somebody else
+      // already has is the caller's problem and has an answer they can act on.
+      // Nothing caught the unique violation, so Personal Information answered
+      // "Internal server error" and the customer had no way to tell that the
+      // number, rather than the app, was the thing that was wrong.
+      if (data.phone) {
+        const taken = await prisma.user.findFirst({
+          where: { phone: data.phone, NOT: { id: req.userId! } },
+          select: { id: true },
+        });
+        if (taken) {
+          throw new ApiError(409, "That mobile number is already on another account");
+        }
+      }
       const user = await prisma.user.update({
         where: { id: req.userId! },
         data: {
@@ -178,6 +192,13 @@ usersRouter.patch(
           dateOfBirth: true,
           gender: true,
         },
+      }).catch((err: { code?: string }) => {
+        // Two accounts claiming the same number at the same moment: the check
+        // above passed for both and the index stopped one. Same answer.
+        if (err?.code === "P2002") {
+          throw new ApiError(409, "That mobile number is already on another account");
+        }
+        throw err;
       });
       res.json({ user });
     } catch (err) {
