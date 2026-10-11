@@ -77,6 +77,15 @@ export async function syncSchema(): Promise<void> {
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     console.error("[schema] FAILED to apply the schema:", detail);
+    // Prisma lists what it objected to on its own output, not in the error
+    // message, and the message alone only says "use --accept-data-loss". A
+    // deploy refused on 2026-10-10 logged exactly that and nothing else, so
+    // nobody could tell which change was the destructive one without
+    // reconstructing the diff by hand. Print the list; it names tables and
+    // columns, never data.
+    const { stdout: failOut, stderr: failErr } = err as { stdout?: string; stderr?: string };
+    const listed = `${failOut ?? ""}${failErr ?? ""}`.trim();
+    if (listed) console.error(listed.split("\n").slice(-20).join("\n"));
     // Two failures look alike from here and need different responses, so name
     // them rather than making whoever is on call guess.
     if (/data loss|destructive/i.test(detail)) {
