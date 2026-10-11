@@ -51,6 +51,11 @@ export default function GroupStatusPage({
     api<GroupCart>(`/api/groups/${id}`)
       .then((c) => {
         setCart(c);
+        // Cleared on every success. The error replaces the whole screen and
+        // nothing ever unset it, so one dropped poll out of a request every
+        // four seconds left the group permanently showing a failure message
+        // while the polls behind it were answering fine.
+        setError("");
         // A cart that has been ordered has a tracking screen; sitting on the
         // member list after checkout is a dead end.
         if (c.status === "ordered" && c.orderId) router.replace(`/orders/${c.orderId}`);
