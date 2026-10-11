@@ -298,8 +298,15 @@ export const outboxDelivered: Array<{ to: string; type: string; subject: string 
 // a milestone, email them once (dedupeKey per milestone makes it idempotent
 // even though we recompute the running total each time).
 export async function checkSavingsMilestone(userId: string): Promise<void> {
+  // The same definition of "saved" the Savings screen uses: money kept on an
+  // order that was actually paid for. This summed every order ever created,
+  // including the ones abandoned at the payment screen and the ones cancelled,
+  // so the email congratulated people on savings the app itself reported as
+  // zero — and anyone could set it off by starting orders and never paying for
+  // one. Worse than a wrong email: the milestone's dedupe key is burned by the
+  // false crossing, so the real one is never announced at all.
   const agg = await prisma.order.aggregate({
-    where: { userId },
+    where: { userId, status: { in: ["confirmed", "in_progress", "completed"] } },
     _sum: { savedPaise: true },
   });
   const total = agg._sum.savedPaise ?? 0;
