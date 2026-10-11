@@ -70,11 +70,19 @@ export default function LoginActivityPage() {
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A failed load used to be written in as an empty list, so this screen —
+  // whose only job is telling somebody which devices can reach their account —
+  // answered "No active sessions" when it had not managed to ask. On a
+  // security screen that is the worst possible wrong answer.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(() => {
     api<{ sessions: Session[] }>("/api/users/sessions")
-      .then((d) => setSessions(d.sessions))
-      .catch(() => setSessions([]));
+      .then((d) => {
+        setSessions(d.sessions);
+        setLoadFailed(false);
+      })
+      .catch(() => setLoadFailed(true));
     api<{ currentId: string | null }>("/api/auth/sessions/current")
       .then((d) => setCurrentId(d.currentId))
       .catch(() => setCurrentId(null));
@@ -133,7 +141,19 @@ export default function LoginActivityPage() {
         </div>
 
         <div className="overflow-hidden rounded-[18px] bg-card shadow-soft">
-          {sessions === null ? (
+          {loadFailed ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-[13px] leading-relaxed text-danger">
+                {t("pp.sess.loadFailed")}
+              </p>
+              <button
+                onClick={load}
+                className="tap-target mt-3 rounded-pill border border-line px-4 py-2 text-[13px] font-bold text-acct-ink"
+              >
+                {t("ipay.tryAgain")}
+              </button>
+            </div>
+          ) : sessions === null ? (
             <p className="px-4 py-8 text-center text-[13px] text-acct-muted">
               {t("common.loading")}
             </p>

@@ -32,11 +32,19 @@ export default function BlockedUsersPage() {
   const [busy, setBusy] = useState(false);
   useEscapeToClose(adding && !busy, () => setAdding(false));
   const [error, setError] = useState("");
+  // A failed load was written in as an empty list, so this screen said "You
+  // have not blocked anyone" when it had not managed to ask. Somebody checking
+  // whether a block they set is still in place is the whole audience for this
+  // screen, and that answer is the one thing it must not get wrong.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(() => {
     api<{ blocked: Blocked[] }>("/api/users/blocked")
-      .then((d) => setRows(d.blocked))
-      .catch(() => setRows([]));
+      .then((d) => {
+        setRows(d.blocked);
+        setLoadFailed(false);
+      })
+      .catch(() => setLoadFailed(true));
   }, []);
   useEffect(load, [load]);
 
@@ -99,7 +107,19 @@ export default function BlockedUsersPage() {
         </div>
 
         <div className="overflow-hidden rounded-[18px] bg-card shadow-soft">
-          {rows === null ? (
+          {loadFailed ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-[13px] leading-relaxed text-danger">
+                {t("pp.blk.loadFailed")}
+              </p>
+              <button
+                onClick={load}
+                className="tap-target mt-3 rounded-pill border border-line px-4 py-2 text-[13px] font-bold text-acct-ink"
+              >
+                {t("ipay.tryAgain")}
+              </button>
+            </div>
+          ) : rows === null ? (
             <p className="px-4 py-8 text-center text-[13px] text-acct-muted">
               {t("common.loading")}
             </p>

@@ -24,6 +24,10 @@ export default function CrewsPage() {
   const { toast } = useToast();
   const [crews, setCrews] = useState<Crew[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Delete was one tap on a small icon beside the crew's name, with nothing in
+  // the way and nothing to undo it: the saved group and everyone in it were
+  // gone. It asks now.
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api<{ crews: Crew[] }>("/api/groups/crews")
@@ -64,6 +68,7 @@ export default function CrewsPage() {
     setBusy(crew.id);
     try {
       await api(`/api/groups/crews/${crew.id}`, { method: "DELETE" });
+      setConfirmDelete(null);
       setCrews((prev) => (prev ?? []).filter((c) => c.id !== crew.id));
     } catch (e) {
       toast(e instanceof Error ? e.message : t("crew.deleteFailed"));
@@ -114,7 +119,7 @@ export default function CrewsPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => remove(crew)}
+                    onClick={() => setConfirmDelete(crew.id)}
                     disabled={busy === crew.id}
                     aria-label={t("crew.delete").replace("{name}", crew.name)}
                     className="tap-target flex size-9 shrink-0 items-center justify-center rounded-full text-cocoa transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-50"
@@ -122,6 +127,27 @@ export default function CrewsPage() {
                     <Trash2 size={16} />
                   </button>
                 </div>
+
+                {confirmDelete === crew.id && (
+                  <div className="mt-3 rounded-[14px] bg-danger-soft px-3.5 py-3">
+                    <p className="text-[13px] text-ink">{t("crew.deleteAsk")}</p>
+                    <div className="mt-2.5 flex gap-2">
+                      <button
+                        onClick={() => setConfirmDelete(null)}
+                        className="tap-target flex-1 rounded-pill border border-line bg-card py-2 text-[13px] font-semibold text-ink"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                      <button
+                        onClick={() => remove(crew)}
+                        disabled={busy === crew.id}
+                        className="tap-target flex-1 rounded-pill bg-danger py-2 text-[13px] font-bold text-white disabled:opacity-60"
+                      >
+                        {t("crew.deleteYes")}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-3 flex flex-col gap-2 border-t border-line pt-3 sm:flex-row">
                   <button
