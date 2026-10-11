@@ -7,6 +7,7 @@ import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
 import { quotesForDish } from "../food/food.service.js";
 import { sendPushToUser } from "../notifications/push.service.js";
+import { privacyView } from "./privacy.js";
 
 // Saved crews.
 //
@@ -53,6 +54,17 @@ async function crewView(crewId: string, ownerId: string) {
   });
   if (!crew) throw new ApiError(404, "Crew not found");
 
+  // A crew is a list of people, so the same Privacy pass the cart screen makes
+  // applies here. These names were read straight off the User row, so a member
+  // who had set their profile to "nobody" was "Flouna user" in the cart they
+  // joined and named on the crew saved out of it — and named again beside what
+  // they ate last time.
+  const view = await privacyView(
+    ownerId,
+    crew.members.map((m) => m.userId),
+    crew.lastCartId ?? "",
+  );
+
   // What they ordered last time, so the reopen screen can offer it.
   let usual: { dishId: string; name: string; qty: number; memberName: string }[] = [];
   if (crew.lastCartId) {
@@ -65,7 +77,7 @@ async function crewView(crewId: string, ownerId: string) {
       dishId: i.dishId,
       name: i.name,
       qty: i.qty,
-      memberName: i.user.name,
+      memberName: view.nameFor(i.userId, i.user.name),
     }));
   }
 
@@ -79,7 +91,7 @@ async function crewView(crewId: string, ownerId: string) {
     updatedAt: crew.updatedAt,
     members: crew.members.map((m) => ({
       userId: m.userId,
-      name: m.user.name,
+      name: view.nameFor(m.userId, m.user.name),
       isYou: m.userId === ownerId,
     })),
     usual,
@@ -100,6 +112,15 @@ crewsRouter.get("/", async (req, res, next) => {
         },
       },
     });
+    // One Privacy pass over everybody in every crew, rather than one per crew:
+    // the names are the member's to withhold here exactly as they are on the
+    // cart screen, and a list route must not make three queries per row to
+    // find that out.
+    const view = await privacyView(
+      req.userId!,
+      [...new Set(crews.flatMap((c) => c.members.map((m) => m.userId)))],
+      "",
+    );
     res.json({
       crews: crews.map((c) => ({
         id: c.id,
@@ -111,7 +132,7 @@ crewsRouter.get("/", async (req, res, next) => {
         updatedAt: c.updatedAt,
         members: c.members.map((m) => ({
           userId: m.userId,
-          name: m.user.name,
+          name: view.nameFor(m.userId, m.user.name),
           isYou: m.userId === req.userId,
         })),
       })),

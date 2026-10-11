@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
+import { CONTENDED_TX, withTxRetry } from "../../lib/txRetry.js";
 import { registerChatDevice } from "./chatDevices.service.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
 import { sendPushToUser } from "../notifications/push.service.js";
+import { privacyView } from "./privacy.js";
 
 // End-to-end encrypted group chat, on the Sender Keys design that Signal and
 // WhatsApp use for groups.
@@ -214,10 +216,17 @@ groupChatRouter.get("/keys", async (req, res, next) => {
         })
       : null;
 
+    // A device list is a list of people, so it goes through the same Privacy
+    // settings the cart screen applies. Read straight off the User row, it
+    // handed back the real name of a member whose profile is set to "nobody" —
+    // the cart called them "Flouna user" and this call, one tap away in the
+    // same cart, named them.
+    const view = await privacyView(req.userId!, memberIds, cartId);
+
     res.json({
       devices: devices.map((d) => ({
         userId: d.userId,
-        name: d.user.name,
+        name: view.nameFor(d.userId, d.user.name),
         deviceId: d.deviceId,
         publicKey: d.publicKey,
         signingKey: d.signingKey,
@@ -418,11 +427,14 @@ groupChatRouter.get("/messages", async (req, res, next) => {
         sender: { select: { name: true } },
       },
     });
+    // Same reason as the device list: every message carries its sender's name,
+    // and that name is the member's to withhold.
+    const view = await privacyView(req.userId!, await memberIdsOf(cartId), cartId);
     res.json({
       messages: messages.map((m) => ({
         id: m.id,
         senderId: m.senderId,
-        senderName: m.sender.name,
+        senderName: view.nameFor(m.senderId, m.sender.name),
         senderDevice: m.senderDevice,
         index: m.index,
         version: m.version,
@@ -507,12 +519,22 @@ groupChatRouter.post(
         where: { cartId, NOT: { userId: req.userId! } },
         select: { userId: true },
       });
+      // The name in the notification is the sender's to withhold too, and a
+      // lock-screen is the one place it is read by someone who never opened the
+      // app. Resolved per recipient, because "contacts" means a different set
+      // of people for each of them.
       for (const o of others) {
-        void sendPushToUser(o.userId, {
-          title: cart.name ?? "Group order",
-          body: `${me?.name ?? "Someone"} sent a message`,
-          url: `/food/group/${cartId}/chat`,
-        });
+        void privacyView(o.userId, [req.userId!], cartId)
+          .then((view) =>
+            sendPushToUser(o.userId, {
+              title: cart.name ?? "Group order",
+              body: `${view.nameFor(req.userId!, me?.name ?? "Someone")} sent a message`,
+              url: `/food/group/${cartId}/chat`,
+            }),
+          )
+          .catch(() => {
+            // A notification must never break the message it announces.
+          });
       }
 
       res.status(201).json({ message: { ...message, isYou: true } });
