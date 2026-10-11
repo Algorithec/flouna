@@ -445,10 +445,40 @@ groupsRouter.patch(
 
 // ---------- nudge the people who have not ordered ----------
 //
-// Rate-limited by its own nature: it only reaches members with nothing in the
-// cart, so once someone orders they stop being remindable. That is a better
-// throttle than a timer, because it makes the nudge impossible to weaponise
-// into a stream of notifications.
+// WHO it reaches is limited by its own nature: only members with nothing in the
+// cart, so once someone orders they stop being remindable.
+//
+// How OFTEN each of them hears about it was not limited at all, and the comment
+// that used to sit here claimed it was. Those are different questions. A host
+// who keeps tapping sent an unbounded stream of notifications to the lock
+// screen of everyone still reading the menu, and a member cannot order their
+// way out of a cart they did not want to be in.
+//
+// So a reminder is per PERSON, not per tap: somebody already nudged in the last
+// few minutes is skipped, and the count that comes back is who was actually
+// told rather than who was eligible. Kept in memory on purpose — this is a
+// nudge, and the worst a restart can cost is one extra notification, which is
+// not worth a column and a write on the hot path.
+const REMIND_COOLDOWN_MS = 5 * 60_000;
+const remindedAt = new Map<string, number>();
+
+/** Who among `userIds` has not been nudged about this cart recently. */
+function dueForReminder(cartId: string, userIds: string[]): string[] {
+  const now = Date.now();
+  // Housekeeping first, so the map cannot grow without bound.
+  for (const [key, at] of remindedAt) {
+    if (now - at > REMIND_COOLDOWN_MS) remindedAt.delete(key);
+  }
+  const due: string[] = [];
+  for (const userId of userIds) {
+    const key = `${cartId}:${userId}`;
+    if (remindedAt.has(key)) continue;
+    remindedAt.set(key, now);
+    due.push(userId);
+  }
+  return due;
+}
+
 groupsRouter.post("/:id/remind", async (req, res, next) => {
   try {
     const cart = await assertMember(req.params.id!, req.userId!);
@@ -468,16 +498,19 @@ groupsRouter.post("/:id/remind", async (req, res, next) => {
     });
     const done = new Set(ordered.map((o) => o.userId));
     const waiting = members.filter((m) => !done.has(m.userId));
+    const due = dueForReminder(cart.id, waiting.map((m) => m.userId));
 
     const label = `${cart.emoji ?? ""} ${cart.name ?? "Group order"}`.trim();
-    for (const m of waiting) {
-      void sendPushToUser(m.userId, {
+    for (const userId of due) {
+      void sendPushToUser(userId, {
         title: label,
         body: "Everyone is waiting on your order.",
         url: `/food/group/${cart.id}`,
       });
     }
-    res.json({ reminded: waiting.length });
+    // What was actually sent. Reporting the eligible count instead would tell
+    // the host four people were nudged when none of them were.
+    res.json({ reminded: due.length, waiting: waiting.length });
   } catch (err) {
     next(err);
   }
@@ -610,7 +643,16 @@ groupsRouter.post(
 // ---------- remove own item ----------
 groupsRouter.delete("/:id/items/:itemId", async (req, res, next) => {
   try {
-    await assertMember(req.params.id!, req.userId!);
+    const cart = await assertMember(req.params.id!, req.userId!);
+    // Once the host has checked out, the cart is the record of who owes what:
+    // it is the screen the host chases shares from, and the UPI links were
+    // built off it. Removing an item was allowed at any time, so a member could
+    // order, let the host pay for the lot, then delete their own lines and the
+    // settle-up screen would show them owing nothing. The food is bought by
+    // then, so there is nothing to take out of the order either.
+    if (cart.status !== "open") {
+      throw new ApiError(409, "This group order has been placed, items can't be removed");
+    }
     // You can only remove your own items.
     const deleted = await prisma.groupCartItem.deleteMany({
       where: { id: req.params.itemId, cartId: req.params.id, userId: req.userId! },
