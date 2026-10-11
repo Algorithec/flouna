@@ -479,35 +479,52 @@ groupChatRouter.post(
       // A chain position is used exactly once. Reusing one is either a replay
       // or a client bug, and both end with a recipient deriving a key for a
       // message that is not the one it is trying to open.
-      const clash = await prisma.groupMessage.findFirst({
-        where: { cartId, senderDevice, index },
-        select: { id: true },
-      });
-      if (clash) throw new ApiError(409, "That chain position is already used");
-
-      const message = await prisma.groupMessage.create({
-        data: {
-          cartId,
-          senderId: req.userId!,
-          senderDevice,
-          index,
-          version: 2,
-          iv,
-          ciphertext,
-          signature,
-        },
-        select: {
-          id: true,
-          senderId: true,
-          senderDevice: true,
-          index: true,
-          version: true,
-          iv: true,
-          ciphertext: true,
-          signature: true,
-          createdAt: true,
-        },
-      });
+      //
+      // Claimed and written in one step. The check used to be a read followed
+      // by an insert, with nothing holding the position in between: two
+      // messages sent at the same moment — which is exactly what two tabs, or
+      // a retry racing the original, produce — both read the position as free
+      // and both stored a row at it. There is no unique index to catch that
+      // (the column has a plain index), so both survived, and the recipient
+      // ratchets once: one of the two can never be opened by anybody, in a
+      // conversation whose whole promise is that it arrives. Serializable, so
+      // the database refuses one of a conflicting pair, and the refused one
+      // retries and finds the position taken.
+      const message = await withTxRetry(() =>
+        prisma.$transaction(
+          async (tx) => {
+            const clash = await tx.groupMessage.findFirst({
+              where: { cartId, senderDevice, index },
+              select: { id: true },
+            });
+            if (clash) throw new ApiError(409, "That chain position is already used");
+            return tx.groupMessage.create({
+              data: {
+                cartId,
+                senderId: req.userId!,
+                senderDevice,
+                index,
+                version: 2,
+                iv,
+                ciphertext,
+                signature,
+              },
+              select: {
+                id: true,
+                senderId: true,
+                senderDevice: true,
+                index: true,
+                version: true,
+                iv: true,
+                ciphertext: true,
+                signature: true,
+                createdAt: true,
+              },
+            });
+          },
+          CONTENDED_TX,
+        ),
+      );
 
       // The push cannot carry the message, because the server does not have it.
       // It says who spoke and where; the text appears once the app decrypts it.
