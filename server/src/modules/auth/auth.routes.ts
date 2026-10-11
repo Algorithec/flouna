@@ -74,12 +74,24 @@ function publicUser(user: {
   };
 }
 
+/**
+ * Starts a session, and records which device it was started from.
+ *
+ * `req` is required rather than optional on purpose. Login Activity exists so
+ * somebody can look at the list and recognise — or fail to recognise — each
+ * device on their account, and it is built out of these rows. Four of the six
+ * doors that start a session were not passing it: email verification at
+ * sign-up, both Google paths and the operator console. Those sessions showed up
+ * on the screen as an unnamed row with no device and no address, which is
+ * precisely the row a person needs to be able to read when they are checking
+ * whether somebody else is signed in as them.
+ */
 async function startSession(
   res: Parameters<typeof setAuthCookies>[0],
   userId: string,
-  stepUp = false,
+  stepUp: boolean,
   /** Request the session is being started from, for Login Activity. */
-  req?: { get(name: string): string | undefined; ip?: string },
+  req: { get(name: string): string | undefined; ip?: string },
 ) {
   // Bake the current role into the access token so ordinary requests carry it.
   // requireRole still re-checks the DB for privileged routes, so a stale token
@@ -265,7 +277,7 @@ authRouter.post(
       });
       // Best-effort — never blocks or fails the verification response.
       void sendWelcomeEmail(user.email, user.name ?? "");
-      await startSession(res, user.id);
+      await startSession(res, user.id, false, req);
       res.json({ user: publicUser(user) });
     } catch (err) {
       next(err);
@@ -548,7 +560,7 @@ authRouter.post(
       if (!ok) throw new ApiError(401, "Invalid or expired code");
 
       // OTP cleared → start a step-up-verified session.
-      await startSession(res, user.id, true);
+      await startSession(res, user.id, true, req);
       res.json({ user: publicUser(user) });
     } catch (err) {
       next(err);
@@ -587,7 +599,7 @@ authRouter.post(
             },
           });
         }
-        await startSession(res, user.id);
+        await startSession(res, user.id, false, req);
         return res.json({ user: publicUser(user) });
       }
       if (!googleClient || !env.GOOGLE_CLIENT_ID) {
@@ -646,7 +658,7 @@ authRouter.post(
         });
       }
 
-      await startSession(res, user.id);
+      await startSession(res, user.id, false, req);
       res.json({ user: publicUser(user) });
     } catch (err) {
       next(err);
