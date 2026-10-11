@@ -1172,9 +1172,28 @@ ordersRouter.post(
       if (order.rating) throw new ApiError(409, "You've already rated this order");
 
       // What was rated: the dish for food, the provider for a ride.
-      const details = JSON.parse(order.details) as { dishId?: string };
+      //
+      // A cart order records its lines under `items` and carries no top-level
+      // dishId, so this fell through to the platform name — "ondc" — and filed
+      // the stars under a key nothing ever looks up, because the community
+      // ratings for food are keyed by dish. Every rating left on a multi-item
+      // order was therefore collected and then silently ignored: the one
+      // feedback loop the ranking has, open and leaking, on exactly the orders
+      // most likely to be rated.
+      //
+      // Keyed to the first line, which is the dish the order is named and
+      // pictured after on the screen the rating is left from. A cart of three
+      // dishes deserves three ratings; that needs a question per line in the
+      // UI, so it is a separate piece of work rather than a reason to keep
+      // discarding the answer.
+      const details = JSON.parse(order.details) as {
+        dishId?: string;
+        items?: { dishId?: string }[];
+      };
       const itemKey =
-        order.domain === "food" ? (details.dishId ?? order.provider) : order.provider;
+        order.domain === "food"
+          ? (details.dishId ?? details.items?.[0]?.dishId ?? order.provider)
+          : order.provider;
 
       const rating = await prisma.orderRating
         .create({
