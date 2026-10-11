@@ -74,12 +74,24 @@ function publicUser(user: {
   };
 }
 
+/**
+ * Starts a session, and records which device it was started from.
+ *
+ * `req` is required rather than optional on purpose. Login Activity exists so
+ * somebody can look at the list and recognise — or fail to recognise — each
+ * device on their account, and it is built out of these rows. Four of the six
+ * doors that start a session were not passing it: email verification at
+ * sign-up, both Google paths and the operator console. Those sessions showed up
+ * on the screen as an unnamed row with no device and no address, which is
+ * precisely the row a person needs to be able to read when they are checking
+ * whether somebody else is signed in as them.
+ */
 async function startSession(
   res: Parameters<typeof setAuthCookies>[0],
   userId: string,
-  stepUp = false,
+  stepUp: boolean,
   /** Request the session is being started from, for Login Activity. */
-  req?: { get(name: string): string | undefined; ip?: string },
+  req: { get(name: string): string | undefined; ip?: string },
 ) {
   // Bake the current role into the access token so ordinary requests carry it.
   // requireRole still re-checks the DB for privileged routes, so a stale token
@@ -87,8 +99,18 @@ async function startSession(
   // cleared operator 2FA — set only by the console verify flow.
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true },
+    select: { role: true, suspendedAt: true },
   });
+  // A suspended account gets no new session, whatever route asked for one.
+  //
+  // Suspension was enforced in exactly two places: requireRole, which only
+  // operators ever reach, and /refresh. An ordinary customer suspended from
+  // the admin console could therefore still sign in and keep ordering — the
+  // refresh fifteen minutes later was refused, and logging in again handed
+  // them another fifteen. Checked here rather than in each route because this
+  // is the single door every session comes through: password login, the
+  // two-factor second step, email verification, Google, and the console.
+  if (user?.suspendedAt) throw new ApiError(403, "Account suspended");
   const access = signAccessToken(userId, normalizeRole(user?.role), stepUp);
   const refresh = await issueRefreshToken(userId, stepUp, {
     userAgent: req?.get("user-agent") ?? null,
@@ -255,7 +277,7 @@ authRouter.post(
       });
       // Best-effort — never blocks or fails the verification response.
       void sendWelcomeEmail(user.email, user.name ?? "");
-      await startSession(res, user.id);
+      await startSession(res, user.id, false, req);
       res.json({ user: publicUser(user) });
     } catch (err) {
       next(err);
@@ -538,7 +560,7 @@ authRouter.post(
       if (!ok) throw new ApiError(401, "Invalid or expired code");
 
       // OTP cleared → start a step-up-verified session.
-      await startSession(res, user.id, true);
+      await startSession(res, user.id, true, req);
       res.json({ user: publicUser(user) });
     } catch (err) {
       next(err);
@@ -577,7 +599,7 @@ authRouter.post(
             },
           });
         }
-        await startSession(res, user.id);
+        await startSession(res, user.id, false, req);
         return res.json({ user: publicUser(user) });
       }
       if (!googleClient || !env.GOOGLE_CLIENT_ID) {
@@ -636,7 +658,7 @@ authRouter.post(
         });
       }
 
-      await startSession(res, user.id);
+      await startSession(res, user.id, false, req);
       res.json({ user: publicUser(user) });
     } catch (err) {
       next(err);
@@ -772,7 +794,19 @@ authRouter.post("/refresh", sessionLimiter, async (req, res, next) => {
 
 authRouter.post("/logout", sessionLimiter, async (req, res) => {
   const raw = req.cookies?.refresh_token as string | undefined;
-  if (raw) await revokeRefreshToken(raw);
+  // Express 4 does not await a handler, so a rejection here reached nothing:
+  // the caller got no response at all and the process counted an unhandled
+  // rejection. Signing out must also never be refusable — if the revoke write
+  // fails, the cookies still go, so the browser is out of the session either
+  // way and the server-side token expires on its own.
+  if (raw) {
+    await revokeRefreshToken(raw).catch((err: unknown) =>
+      console.error(
+        "[auth] could not revoke the refresh token on logout:",
+        err instanceof Error ? err.message : String(err),
+      ),
+    );
+  }
   clearAuthCookies(res);
   res.json({ ok: true });
 });

@@ -437,10 +437,22 @@ ordersRouter.post(
         const allQuotes = quotesForProduct(body.productId);
         const quote = allQuotes.find((q) => q.platform === body.platform);
         if (!quote) throw new ApiError(404, "That product option is no longer available");
+        // Out of stock is a listing nobody can be sold. The search filters
+        // these out, but quotesForProduct does not, and this route only
+        // matched on the platform — so the one out-of-stock seller in the
+        // catalogue could be ordered from and paid for, and the buyer was
+        // charged for something that was never going to ship.
+        if (!quote.inStock) {
+          throw new ApiError(409, "That seller is out of stock, pick another option");
+        }
 
+        // Against the alternatives the buyer could actually have taken. An
+        // out-of-stock seller is not one, and counting a dearer unbuyable
+        // listing as the next-best price inflated the savings this order adds
+        // to the customer's lifetime total.
         const cheapestOther = Math.min(
           ...allQuotes
-            .filter((q) => q.platform !== body.platform)
+            .filter((q) => q.platform !== body.platform && q.inStock)
             .map((q) => q.effectivePaise),
         );
         const savedPaise = Number.isFinite(cheapestOther)
@@ -733,8 +745,17 @@ ordersRouter.get("/:id", async (req, res, next) => {
       // share of it handed back — so nothing about the reward is invented here.
       // The ledger's unique index makes a repeat call a no-op, which matters
       // because this route is polled.
+      //
+      // Only on money actually collected. Cash on delivery confirms the order
+      // and leaves its payment at "pending" until the money is taken in
+      // person, and nothing ever marks it taken — so every COD order reached
+      // here and paid out a share of a margin Flouna had not earned. A buyer
+      // could place COD orders, refuse them at the door, and still be credited
+      // real spendable balance. The cashback follows the payment, and a COD
+      // order earns it once collection is recorded.
+      const paid = order.payment?.status === "success";
       const { ondcMinMarginBps, cashbackUserSharePct } = await getConfig();
-      if (cashbackUserSharePct > 0) {
+      if (paid && cashbackUserSharePct > 0) {
         await creditCashback({
           userId: order.userId,
           orderId: order.id,
@@ -1151,9 +1172,28 @@ ordersRouter.post(
       if (order.rating) throw new ApiError(409, "You've already rated this order");
 
       // What was rated: the dish for food, the provider for a ride.
-      const details = JSON.parse(order.details) as { dishId?: string };
+      //
+      // A cart order records its lines under `items` and carries no top-level
+      // dishId, so this fell through to the platform name — "ondc" — and filed
+      // the stars under a key nothing ever looks up, because the community
+      // ratings for food are keyed by dish. Every rating left on a multi-item
+      // order was therefore collected and then silently ignored: the one
+      // feedback loop the ranking has, open and leaking, on exactly the orders
+      // most likely to be rated.
+      //
+      // Keyed to the first line, which is the dish the order is named and
+      // pictured after on the screen the rating is left from. A cart of three
+      // dishes deserves three ratings; that needs a question per line in the
+      // UI, so it is a separate piece of work rather than a reason to keep
+      // discarding the answer.
+      const details = JSON.parse(order.details) as {
+        dishId?: string;
+        items?: { dishId?: string }[];
+      };
       const itemKey =
-        order.domain === "food" ? (details.dishId ?? order.provider) : order.provider;
+        order.domain === "food"
+          ? (details.dishId ?? details.items?.[0]?.dishId ?? order.provider)
+          : order.provider;
 
       const rating = await prisma.orderRating
         .create({

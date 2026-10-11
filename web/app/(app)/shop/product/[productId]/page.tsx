@@ -155,7 +155,7 @@ export default function ProductPage({
           {["WELCOME100", "HDFC10"].map((code) => (
             <span
               key={code}
-              className="rounded-lg border border-dashed border-accent/50 bg-accent-soft/40 px-2.5 py-1 text-[12px] font-semibold text-accent"
+              className="rounded-lg border border-dashed border-accent/50 bg-accent-soft/40 px-2.5 py-1 text-[12px] font-semibold text-accent-ink"
             >
               {code}
             </span>

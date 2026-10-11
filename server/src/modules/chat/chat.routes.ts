@@ -589,7 +589,12 @@ chatRouter.get("/sessions/:id", async (req, res, next) => {
     const session = await prisma.chatSession.findFirst({
       where: { id: req.params.id, userId: req.userId! },
       include: {
-        messages: { orderBy: { createdAt: "asc" }, take: 100 },
+        // The newest hundred, then put back in reading order. Taking the first
+        // hundred ascending is what a cap looks like from the wrong end: open a
+        // conversation with any real history and it restored the opening
+        // exchange and nothing since, with the reply you were reading a moment
+        // ago missing entirely.
+        messages: { orderBy: { createdAt: "desc" }, take: 100 },
       },
     });
     if (!session) throw new ApiError(404, "Chat not found");
@@ -597,7 +602,7 @@ chatRouter.get("/sessions/:id", async (req, res, next) => {
       session: {
         id: session.id,
         title: session.title,
-        messages: session.messages.map((m) => ({
+        messages: [...session.messages].reverse().map((m) => ({
           id: m.id,
           role: m.role,
           content: m.content,

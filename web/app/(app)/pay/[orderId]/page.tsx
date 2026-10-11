@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   Smartphone,
@@ -19,7 +19,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { useCheckout } from "@/lib/payments/useCheckout";
+import { useCheckout, type PayMethod } from "@/lib/payments/useCheckout";
 import { rupees } from "@/lib/money";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -29,6 +29,14 @@ import { useI18n } from "@/components/i18n/I18nContext";
 
 
 type AddressSummary = { label: string; line1: string; city: string; isDefault: boolean };
+
+// A surface that already asked for a payment method sends it here, so the
+// picker opens on what the buyer chose rather than asking the same question
+// again with a different default. Anything unrecognised is ignored.
+const METHODS: PayMethod[] = ["upi", "cash", "card"];
+function methodFromUrl(value: string | null): PayMethod | undefined {
+  return METHODS.find((m) => m === value);
+}
 
 
 export default function PayPage({
@@ -52,7 +60,10 @@ export default function PayPage({
     error,
     pay,
     reset,
-  } = useCheckout(orderId, { genericError: t("pay.failed.generic") });
+  } = useCheckout(orderId, {
+    genericError: t("pay.failed.generic"),
+    initialMethod: methodFromUrl(useSearchParams().get("method")),
+  });
   const [showSummary, setShowSummary] = useState(true);
   const [address, setAddress] = useState<AddressSummary | null>(null);
   // Off by default: reward credit is the buyer's to keep or spend, and quietly

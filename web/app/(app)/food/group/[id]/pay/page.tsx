@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import {
   Smartphone,
   CreditCard,
-  Building2,
   Wallet,
   ShieldCheck,
   Info,
   Check,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import type { PayMethod } from "@/lib/payments/useCheckout";
 import { rupees } from "@/lib/money";
 import { Card } from "@/components/ui/Card";
 import { GroupHeader } from "@/components/food/GroupHeader";
@@ -32,7 +32,12 @@ import { cn } from "@/lib/cn";
 // The bill's numbers are the ones the server computed. Nothing here is
 // hardcoded, including the fees the frame prints as fixed values.
 
-type Method = "upi" | "card" | "netbanking" | "cash";
+// The same three the checkout can actually take. Net banking was a fourth row
+// here and the payment screen has never offered it, so choosing it meant being
+// asked again a screen later and handed UPI. The method chosen here is now
+// carried to that screen instead of being collected and dropped: before this,
+// a host who picked Cash on delivery was sent straight to a UPI default.
+type Method = PayMethod;
 
 export default function GroupPayPage({
   params,
@@ -70,8 +75,8 @@ export default function GroupPayPage({
       );
       setShares(d.shares);
       // The combined order is real from here on, so the payment screen for it
-      // is where the host belongs.
-      router.push(`/pay/${d.orderId}`);
+      // is where the host belongs — opened on the method they just chose.
+      router.push(`/pay/${d.orderId}?method=${method}`);
     } catch (e) {
       toast(e instanceof Error ? e.message : t("grp.checkoutFailed"));
       setBusy(false);
@@ -129,14 +134,6 @@ export default function GroupPayPage({
           <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-cocoa">
             {t("grp.otherOptions")}
           </p>
-          <MethodRow
-            active={method === "netbanking"}
-            onClick={() => setMethod("netbanking")}
-            icon={<Building2 size={18} className="text-cocoa" />}
-            tint="bg-beige"
-            title={t("grp.netBanking")}
-            subtitle={t("grp.netBankingSub")}
-          />
           <MethodRow
             active={method === "cash"}
             onClick={() => setMethod("cash")}

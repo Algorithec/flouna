@@ -61,15 +61,44 @@ export function createApp() {
       credentials: true,
     }),
   );
-  app.use(
-    express.json({
-      limit: "100kb",
-      // Keep the exact bytes — the Cashfree webhook HMAC is computed over them.
-      verify: (req, _res, buf) => {
-        (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
-      },
-    }),
-  );
+  // Keep the exact bytes — the Cashfree webhook HMAC is computed over them.
+  const keepRawBody = (req: express.Request, _res: express.Response, buf: Buffer) => {
+    (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+  };
+  const jsonBody = express.json({ limit: "100kb", verify: keepRawBody });
+
+  // 100 KB is the right ceiling for the whole API and the wrong one for two
+  // routes, and a parser mounted on a route cannot raise it: this one runs
+  // first, for every request, and has already refused the body by the time
+  // routing happens. Both routes were written as though it could.
+  //
+  //   complaint evidence — mounts its own 8 MB parser and documents the limit
+  //     in a comment. Every photo a phone takes is larger than 100 KB, so
+  //     attaching one to a complaint answered "That request was too large".
+  //     The one piece of evidence a customer has for a cold delivery, refused.
+  //
+  //   encrypted chat history — its schema allows a 400 KB sealed payload for
+  //     handing a conversation from one of your own devices to another. Under
+  //     the ceiling no real handover ever fitted, so a second device could
+  //     never be given the history the feature exists to give it.
+  //
+  // Decided here, where the ceiling actually is, and kept to these paths so
+  // nothing else gains a bigger surface to be hammered with.
+  const uploadJsonBody = express.json({ limit: "8mb", verify: keepRawBody });
+  const bulkJsonBody = express.json({ limit: "600kb", verify: keepRawBody });
+  const UPLOAD_PATHS = [/^\/api\/complaints\/[^/]+\/evidence\/?$/];
+  const BULK_PATHS = [/^\/api\/groups\/[^/]+\/chat\/history\/?$/];
+  app.use((req, res, next) => {
+    if (req.method === "POST") {
+      if (UPLOAD_PATHS.some((re) => re.test(req.path))) {
+        return uploadJsonBody(req, res, next);
+      }
+      if (BULK_PATHS.some((re) => re.test(req.path))) {
+        return bulkJsonBody(req, res, next);
+      }
+    }
+    return jsonBody(req, res, next);
+  });
   app.use(cookieParser());
 
   // Two safety nets, because one is always wrong for somebody.

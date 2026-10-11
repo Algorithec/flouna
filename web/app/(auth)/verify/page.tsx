@@ -161,7 +161,10 @@ export default function VerifyEmailPage() {
               }}
               inputMode="numeric"
               autoComplete={i === 0 ? "one-time-code" : "off"}
-              aria-label={`Digit ${i + 1}`}
+              // Was an English literal. The six boxes are the only thing on this
+              // screen a screen reader has to be told about, and they were the
+              // one part not translated.
+              aria-label={t("au.digit").replace("{n}", String(i + 1))}
               value={d}
               disabled={busy}
               autoFocus={i === 0}

@@ -64,7 +64,11 @@ export function PredictionBanner({
         "flex w-full items-start gap-3 rounded-card border px-4 py-3 text-left transition-colors",
         warning
           ? "border-accent/50 bg-accent-soft/70 hover:bg-accent-soft"
-          : "border-navy/15 bg-[#eef4fa] hover:bg-[#e6eef7]",
+          : // Tinted from the navy token rather than a fixed pale blue. The
+            // literal kept its light value in dark mode, so the title and
+            // message — both token colours, both near-white there — sat on an
+            // almost-white band at roughly 1.1:1.
+            "border-navy/15 bg-navy/10 hover:bg-navy/15",
       )}
     >
       <span

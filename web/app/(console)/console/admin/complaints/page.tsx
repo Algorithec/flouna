@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
+import { useOperator } from "@/components/console/useOperator";
+import { ConsoleShell } from "@/components/console/ConsoleShell";
 
 // Operator view of ONDC IGM complaints.
 //
@@ -80,14 +84,41 @@ const STATUS_TONE: Record<string, string> = {
   CLOSED: "bg-neutral-200 text-neutral-700",
 };
 
+// Every other console screen is wrapped in the operator gate and the console
+// chrome; this one was not. Reached from the sidebar it dropped the operator
+// onto a page with no sidebar and no mobile header, so the only way to any
+// other console screen was the browser's back button. Signed out it rendered
+// the whole screen and showed "Failed to load" instead of sending them to the
+// console login. The server always re-authorized the calls, so this was
+// navigation and a misleading error, not access.
 export default function AdminComplaintsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
+          <Loader2 className="animate-spin" />
+        </div>
+      }
+    >
+      <Complaints />
+    </Suspense>
+  );
+}
+
+function Complaints() {
+  const state = useOperator(["admin", "super_admin"]);
+  // "Protocol log" on a grievance links here with ?case=<id>. The parameter was
+  // read by nothing, so the operator chasing one case landed on the unfiltered
+  // list and had to find it again by eye.
+  const caseId = useSearchParams().get("case");
   const [rows, setRows] = useState<Row[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(caseId);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (state.status !== "ok") return;
     let cancelled = false;
     api<{ complaints: Row[] }>("/api/console/admin/complaints")
       .then((d) => {
@@ -99,10 +130,10 @@ export default function AdminComplaintsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [state.status]);
 
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || state.status !== "ok") return;
     let cancelled = false;
     api<{ complaint: Detail }>(`/api/console/admin/complaints/${selected}`)
       .then((d) => {
@@ -112,7 +143,7 @@ export default function AdminComplaintsPage() {
     return () => {
       cancelled = true;
     };
-  }, [selected]);
+  }, [selected, state.status]);
 
   async function refresh() {
     if (!selected) return;
@@ -138,8 +169,16 @@ export default function AdminComplaintsPage() {
     }
   }
 
+  if (state.status !== "ok") {
+    return (
+      <div className="flex min-h-dvh items-center justify-center text-(--c-muted)">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-6 py-8">
+    <ConsoleShell operator={state.operator}>
       <h1 className="text-[24px] font-bold text-ink">ONDC IGM complaints</h1>
       <p className="mt-1 max-w-[70ch] text-[14px] text-cocoa">
         Every customer-facing event has a record here. The message log shows the
@@ -390,7 +429,7 @@ export default function AdminComplaintsPage() {
           )}
         </div>
       </div>
-    </div>
+    </ConsoleShell>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, Sparkles, Star, Search, ShoppingBag, Check } from "lucide-react";
 import { api } from "@/lib/api";
@@ -48,11 +48,26 @@ export default function GroupMenuPage({
   const [adding, setAdding] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
 
+  // Bumped on either side of every change this device makes; a poll that was
+  // already in flight answers with the cart as it was before and used to
+  // overwrite the fresh one, so the count on the cart button dropped back for
+  // a poll after each Add.
+  const writes = useRef(0);
+
   const load = useCallback(() => {
-    api<GroupCart>(`/api/groups/${id}`).then(setCart).catch(() => {});
+    const at = writes.current;
+    api<GroupCart>(`/api/groups/${id}`)
+      .then((c) => {
+        if (writes.current === at) setCart(c);
+      })
+      .catch(() => {});
     api<{ suggestion: GroupSuggestion | null }>(`/api/groups/${id}/suggestion`)
-      .then((d) => setSuggestion(d.suggestion))
-      .catch(() => setSuggestion(null));
+      .then((d) => {
+        if (writes.current === at) setSuggestion(d.suggestion);
+      })
+      .catch(() => {
+        if (writes.current === at) setSuggestion(null);
+      });
   }, [id]);
 
   useEffect(() => {
@@ -100,6 +115,7 @@ export default function GroupMenuPage({
 
   async function add(dishId: string) {
     setAdding(dishId);
+    writes.current += 1;
     try {
       setCart(
         await api<GroupCart>(`/api/groups/${id}/items`, {
@@ -107,8 +123,10 @@ export default function GroupMenuPage({
           json: { dishId, qty: 1 },
         }),
       );
+      writes.current += 1;
       load();
     } catch (e) {
+      writes.current += 1;
       toast(e instanceof Error ? e.message : t("grp.addFailed"));
     } finally {
       setAdding(null);
@@ -117,16 +135,19 @@ export default function GroupMenuPage({
 
   async function applyDeal() {
     setApplying(true);
+    writes.current += 1;
     try {
       const d = await api<{ applied: number; cart: GroupCart }>(
         `/api/groups/${id}/suggestion/apply`,
         { method: "POST", json: {} },
       );
+      writes.current += 1;
       setCart(d.cart);
       setSuggestion(null);
       toast(t("grp.dealApplied").replace("{amount}", rupees(d.applied)));
     } catch (e) {
       toast(e instanceof Error ? e.message : t("grp.dealFailed"));
+      writes.current += 1;
       load();
     } finally {
       setApplying(false);
@@ -216,7 +237,7 @@ export default function GroupMenuPage({
                 <button
                   onClick={applyDeal}
                   disabled={applying}
-                  className="tap-target h-[46px] flex-1 rounded-pill border border-accent bg-accent-soft text-[14px] font-bold text-accent transition-colors hover:bg-accent hover:text-white disabled:opacity-60"
+                  className="tap-target h-[46px] flex-1 rounded-pill border border-accent bg-accent-soft text-[14px] font-bold text-accent-ink transition-colors hover:bg-accent hover:text-white disabled:opacity-60"
                 >
                   {applying ? t("grp.applying") : t("grp.applyAndSave")}
                 </button>
@@ -286,7 +307,7 @@ export default function GroupMenuPage({
               >
                 <Plus size={17} />
                 {mine.length > 0 && (
-                  <span className="absolute -right-1 -top-1 flex min-w-[16px] items-center justify-center rounded-full border-2 border-card bg-ink px-1 text-[9px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 flex min-w-[16px] items-center justify-center rounded-full border-2 border-card bg-ink-fill px-1 text-[9px] font-bold text-white">
                     {mine.reduce((s, i) => s + i.qty, 0)}
                   </span>
                 )}

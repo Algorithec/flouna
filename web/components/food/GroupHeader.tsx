@@ -84,7 +84,7 @@ export function MemberStrip({
           key={m.userId}
           title={m.name}
           style={{ marginLeft: i === 0 ? 0 : -10, zIndex: shown.length - i }}
-          className="flex size-9 items-center justify-center rounded-full border-2 border-cream bg-accent-soft text-[13px] font-bold text-accent"
+          className="flex size-9 items-center justify-center rounded-full border-2 border-cream bg-accent-soft text-[13px] font-bold text-accent-ink"
         >
           {m.name.trim().charAt(0).toUpperCase() || "?"}
         </span>

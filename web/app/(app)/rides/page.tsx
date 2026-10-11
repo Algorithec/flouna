@@ -48,6 +48,13 @@ type RouteInfo = {
 
 const VEHICLES = ["any", "bike", "auto", "cab"] as const;
 
+/** Random enough that two devices cannot collide on one. */
+function newAttemptKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `k-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 // Seat counts are a fixed fact of the vehicle type, not order data — safe to
 // look up client-side rather than round-trip it from the quote.
 const SEATS: Record<string, number> = { bike: 1, auto: 3, cab: 4 };
@@ -217,6 +224,8 @@ function RidesInner() {
   const [saved, setSaved] = useState<Place[]>([]);
   // Which endpoint the next map tap sets (null = tapping does nothing).
   const [picking, setPicking] = useState<"pickup" | "drop" | null>(null);
+  // One key per booking attempt; replaced once a booking succeeds.
+  const attemptKey = useRef<string>(newAttemptKey());
 
   // Detect (or re-detect) the rider's live position on demand. The auto-detect
   // on mount used to be the only chance to get this — if it failed or the
@@ -438,24 +447,39 @@ function RidesInner() {
 
   useEffect(() => {
     if (!pickup || !drop) return;
+    let cancelled = false;
     api<RouteInfo>(
       `/api/rides/route?fromLat=${pickup.lat}&fromLng=${pickup.lng}&toLat=${drop.lat}&toLng=${drop.lng}`,
     )
-      .then(setRoute)
-      .catch(() => setError(t("rd.routeFailed")));
+      .then((r) => !cancelled && setRoute(r))
+      .catch(() => !cancelled && setError(t("rd.routeFailed")));
+    return () => {
+      cancelled = true;
+    };
   }, [pickup, drop, t]);
 
+  /**
+   * Which fare request is the current one.
+   *
+   * Changing the vehicle, or moving either endpoint, starts another one before
+   * the last has answered, and they do not come back in order. The late answer
+   * used to win and take `selected` with it, leaving the rider looking at — and
+   * about to book — a fare priced for a trip they had already changed.
+   */
+  const quoteRun = useRef(0);
   const loadQuotes = useCallback(() => {
     if (!route) return;
+    const run = ++quoteRun.current;
     api<{ quotes: RideQuote[]; advice?: Advice }>(
       `/api/rides/quotes?distanceKm=${route.distanceKm.toFixed(2)}&rideMinutes=${route.rideMinutes}&vehicle=${vehicle}`,
     )
       .then((d) => {
+        if (run !== quoteRun.current) return;
         setQuotes(d.quotes);
         setAdvice(d.advice ?? null);
         setSelected(d.quotes[0] ?? null);
       })
-      .catch(() => setError(t("rd.optionsFailed")));
+      .catch(() => run === quoteRun.current && setError(t("rd.optionsFailed")));
   }, [route, vehicle, t]);
 
   useEffect(loadQuotes, [loadQuotes]);
@@ -501,12 +525,17 @@ function RidesInner() {
   }
 
   async function confirmRide() {
-    if (!selected || !pickup || !drop || !route) return;
+    if (!selected || !pickup || !drop || !route || busy) return;
     setBusy(true);
     setError("");
     try {
       const d = await api<{ order: { id: string } }>("/api/orders", {
         method: "POST",
+        // The same attempt key for a double tap or a retried request, so one
+        // booking cannot become two orders. The chat's booking card has had
+        // this since the duplicate-order bug; this screen, which is where most
+        // rides are booked, never got it.
+        headers: { "Idempotency-Key": attemptKey.current },
         json: {
           domain: "ride",
           provider: selected.provider,
@@ -522,6 +551,8 @@ function RidesInner() {
           ...(scheduledAt ? { scheduledAt } : {}),
         },
       });
+      // Booked. The next trip is a new decision, not a retry of this one.
+      attemptKey.current = newAttemptKey();
       router.push(`/pay/${d.order.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("rd.bookFailed"));
@@ -606,7 +637,7 @@ function RidesInner() {
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 rounded-pill border py-2.5 text-[13px] font-semibold transition-colors",
                 picking
-                  ? "border-accent bg-accent-soft text-accent"
+                  ? "border-accent bg-accent-soft text-accent-ink"
                   : "border-line bg-card text-ink hover:bg-beige/40",
               )}
             >
@@ -676,7 +707,7 @@ function RidesInner() {
                     className={cn(
                       "flex-1 rounded-pill border px-3 py-2 text-[12px] font-semibold capitalize transition-colors",
                       v === vehicle
-                        ? "border-accent bg-accent-soft text-accent"
+                        ? "border-accent bg-accent-soft text-accent-ink"
                         : "border-line bg-card text-cocoa hover:bg-beige/40",
                     )}
                   >
@@ -736,7 +767,7 @@ function RidesInner() {
                                 {rupees(q.effectivePaise)}
                               </p>
                               {q.badge && (
-                                <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent">
+                                <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent-ink">
                                   {q.badge}
                                 </span>
                               )}
@@ -762,7 +793,7 @@ function RidesInner() {
                   className={cn(
                     "rounded-pill px-3 py-1.5 text-[12px] font-semibold transition-colors",
                     !scheduledAt
-                      ? "bg-accent-soft text-accent"
+                      ? "bg-accent-soft text-accent-ink"
                       : "bg-beige/50 text-cocoa hover:text-ink",
                   )}
                 >
@@ -789,7 +820,7 @@ function RidesInner() {
                   className={cn(
                     "flex-1 rounded-pill border px-3 py-1.5 text-[12px] font-medium outline-none transition-colors",
                     scheduledAt
-                      ? "border-accent bg-accent-soft/50 text-accent"
+                      ? "border-accent bg-accent-soft/50 text-accent-ink"
                       : "border-line bg-card text-cocoa",
                   )}
                 />

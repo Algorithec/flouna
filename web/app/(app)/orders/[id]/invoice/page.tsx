@@ -156,14 +156,16 @@ export default function InvoicePage({
         </button>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-full bg-cocoa px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-ink"
+          className="flex items-center gap-2 rounded-full bg-btn px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-btn-hover"
         >
           <Printer size={15} /> {t("inv.print")}
         </button>
       </div>
 
       {/* The receipt document */}
-      <div className="print-document rounded-card border border-line bg-white p-6 sm:p-8">
+      {/* bg-card, not a fixed white: every line inside is a token colour, so
+          in dark mode the whole receipt was near-white type on white. */}
+      <div className="print-document rounded-card border border-line bg-card p-6 sm:p-8">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-line pb-5">
           <div>
@@ -254,7 +256,7 @@ export default function InvoicePage({
 
       {/* Marketing line — screen only, kept OUT of the printed receipt. */}
       {order.savedPaise > 0 && (
-        <div className="mt-3 rounded-card bg-accent-soft/60 px-4 py-2.5 text-[12px] font-medium text-accent print:hidden">
+        <div className="mt-3 rounded-card bg-accent-soft/60 px-4 py-2.5 text-[12px] font-medium text-accent-ink print:hidden">
           {t("inv.saved").replace("{amount}", rupees(order.savedPaise))}
         </div>
       )}

@@ -43,6 +43,24 @@ export async function fileAppeal(input: {
     if (!order) return { ok: false as const, reason: "order_not_found" as const };
   }
 
+  // The contested ranking has to be one made for this person.
+  //
+  // The order was checked and this was not, so any decision id could be
+  // attached to an appeal — and the whole point of 2.6 is that a reviewer
+  // looks at the decision made about the person appealing. An appeal pointing
+  // at somebody else's search sends the reviewer to the wrong ranking and
+  // records a contested decision against an account that never contested it.
+  // There is no foreign key here, so nothing caught it.
+  if (input.decisionLogId) {
+    const decision = await prisma.decisionLog.findFirst({
+      where: { id: input.decisionLogId, userId: input.userId },
+      select: { id: true },
+    });
+    if (!decision) {
+      return { ok: false as const, reason: "decision_not_found" as const };
+    }
+  }
+
   // Five business days, not five calendar days. Treating them as the same
   // would quietly make the promise stricter than the published one, and the
   // promise we would then miss is our own.

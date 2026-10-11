@@ -1,4 +1,4 @@
-import { Router, json as expressJson } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
@@ -160,12 +160,14 @@ complaintsRouter.post(
 // Evidence.
 //
 // The global body limit is 100kb, which is right for the rest of the API and
-// far too small for a photo. The larger limit is applied to this one route
-// rather than raised globally, so nothing else gains a bigger attack surface.
+// far too small for a photo. The larger limit cannot be granted from here: the
+// app-level parser runs before routing and had already refused the body, so the
+// 8mb parser that used to sit on this line never saw a request and every photo
+// came back "That request was too large". It is granted in app.ts, beside the
+// ceiling it is an exception to, which is the only place it can take effect.
 // 8mb of JSON accommodates the 5mb file cap plus base64's overhead.
 complaintsRouter.post(
   "/:id/evidence",
-  expressJson({ limit: "8mb" }),
   validateBody(z.object({ dataUrl: z.string().min(32).max(8_000_000) }).strict()),
   async (req, res, next) => {
     try {

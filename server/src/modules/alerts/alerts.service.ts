@@ -20,20 +20,49 @@ async function latestBestPaise(
 // Checks every active alert; for any whose item is now at/below its target,
 // deactivates it and notifies the owner via push + realtime. Returns the count.
 export async function checkPriceAlerts(): Promise<number> {
-  const alerts = await prisma.priceAlert.findMany({
-    where: { active: true },
-    take: 500,
-  });
+  // Every active alert, a page at a time.
+  //
+  // This used to read the first 500 and stop. Nothing said so, and nothing went
+  // wrong until there were 501: a customer can hold 30 alerts, so seventeen
+  // keen customers was enough, and from then on the alerts past the cut were
+  // never looked at again. They sat armed on the customer's screen, promising a
+  // notification that could not arrive. Silently, and worst for the people
+  // using the feature most.
+  //
+  // Paged by id rather than by a bigger `take`, so the number is a batch size
+  // instead of a ceiling. A triggered alert is deactivated, so the set only
+  // shrinks as the sweep walks it.
+  const alerts: Awaited<ReturnType<typeof prisma.priceAlert.findMany>> = [];
+  const BATCH = 500;
+  let cursor: string | undefined;
+  for (;;) {
+    const page = await prisma.priceAlert.findMany({
+      where: { active: true },
+      orderBy: { id: "asc" },
+      take: BATCH,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+    alerts.push(...page);
+    if (page.length < BATCH) break;
+    cursor = page[page.length - 1]!.id;
+  }
 
   let triggered = 0;
   for (const alert of alerts) {
     const best = await latestBestPaise(alert.domain, alert.itemKey);
     if (best === null || best > alert.targetPaise) continue;
 
-    await prisma.priceAlert.update({
-      where: { id: alert.id },
+    // Claim the alert, then notify. The sweep runs on a timer that does not
+    // wait for the previous run, and a pass over 500 alerts that each do a
+    // read and a push can outlast its own minute — two overlapping passes both
+    // read the alert as active and both pushed, so the customer was told about
+    // the same price drop twice. Scoped to it still being active, only one
+    // pass gets to announce it (and the same holds for a second instance).
+    const claimed = await prisma.priceAlert.updateMany({
+      where: { id: alert.id, active: true },
       data: { active: false, triggeredAt: new Date(), lastSeenPaise: best },
     });
+    if (claimed.count === 0) continue;
 
     const rupees = Math.round(best / 100);
     void sendPushToUser(alert.userId, {

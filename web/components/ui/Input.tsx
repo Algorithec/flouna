@@ -31,8 +31,12 @@ export function Input({
         <input
           id={id}
           className={cn(
-            // Pill field with a faint warm border on a soft surface — matches Figma.
-            "h-[52px] w-full rounded-full border border-[#ece2d8] bg-surface text-[15px] text-ink placeholder:text-cocoa/45",
+            // Pill field with a faint warm border on a soft surface — matches
+            // Figma. The border is the `line` token, not the literal it was:
+            // a fixed near-white hairline kept its light value in dark mode,
+            // so every field on the join-group, address, budget and shared-ride
+            // screens was ringed in white against a #191919 fill.
+            "h-[52px] w-full rounded-full border border-line bg-surface text-[15px] text-ink placeholder:text-cocoa/45",
             icon ? "pl-[46px]" : "pl-5",
             trailing ? "pr-[46px]" : "pr-5",
             "outline-none transition-colors focus:border-accent/60 focus:ring-2 focus:ring-accent/10",

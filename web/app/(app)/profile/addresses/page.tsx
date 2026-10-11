@@ -170,7 +170,7 @@ export default function AddressesPage() {
                 <p className="text-[14px] font-bold text-ink">
                   {labelText(a.label)}
                   {a.isDefault && (
-                    <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">
+                    <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent-ink">
                       {t("pp.addr.default")}
                     </span>
                   )}

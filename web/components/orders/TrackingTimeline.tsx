@@ -73,7 +73,7 @@ export function TrackingTimeline({
           )}
         </div>
         {!allDone && (
-          <span className="flex shrink-0 items-center gap-1.5 rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent">
+          <span className="flex shrink-0 items-center gap-1.5 rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent-ink">
             <Loader2 size={11} className="animate-spin" />
             {t("tt.live")}
           </span>

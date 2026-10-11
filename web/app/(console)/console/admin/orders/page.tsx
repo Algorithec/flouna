@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, RefreshCcw } from "lucide-react";
-import { api } from "@/lib/api";
+import { AlertTriangle, Loader2, RefreshCcw } from "lucide-react";
+import { api, ApiClientError } from "@/lib/api";
 import { useOperator } from "@/components/console/useOperator";
 import { ConsoleShell, PageTitle } from "@/components/console/ConsoleShell";
 
@@ -28,6 +28,7 @@ export default function AdminOrdersPage() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   function load() {
     api<{ orders: Order[] }>(
@@ -45,6 +46,7 @@ export default function AdminOrdersPage() {
 
   async function flagRefund(id: string) {
     setBusy(id);
+    setError(null);
     try {
       await api(`/api/console/admin/orders/${id}/flag-refund`, { method: "POST" });
       setOrders((os) =>
@@ -54,8 +56,17 @@ export default function AdminOrdersPage() {
             : o,
         ),
       );
-    } catch {
-      /* not refundable — ignore */
+    } catch (err) {
+      // Was swallowed as "not refundable". It also swallowed a 500, a dropped
+      // connection and the 409 from somebody else claiming the same payment:
+      // the row went back to normal, nothing had been flagged, and the
+      // operator who told a customer their refund was raised had no way to
+      // know it was not. From here the super-admin queue never sees it.
+      setError(
+        err instanceof ApiClientError
+          ? `Refund not flagged: ${err.message}`
+          : "Refund not flagged. Nothing has been raised for this order.",
+      );
     } finally {
       setBusy(null);
     }
@@ -86,12 +97,23 @@ export default function AdminOrdersPage() {
         </select>
       </div>
 
+      {error && (
+        <p className="mb-3 flex items-center gap-2 rounded-lg bg-(--c-red)/10 px-3 py-2 text-[13px] text-(--c-red)">
+          <AlertTriangle size={15} /> {error}
+        </p>
+      )}
+
+      {/* overflow-x-auto on the table wrapper, not overflow-hidden: these
+         tables are wider than a phone, and hidden overflow clipped the
+         right-hand columns away instead of letting them scroll. The row
+         actions live in those columns, so below lg the rows could be read
+         and not used. */}
       {loading ? (
         <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-(--c-border)">
+        <div className="overflow-x-auto rounded-xl border border-(--c-border)">
           <table className="w-full text-left text-[13px]">
             <thead className="bg-white text-[12px] uppercase tracking-wide text-(--c-muted)">
               <tr>

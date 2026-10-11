@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { registerChatDevice } from "../groups/chatDevices.service.js";
+import { privacyView } from "../groups/privacy.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
@@ -154,6 +155,20 @@ usersRouter.patch(
         dateOfBirth?: string | null;
         gender?: string | null;
       };
+      // A phone number is unique across accounts, so saving one somebody else
+      // already has is the caller's problem and has an answer they can act on.
+      // Nothing caught the unique violation, so Personal Information answered
+      // "Internal server error" and the customer had no way to tell that the
+      // number, rather than the app, was the thing that was wrong.
+      if (data.phone) {
+        const taken = await prisma.user.findFirst({
+          where: { phone: data.phone, NOT: { id: req.userId! } },
+          select: { id: true },
+        });
+        if (taken) {
+          throw new ApiError(409, "That mobile number is already on another account");
+        }
+      }
       const user = await prisma.user.update({
         where: { id: req.userId! },
         data: {
@@ -178,6 +193,13 @@ usersRouter.patch(
           dateOfBirth: true,
           gender: true,
         },
+      }).catch((err: { code?: string }) => {
+        // Two accounts claiming the same number at the same moment: the check
+        // above passed for both and the index stopped one. Same answer.
+        if (err?.code === "P2002") {
+          throw new ApiError(409, "That mobile number is already on another account");
+        }
+        throw err;
       });
       res.json({ user });
     } catch (err) {
@@ -369,12 +391,28 @@ usersRouter.get("/blocked", async (req, res, next) => {
       },
       orderBy: { createdAt: "desc" },
     });
+    // Same Privacy pass as the route that adds them, for the same reason: this
+    // list is built from addresses the caller typed, so it would otherwise be
+    // the same lookup one request later.
+    const view = await privacyView(
+      req.userId!,
+      rows.map((r) => r.blockedUser.id),
+      "",
+    );
     res.json({
-      blocked: rows.map((r) => ({
-        id: r.id,
-        createdAt: r.createdAt,
-        user: r.blockedUser,
-      })),
+      blocked: rows.map((r) => {
+        const named = view.nameFor(r.blockedUser.id, r.blockedUser.name);
+        return {
+          id: r.id,
+          createdAt: r.createdAt,
+          user: {
+            id: r.blockedUser.id,
+            email: r.blockedUser.email,
+            name: named,
+            avatarUrl: named === r.blockedUser.name ? r.blockedUser.avatarUrl : null,
+          },
+        };
+      }),
     });
   } catch (err) {
     next(err);
@@ -407,7 +445,26 @@ usersRouter.post(
         update: {},
         select: { id: true, createdAt: true },
       });
-      res.status(201).json({ blocked: { id: row.id, createdAt: row.createdAt, user: target } });
+      // The target's own Privacy setting decides whether they are named back.
+      // This handed out the display name and avatar of whoever owns an address,
+      // to anybody who typed it — which turned a block into a lookup for the
+      // whole user base, and directly contradicted the one setting that says
+      // "nobody sees my name". The address itself is echoed because the caller
+      // supplied it; nothing new is disclosed by repeating it.
+      const view = await privacyView(req.userId!, [target.id], "");
+      const named = view.nameFor(target.id, target.name);
+      res.status(201).json({
+        blocked: {
+          id: row.id,
+          createdAt: row.createdAt,
+          user: {
+            id: target.id,
+            email: target.email,
+            name: named,
+            avatarUrl: named === target.name ? target.avatarUrl : null,
+          },
+        },
+      });
     } catch (err) {
       next(err);
     }

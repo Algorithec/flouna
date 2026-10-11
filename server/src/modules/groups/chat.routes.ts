@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
+import { CONTENDED_TX, withTxRetry } from "../../lib/txRetry.js";
 import { registerChatDevice } from "./chatDevices.service.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
 import { sendPushToUser } from "../notifications/push.service.js";
+import { privacyView } from "./privacy.js";
 
 // End-to-end encrypted group chat, on the Sender Keys design that Signal and
 // WhatsApp use for groups.
@@ -214,10 +216,17 @@ groupChatRouter.get("/keys", async (req, res, next) => {
         })
       : null;
 
+    // A device list is a list of people, so it goes through the same Privacy
+    // settings the cart screen applies. Read straight off the User row, it
+    // handed back the real name of a member whose profile is set to "nobody" —
+    // the cart called them "Flouna user" and this call, one tap away in the
+    // same cart, named them.
+    const view = await privacyView(req.userId!, memberIds, cartId);
+
     res.json({
       devices: devices.map((d) => ({
         userId: d.userId,
-        name: d.user.name,
+        name: view.nameFor(d.userId, d.user.name),
         deviceId: d.deviceId,
         publicKey: d.publicKey,
         signingKey: d.signingKey,
@@ -418,11 +427,14 @@ groupChatRouter.get("/messages", async (req, res, next) => {
         sender: { select: { name: true } },
       },
     });
+    // Same reason as the device list: every message carries its sender's name,
+    // and that name is the member's to withhold.
+    const view = await privacyView(req.userId!, await memberIdsOf(cartId), cartId);
     res.json({
       messages: messages.map((m) => ({
         id: m.id,
         senderId: m.senderId,
-        senderName: m.sender.name,
+        senderName: view.nameFor(m.senderId, m.sender.name),
         senderDevice: m.senderDevice,
         index: m.index,
         version: m.version,
@@ -467,35 +479,52 @@ groupChatRouter.post(
       // A chain position is used exactly once. Reusing one is either a replay
       // or a client bug, and both end with a recipient deriving a key for a
       // message that is not the one it is trying to open.
-      const clash = await prisma.groupMessage.findFirst({
-        where: { cartId, senderDevice, index },
-        select: { id: true },
-      });
-      if (clash) throw new ApiError(409, "That chain position is already used");
-
-      const message = await prisma.groupMessage.create({
-        data: {
-          cartId,
-          senderId: req.userId!,
-          senderDevice,
-          index,
-          version: 2,
-          iv,
-          ciphertext,
-          signature,
-        },
-        select: {
-          id: true,
-          senderId: true,
-          senderDevice: true,
-          index: true,
-          version: true,
-          iv: true,
-          ciphertext: true,
-          signature: true,
-          createdAt: true,
-        },
-      });
+      //
+      // Claimed and written in one step. The check used to be a read followed
+      // by an insert, with nothing holding the position in between: two
+      // messages sent at the same moment — which is exactly what two tabs, or
+      // a retry racing the original, produce — both read the position as free
+      // and both stored a row at it. There is no unique index to catch that
+      // (the column has a plain index), so both survived, and the recipient
+      // ratchets once: one of the two can never be opened by anybody, in a
+      // conversation whose whole promise is that it arrives. Serializable, so
+      // the database refuses one of a conflicting pair, and the refused one
+      // retries and finds the position taken.
+      const message = await withTxRetry(() =>
+        prisma.$transaction(
+          async (tx) => {
+            const clash = await tx.groupMessage.findFirst({
+              where: { cartId, senderDevice, index },
+              select: { id: true },
+            });
+            if (clash) throw new ApiError(409, "That chain position is already used");
+            return tx.groupMessage.create({
+              data: {
+                cartId,
+                senderId: req.userId!,
+                senderDevice,
+                index,
+                version: 2,
+                iv,
+                ciphertext,
+                signature,
+              },
+              select: {
+                id: true,
+                senderId: true,
+                senderDevice: true,
+                index: true,
+                version: true,
+                iv: true,
+                ciphertext: true,
+                signature: true,
+                createdAt: true,
+              },
+            });
+          },
+          CONTENDED_TX,
+        ),
+      );
 
       // The push cannot carry the message, because the server does not have it.
       // It says who spoke and where; the text appears once the app decrypts it.
@@ -507,12 +536,22 @@ groupChatRouter.post(
         where: { cartId, NOT: { userId: req.userId! } },
         select: { userId: true },
       });
+      // The name in the notification is the sender's to withhold too, and a
+      // lock-screen is the one place it is read by someone who never opened the
+      // app. Resolved per recipient, because "contacts" means a different set
+      // of people for each of them.
       for (const o of others) {
-        void sendPushToUser(o.userId, {
-          title: cart.name ?? "Group order",
-          body: `${me?.name ?? "Someone"} sent a message`,
-          url: `/food/group/${cartId}/chat`,
-        });
+        void privacyView(o.userId, [req.userId!], cartId)
+          .then((view) =>
+            sendPushToUser(o.userId, {
+              title: cart.name ?? "Group order",
+              body: `${view.nameFor(req.userId!, me?.name ?? "Someone")} sent a message`,
+              url: `/food/group/${cartId}/chat`,
+            }),
+          )
+          .catch(() => {
+            // A notification must never break the message it announces.
+          });
       }
 
       res.status(201).json({ message: { ...message, isYou: true } });

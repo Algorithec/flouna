@@ -51,6 +51,11 @@ export default function GroupStatusPage({
     api<GroupCart>(`/api/groups/${id}`)
       .then((c) => {
         setCart(c);
+        // Cleared on every success. The error replaces the whole screen and
+        // nothing ever unset it, so one dropped poll out of a request every
+        // four seconds left the group permanently showing a failure message
+        // while the polls behind it were answering fine.
+        setError("");
         // A cart that has been ordered has a tracking screen; sitting on the
         // member list after checkout is a dead end.
         if (c.status === "ordered" && c.orderId) router.replace(`/orders/${c.orderId}`);
@@ -237,7 +242,7 @@ export default function GroupStatusPage({
                 i < cart.members.length - 1 && "border-b border-line",
               )}
             >
-              <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[15px] font-bold text-accent">
+              <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[15px] font-bold text-accent-ink">
                 {m.name.trim().charAt(0).toUpperCase() || "?"}
                 {m.active && (
                   <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-card bg-success" />
@@ -254,7 +259,7 @@ export default function GroupStatusPage({
                 )}
               </span>
               {m.isHost && (
-                <span className="shrink-0 rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent">
+                <span className="shrink-0 rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent-ink">
                   {t("grp.admin")}
                 </span>
               )}

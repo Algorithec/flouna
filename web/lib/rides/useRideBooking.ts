@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { useI18n } from "@/components/i18n/I18nContext";
 import { resolvePlace, searchPlaces } from "@/lib/places";
 import type { RideQuote } from "@/components/chat/types";
 import type { Advice } from "@/components/ui/AdviceBanner";
@@ -70,6 +71,9 @@ export function useRideBooking(opts: {
   maxPickupMinutes?: number;
 } = {}) {
   const enabled = opts.enabled !== false;
+  // Both surfaces that render this hook show `error` to the customer, so the
+  // wording belongs to the language layer rather than to the hook.
+  const { t } = useI18n();
 
   const [pickup, setPickup] = useState<Place | null>(null);
   const [drop, setDrop] = useState<Place | null>(null);
@@ -132,7 +136,7 @@ export function useRideBooking(opts: {
   /** Reads the device position on demand. */
   const detectPickup = useCallback(() => {
     if (!navigator.geolocation) {
-      setError("This browser cannot share your location. Type your pickup below.");
+      setError(t("lp.unavailable"));
       return;
     }
     setError("");
@@ -157,14 +161,12 @@ export function useRideBooking(opts: {
         // refused permission from a slow fix or a broken button. Say which,
         // and say what they can do instead.
         setError(
-          err.code === err.PERMISSION_DENIED
-            ? "Location is blocked for this site. Allow it, or type your pickup below."
-            : "Could not get your location just now. Type your pickup below.",
+          err.code === err.PERMISSION_DENIED ? t("lp.denied") : t("rd.locateFailed"),
         );
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
     );
-  }, [nameFor]);
+  }, [nameFor, t]);
 
   /** Assigns whichever endpoint is currently being picked on the map. */
   const pickOnMap = useCallback(
@@ -331,15 +333,28 @@ export function useRideBooking(opts: {
       `/api/rides/route?fromLat=${pickup.lat}&fromLng=${pickup.lng}&toLat=${drop.lat}&toLng=${drop.lng}`,
     )
       .then((r) => !cancelled && setRoute(r))
-      .catch(() => !cancelled && setError("Could not calculate the route"));
+      .catch(() => !cancelled && setError(t("rd.routeFailed")));
     return () => {
       cancelled = true;
     };
-  }, [pickup, drop, routeVersion]);
+  }, [pickup, drop, routeVersion, t]);
 
   const { maxFarePaise, maxPickupMinutes } = opts;
+  /**
+   * Which quote request is the current one.
+   *
+   * The fares are refetched whenever the route or the vehicle changes, and the
+   * requests are not guaranteed to come back in order. Without this, a slow
+   * answer for the previous trip could land after a fast one for the current
+   * trip and replace it — including `setSelected`, which is the fare the rider
+   * then books. The server re-prices on booking and would refuse, so the
+   * symptom was a refusal the rider could not explain rather than a wrong
+   * charge, but the list on screen was still for a trip nobody had asked for.
+   */
+  const quoteRun = useRef(0);
   const loadQuotes = useCallback(() => {
     if (!route) return;
+    const run = ++quoteRun.current;
     const limits =
       (maxFarePaise ? `&maxFarePaise=${maxFarePaise}` : "") +
       (maxPickupMinutes ? `&maxPickupMinutes=${maxPickupMinutes}` : "");
@@ -352,6 +367,7 @@ export function useRideBooking(opts: {
       `/api/rides/quotes?distanceKm=${route.distanceKm.toFixed(2)}&rideMinutes=${route.rideMinutes}&vehicle=${vehicle}${limits}`,
     )
       .then((d) => {
+        if (run !== quoteRun.current) return;
         setQuotes(d.quotes);
         setAdvice(d.advice ?? null);
         setSelected(d.quotes[0] ?? null);
@@ -359,11 +375,12 @@ export function useRideBooking(opts: {
         setUnmetNote(d.unmetNote ?? null);
       })
       .catch(() => {
-        setError("Could not fetch ride options");
+        if (run !== quoteRun.current) return;
+        setError(t("rd.optionsFailed"));
         setQuoteDecisionId(null);
         setUnmetNote(null);
       });
-  }, [route, vehicle, maxFarePaise, maxPickupMinutes]);
+  }, [route, vehicle, maxFarePaise, maxPickupMinutes, t]);
   useEffect(loadQuotes, [loadQuotes]);
 
   const mapPoints = useMemo(
@@ -416,7 +433,7 @@ export function useRideBooking(opts: {
       attemptKey.current = newAttemptKey();
       return d.order.id;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not book the ride");
+      setError(e instanceof Error ? e.message : t("rd.bookFailed"));
       // A refusal can mean the fare moved. Re-pricing from the route already
       // held would show the old fare again and the rider would loop, so the
       // route is fetched afresh; the server now answers with the one it just

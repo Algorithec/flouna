@@ -36,6 +36,7 @@ import {
 import { RideResultMap } from "@/components/rides/RideResultMap";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import type {
   FoodQuote,
   ProductQuote,
@@ -44,17 +45,21 @@ import type {
   PickReason,
 } from "./types";
 
+// The label is a key, not a word: these badges sit on the one surface the
+// whole product is read through, and they were the last English left on a
+// Telugu result card.
 const PICK_BADGES: Record<
   PickReason,
-  { label: string; icon: typeof Star; className: string }
+  { labelKey: TranslationKey; icon: typeof Star; className: string }
 > = {
-  top_rated: { label: "TOP RATED", icon: Award, className: "bg-[#efe7fb] text-[#8b5cf6]" },
-  best_price: { label: "BEST PRICE", icon: Tag, className: "bg-accent-soft text-accent" },
-  fastest: { label: "FASTEST", icon: Zap, className: "bg-success-soft text-success" },
-  best_overall: { label: "BEST OVERALL", icon: Sparkles, className: "bg-accent-soft text-accent" },
+  top_rated: { labelKey: "rc.badge.topRated", icon: Award, className: "bg-[#efe7fb] text-[#8b5cf6]" },
+  best_price: { labelKey: "rc.badge.bestPrice", icon: Tag, className: "bg-accent-soft text-accent-ink" },
+  fastest: { labelKey: "rc.badge.fastest", icon: Zap, className: "bg-success-soft text-success" },
+  best_overall: { labelKey: "rc.badge.bestOverall", icon: Sparkles, className: "bg-accent-soft text-accent-ink" },
 };
 
 function PickBadge({ reason }: { reason?: PickReason }) {
+  const { t } = useI18n();
   if (!reason) return null;
   const b = PICK_BADGES[reason];
   const Icon = b.icon;
@@ -65,7 +70,7 @@ function PickBadge({ reason }: { reason?: PickReason }) {
         b.className,
       )}
     >
-      <Icon size={11} /> {b.label}
+      <Icon size={11} /> {t(b.labelKey)}
     </span>
   );
 }
@@ -102,7 +107,7 @@ function MoreOptions({
     <button
       type="button"
       onClick={onShow}
-      className="tap-target w-full rounded-full border border-accent/45 bg-accent-soft/20 px-4 py-2.5 text-[13px] font-semibold text-accent transition-colors hover:bg-accent-soft/50"
+      className="tap-target w-full rounded-full border border-accent/45 bg-accent-soft/20 px-4 py-2.5 text-[13px] font-semibold text-accent-ink transition-colors hover:bg-accent-soft/50"
     >
       {t("hm.viewFull")}
     </button>
@@ -118,9 +123,14 @@ export function FoodRecommendation({
 }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(!compact);
-  const alts = (expanded ? rec.alternatives : rec.alternatives.slice(0, 3)).filter(
+  // Filtered first, then cut. Cutting first and filtering after left the hidden
+  // count including the best pick, which is never in the list: a card showing
+  // everything it had still offered "view the full list", and the button only
+  // set a flag that was already set.
+  const allAlts = rec.alternatives.filter(
     (q) => !(q.dishId === rec.best.dishId && q.platform === rec.best.platform),
   );
+  const alts = expanded ? allAlts : allAlts.slice(0, 3);
   const insightProps = {
     quote: rec.best.reviewSummary?.trim() || undefined,
     hacks: [
@@ -166,7 +176,7 @@ export function FoodRecommendation({
 
       <WhyBest best={rec.best} alternatives={rec.alternatives} why={rec.why} />
 
-      <ProvidersHeader count={1 + rec.alternatives.length} />
+      <ProvidersHeader count={1 + allAlts.length} />
 
       <FoodHeroCard q={rec.best} decisionId={rec.decisionId} />
 
@@ -184,13 +194,13 @@ export function FoodRecommendation({
       )}
 
       <MoreOptions
-        hidden={rec.alternatives.length - alts.length}
+        hidden={allAlts.length - alts.length}
         onShow={() => setExpanded(true)}
       />
 
       <Link
         href="/food/group"
-        className="tap-target flex w-full items-center justify-center rounded-2xl border border-accent/45 bg-accent-soft/30 px-4 py-3 text-[14px] font-semibold text-accent transition-colors hover:bg-accent-soft/50"
+        className="tap-target flex w-full items-center justify-center rounded-2xl border border-accent/45 bg-accent-soft/30 px-4 py-3 text-[14px] font-semibold text-accent-ink transition-colors hover:bg-accent-soft/50"
       >
         {t("rc.groupOrdering")}
       </Link>
@@ -303,7 +313,7 @@ export function RideRecommendation({
       {rec.advice && <AdviceBanner advice={rec.advice} />}
 
       {rec.scheduledAt && (
-        <p className="flex items-center gap-1.5 self-start rounded-pill bg-accent-soft px-3 py-1 text-[12px] font-semibold text-accent">
+        <p className="flex items-center gap-1.5 self-start rounded-pill bg-accent-soft px-3 py-1 text-[12px] font-semibold text-accent-ink">
           <Clock size={12} /> {t("rc.scheduledFor")}{" "}
           {new Date(rec.scheduledAt).toLocaleString("en-IN", {
             hour: "numeric",
@@ -511,15 +521,17 @@ export function ShopRecommendation({
 }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(!compact);
-  const alts = (expanded ? rec.alternatives : rec.alternatives.slice(0, 3)).filter(
+  // Filtered before the cut; see FoodRecommendation above.
+  const allAlts = rec.alternatives.filter(
     (q) => !(q.productId === rec.best.productId && q.platform === rec.best.platform),
   );
+  const alts = expanded ? allAlts : allAlts.slice(0, 3);
   return (
     <ResultStack>
       <PickBadge reason={rec.pickReason} />
       <PersonalNote note={rec.personalNote} />
       <ShopWhyBest why={rec.why} best={rec.best} alternatives={rec.alternatives} />
-      <ProvidersHeader count={1 + rec.alternatives.length} />
+      <ProvidersHeader count={1 + allAlts.length} />
       <ShopHeroCard q={rec.best} />
       {alts.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -530,7 +542,7 @@ export function ShopRecommendation({
         </div>
       )}
       <MoreOptions
-        hidden={rec.alternatives.length - alts.length}
+        hidden={allAlts.length - alts.length}
         onShow={() => setExpanded(true)}
       />
       <FlounaInsights

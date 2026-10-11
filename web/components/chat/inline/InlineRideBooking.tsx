@@ -377,7 +377,7 @@ export function InlineRideBooking({
                     <button
                       type="button"
                       onClick={() => setShowAllOptions(true)}
-                      className="tap-target w-full rounded-full border border-accent/45 bg-accent-soft/20 px-4 py-2.5 text-[13px] font-semibold text-accent transition-colors hover:bg-accent-soft/50"
+                      className="tap-target w-full rounded-full border border-accent/45 bg-accent-soft/20 px-4 py-2.5 text-[13px] font-semibold text-accent-ink transition-colors hover:bg-accent-soft/50"
                     >
                       {t("hm.viewFull")}
                     </button>

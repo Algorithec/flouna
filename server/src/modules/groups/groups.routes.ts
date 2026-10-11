@@ -14,6 +14,7 @@ import { sendPushToUser } from "../notifications/push.service.js";
 import { joinLimiter } from "../../middleware/rateLimit.js";
 import { groupChatRouter } from "./chat.routes.js";
 import { suggestForCart } from "./suggestion.service.js";
+import { privacyView } from "./privacy.js";
 
 export const groupsRouter = Router();
 groupsRouter.use(requireAuth);
@@ -77,74 +78,6 @@ const SEATS: Record<string, number> = { auto: 3, cab: 4 };
 
 // Builds the per-member breakdown + split shown to everyone. Food carts split
 // by what each member added; ride carts split the fare equally.
-/** A member is "active" if one of their sessions was used in this window. */
-const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
-
-/**
- * Applies each member's own Privacy settings to what the viewer is shown.
- *
- * profileVisibility decides whether the viewer sees a real name at all:
- * "everyone" always does, "nobody" never does, and "contacts" does only if the
- * two have shared some other cart before. activityStatus decides whether the
- * viewer is told they're online. Neither setting ever hides you from yourself.
- */
-async function privacyView(
-  viewerId: string,
-  memberIds: string[],
-  cartId: string,
-) {
-  if (memberIds.length === 0) {
-    return { nameFor: (_id: string, name: string) => name, activeFor: () => false };
-  }
-
-  const users = await prisma.user.findMany({
-    where: { id: { in: memberIds } },
-    select: { id: true, profileVisibility: true, activityStatus: true },
-  });
-
-  // Carts the viewer belongs to, so "contacts" can mean something concrete:
-  // people they have actually shared an order with before this one.
-  const viewerCarts = await prisma.groupCartMember.findMany({
-    where: { userId: viewerId, NOT: { cartId } },
-    select: { cartId: true },
-  });
-  const sharedIds = new Set<string>();
-  if (viewerCarts.length > 0) {
-    const shared = await prisma.groupCartMember.findMany({
-      where: {
-        cartId: { in: viewerCarts.map((c) => c.cartId) },
-        userId: { in: memberIds },
-      },
-      select: { userId: true },
-    });
-    for (const s of shared) sharedIds.add(s.userId);
-  }
-
-  const since = new Date(Date.now() - ACTIVE_WINDOW_MS);
-  const recent = await prisma.refreshToken.findMany({
-    where: { userId: { in: memberIds }, revokedAt: null, lastUsedAt: { gte: since } },
-    select: { userId: true },
-  });
-  const activeIds = new Set(recent.map((r) => r.userId));
-
-  const settings = new Map(users.map((u) => [u.id, u]));
-
-  return {
-    nameFor(id: string, name: string) {
-      if (id === viewerId) return name;
-      const s = settings.get(id);
-      if (!s || s.profileVisibility === "everyone") return name;
-      if (s.profileVisibility === "contacts" && sharedIds.has(id)) return name;
-      return "Flouna user";
-    },
-    activeFor(id: string) {
-      if (id === viewerId) return true;
-      const s = settings.get(id);
-      if (!s?.activityStatus) return false;
-      return activeIds.has(id);
-    },
-  };
-}
 
 async function summarize(cartId: string, viewerId: string) {
   const cart = (await prisma.groupCart.findUnique({
@@ -512,10 +445,40 @@ groupsRouter.patch(
 
 // ---------- nudge the people who have not ordered ----------
 //
-// Rate-limited by its own nature: it only reaches members with nothing in the
-// cart, so once someone orders they stop being remindable. That is a better
-// throttle than a timer, because it makes the nudge impossible to weaponise
-// into a stream of notifications.
+// WHO it reaches is limited by its own nature: only members with nothing in the
+// cart, so once someone orders they stop being remindable.
+//
+// How OFTEN each of them hears about it was not limited at all, and the comment
+// that used to sit here claimed it was. Those are different questions. A host
+// who keeps tapping sent an unbounded stream of notifications to the lock
+// screen of everyone still reading the menu, and a member cannot order their
+// way out of a cart they did not want to be in.
+//
+// So a reminder is per PERSON, not per tap: somebody already nudged in the last
+// few minutes is skipped, and the count that comes back is who was actually
+// told rather than who was eligible. Kept in memory on purpose — this is a
+// nudge, and the worst a restart can cost is one extra notification, which is
+// not worth a column and a write on the hot path.
+const REMIND_COOLDOWN_MS = 5 * 60_000;
+const remindedAt = new Map<string, number>();
+
+/** Who among `userIds` has not been nudged about this cart recently. */
+function dueForReminder(cartId: string, userIds: string[]): string[] {
+  const now = Date.now();
+  // Housekeeping first, so the map cannot grow without bound.
+  for (const [key, at] of remindedAt) {
+    if (now - at > REMIND_COOLDOWN_MS) remindedAt.delete(key);
+  }
+  const due: string[] = [];
+  for (const userId of userIds) {
+    const key = `${cartId}:${userId}`;
+    if (remindedAt.has(key)) continue;
+    remindedAt.set(key, now);
+    due.push(userId);
+  }
+  return due;
+}
+
 groupsRouter.post("/:id/remind", async (req, res, next) => {
   try {
     const cart = await assertMember(req.params.id!, req.userId!);
@@ -535,16 +498,19 @@ groupsRouter.post("/:id/remind", async (req, res, next) => {
     });
     const done = new Set(ordered.map((o) => o.userId));
     const waiting = members.filter((m) => !done.has(m.userId));
+    const due = dueForReminder(cart.id, waiting.map((m) => m.userId));
 
     const label = `${cart.emoji ?? ""} ${cart.name ?? "Group order"}`.trim();
-    for (const m of waiting) {
-      void sendPushToUser(m.userId, {
+    for (const userId of due) {
+      void sendPushToUser(userId, {
         title: label,
         body: "Everyone is waiting on your order.",
         url: `/food/group/${cart.id}`,
       });
     }
-    res.json({ reminded: waiting.length });
+    // What was actually sent. Reporting the eligible count instead would tell
+    // the host four people were nudged when none of them were.
+    res.json({ reminded: due.length, waiting: waiting.length });
   } catch (err) {
     next(err);
   }
@@ -677,7 +643,16 @@ groupsRouter.post(
 // ---------- remove own item ----------
 groupsRouter.delete("/:id/items/:itemId", async (req, res, next) => {
   try {
-    await assertMember(req.params.id!, req.userId!);
+    const cart = await assertMember(req.params.id!, req.userId!);
+    // Once the host has checked out, the cart is the record of who owes what:
+    // it is the screen the host chases shares from, and the UPI links were
+    // built off it. Removing an item was allowed at any time, so a member could
+    // order, let the host pay for the lot, then delete their own lines and the
+    // settle-up screen would show them owing nothing. The food is bought by
+    // then, so there is nothing to take out of the order either.
+    if (cart.status !== "open") {
+      throw new ApiError(409, "This group order has been placed, items can't be removed");
+    }
     // You can only remove your own items.
     const deleted = await prisma.groupCartItem.deleteMany({
       where: { id: req.params.itemId, cartId: req.params.id, userId: req.userId! },
@@ -787,21 +762,34 @@ groupsRouter.post(
         const memberCount = Math.max(1, cart.members.length);
         const split = splitFare(quote.effectivePaise, memberCount);
         const sharePaise = split.otherPaise;
-        const shares = cart.members.map((m) => ({
-          userId: m.userId,
-          name: m.user.name,
-          sharePaise: m.userId === cart.hostId ? split.hostPaise : sharePaise,
-          isHost: m.userId === cart.hostId,
-          upiLink:
-            m.userId === cart.hostId || !hostUpiId
-              ? null
-              : upiLink({
-                  payeeUpi: hostUpiId,
-                  payeeName: hostName,
-                  amountPaise: sharePaise,
-                  note: `Shared ride (${m.user.name})`,
-                }),
-        }));
+        // Each rider's Privacy setting still applies at checkout. These names
+        // were read straight off the User row, so the settle-up screen — and
+        // the UPI note, and the copy written into the order record for good —
+        // printed the real name of a rider the cart screen had already agreed
+        // to call "Flouna user".
+        const rideView = await privacyView(
+          req.userId!,
+          cart.members.map((m) => m.userId),
+          cart.id,
+        );
+        const shares = cart.members.map((m) => {
+          const name = rideView.nameFor(m.userId, m.user.name);
+          return {
+            userId: m.userId,
+            name,
+            sharePaise: m.userId === cart.hostId ? split.hostPaise : sharePaise,
+            isHost: m.userId === cart.hostId,
+            upiLink:
+              m.userId === cart.hostId || !hostUpiId
+                ? null
+                : upiLink({
+                    payeeUpi: hostUpiId,
+                    payeeName: hostName,
+                    amountPaise: sharePaise,
+                    note: `Shared ride (${name})`,
+                  }),
+          };
+        });
 
         // The group is claimed and its order created together, or neither.
         // Checkout used to read the group as open, create the order, then mark
@@ -880,22 +868,28 @@ groupsRouter.post(
       const hostName =
         owed.get(cart.hostId)?.name ?? cart.items[0]?.user.name ?? "Host";
 
-      const shares = [...owed.entries()].map(([userId, m]) => ({
-        userId,
-        name: m.name,
-        sharePaise: m.sharePaise,
-        isHost: userId === cart.hostId,
-        // Host doesn't pay themselves; others get a UPI link if host gave an ID.
-        upiLink:
-          userId === cart.hostId || !hostUpiId
-            ? null
-            : upiLink({
-                payeeUpi: hostUpiId,
-                payeeName: hostName,
-                amountPaise: m.sharePaise,
-                note: `Group order share (${m.name})`,
-              }),
-      }));
+      // Same Privacy pass as the ride split above, and for the same reason.
+      const foodView = await privacyView(req.userId!, [...owed.keys()], cart.id);
+
+      const shares = [...owed.entries()].map(([userId, m]) => {
+        const name = foodView.nameFor(userId, m.name);
+        return {
+          userId,
+          name,
+          sharePaise: m.sharePaise,
+          isHost: userId === cart.hostId,
+          // Host doesn't pay themselves; others get a UPI link if host gave an ID.
+          upiLink:
+            userId === cart.hostId || !hostUpiId
+              ? null
+              : upiLink({
+                  payeeUpi: hostUpiId,
+                  payeeName: hostName,
+                  amountPaise: m.sharePaise,
+                  note: `Group order share (${name})`,
+                }),
+        };
+      });
 
       // The host's address is where the whole group order gets delivered, so
       // it's required here just like a solo food order.

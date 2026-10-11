@@ -6,8 +6,32 @@
   --color-ink: #3d1c00; /* headings / primary text (deep brown) */
   --color-accent: #e8651a; /* brand orange */
   --color-accent-soft: #ffe9db; /* orange tint for chips/badges */
-  --color-cocoa: #8b5e3c; /* secondary text + primary buttons */
+  /* Accent *text*, for labels and pills drawn on accent-soft.
+     The brand orange is a fill colour: at #e8651a on #ffe9db it reads about
+     3.1:1, under the 4.5:1 normal text needs, which is most of the result
+     surface (BEST PRICE, the scheduled-for pill, "view the full list"). This
+     is the same hue carried to a weight that passes, and it has its own dark
+     value below — a darkened orange on the dark tint would be worse than what
+     it replaced. */
+  --color-accent-ink: #b33b06;
+  --color-cocoa: #8b5e3c; /* secondary text */
+  /* The primary button's fill, split out of cocoa.
+     One token did both jobs, and the two want opposite things in dark mode:
+     cocoa has to lighten to stay readable as secondary text, which turned
+     every primary button — Pay, Place order, Book ride — into white type on a
+     light taupe at about 2:1. This is a fill, so it darkens instead. */
+  --color-btn: #8b5e3c;
+  --color-btn-hover: #7a5234;
+  /* `ink` is a text colour and correctly flips to near-white in dark mode.
+     In about ten places it was used as a *fill* under white type instead —
+     the cancel-order sheet's confirm, the error and not-found pages' only
+     action, the share button on an invite, the cart count badge, the driver
+     call button — and all of those became white on white. This is the fill, so
+     it stays dark in both themes. */
+  --color-ink-fill: #3d1c00;
+  --color-ink-fill-hover: #2c1500;
   --color-beige: #f0e6de; /* secondary buttons / muted surfaces */
+  --color-beige-hover: #e6d8cc;
   --color-card: #ffffff; /* cards */
   --color-line: #eee3da; /* hairline borders */
   --color-success: #1ca65c;
@@ -150,6 +174,14 @@
   --color-line: #2b2b2b;
   --color-beige: #262626;
   --color-cocoa: #b9a99c;
+  /* Darkened, not lightened: this is what white button type sits on. */
+  --color-btn: #7a5234;
+  --color-btn-hover: #8b5e3c;
+  --color-beige-hover: #333333;
+  /* Lifted off near-black so the pill is visibly a pill; still dark enough to
+     carry white type at about 9:1. */
+  --color-ink-fill: #5a2d05;
+  --color-ink-fill-hover: #73400f;
   --color-muted: #9c8d83;
   --color-surface: #191919;
   --color-hairline: #242424;
@@ -159,6 +191,8 @@
      tints below — a pale advisory banner over light ink text, unreadable on
      a dark ground. */
   --color-accent-soft: #3a2a1f;
+  /* Lightened rather than darkened: the tint it sits on is now near-black. */
+  --color-accent-ink: #ff9a5c;
   --color-success-soft: #16301f;
   --color-warning-soft: #332a10;
   --color-danger-soft: #331512;

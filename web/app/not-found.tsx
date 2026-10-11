@@ -22,7 +22,7 @@ export default function NotFound() {
         <div className="mt-8 flex w-full flex-col gap-3">
           <Link
             href="/home"
-            className="flex h-13 items-center justify-center gap-2 rounded-pill bg-ink text-[15px] font-semibold text-white shadow-lift transition-colors hover:bg-[#2c1500]"
+            className="flex h-13 items-center justify-center gap-2 rounded-pill bg-ink-fill text-[15px] font-semibold text-white shadow-lift transition-colors hover:bg-ink-fill-hover"
           >
             <Home size={16} /> Back to home
           </Link>

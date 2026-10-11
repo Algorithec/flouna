@@ -90,14 +90,22 @@ export default function FoodLandingPage() {
 
   useEffect(() => {
     if (!activeQuery) return;
-    const t = setTimeout(() => {
+    // `active` as well as the debounce: typing "pizza" fires one request, but
+    // changing the category while one is in flight fires another, and the two
+    // do not have to come back in order. The late answer used to win, leaving
+    // the results list showing dishes for a query nobody had asked for.
+    let active = true;
+    const timer = setTimeout(() => {
       api<{ quotes: FoodQuote[] }>(
         `/api/food/search?q=${encodeURIComponent(activeQuery)}`,
       )
-        .then((d) => setResults(d.quotes))
-        .catch(() => setResults([]));
+        .then((d) => active && setResults(d.quotes))
+        .catch(() => active && setResults([]));
     }, 250);
-    return () => clearTimeout(t);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [activeQuery]);
 
   const showSearch = activeQuery !== "" && results !== null;
@@ -199,7 +207,7 @@ export default function FoodLandingPage() {
                   className={cn(
                     "flex size-[52px] items-center justify-center rounded-[16px] border transition-colors",
                     active
-                      ? "border-accent bg-accent-soft text-accent"
+                      ? "border-accent bg-accent-soft text-accent-ink"
                       : "border-line bg-card text-cocoa hover:bg-beige/40",
                   )}
                 >
@@ -401,7 +409,7 @@ export default function FoodLandingPage() {
             className="h-9 min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-cocoa/50"
           />
           <VoiceButton onTranscript={setQuery} onFinal={setQuery} />
-          <span className="flex size-[42px] shrink-0 items-center justify-center rounded-full bg-ink text-white">
+          <span className="flex size-[42px] shrink-0 items-center justify-center rounded-full bg-ink-fill text-white">
             <ArrowRight size={17} />
           </span>
         </div>
@@ -473,7 +481,7 @@ function DishRow({ q }: { q: FoodQuote }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <DishArt name={q.name} image={q.image} size={48} />
         <div className="min-w-0 flex-1 basis-36">
-          <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
+          <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-ink">
             {q.tag}
           </span>
           <p className="mt-1 truncate text-[15px] font-bold text-ink">{q.name}</p>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Search, Ban, RotateCcw, BadgeCheck } from "lucide-react";
-import { api } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Loader2, Search, Ban, RotateCcw, BadgeCheck } from "lucide-react";
+import { api, ApiClientError } from "@/lib/api";
 import { useOperator } from "@/components/console/useOperator";
 import { ConsoleShell, PageTitle } from "@/components/console/ConsoleShell";
 
@@ -26,17 +26,28 @@ export default function AdminUsersPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Two searches in quick succession need not come back in order, and the late
+  // answer won: the table could be showing the results of a query the operator
+  // had already replaced.
+  const req = useRef(0);
 
   function load(query = q) {
+    const seq = ++req.current;
     api<{ users: Row[]; total: number }>(
       `/api/console/admin/users?q=${encodeURIComponent(query)}`,
     )
       .then((d) => {
+        if (seq !== req.current) return;
         setRows(d.users);
         setTotal(d.total);
       })
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (seq === req.current) setRows([]);
+      })
+      .finally(() => {
+        if (seq === req.current) setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -46,6 +57,7 @@ export default function AdminUsersPage() {
 
   async function toggleSuspend(row: Row) {
     setBusy(row.id);
+    setError(null);
     try {
       await api(`/api/console/admin/users/${row.id}/suspend`, {
         method: "PATCH",
@@ -54,8 +66,17 @@ export default function AdminUsersPage() {
       setRows((rs) =>
         rs.map((r) => (r.id === row.id ? { ...r, suspended: !r.suspended } : r)),
       );
-    } catch {
-      /* operator accounts can't be suspended here — ignore */
+    } catch (err) {
+      // The swallowed case was operator accounts, and the button is not even
+      // rendered for those — so in practice this threw away every real
+      // failure. The row stayed as it was and nothing said why, which on a
+      // suspension is the difference between an account being shut and an
+      // operator believing it was.
+      setError(
+        err instanceof ApiClientError
+          ? `That account was not changed: ${err.message}`
+          : "That account was not changed.",
+      );
     } finally {
       setBusy(null);
     }
@@ -89,12 +110,23 @@ export default function AdminUsersPage() {
         />
       </form>
 
+      {error && (
+        <p className="mb-3 flex items-center gap-2 rounded-lg bg-(--c-red)/10 px-3 py-2 text-[13px] text-(--c-red)">
+          <AlertTriangle size={15} /> {error}
+        </p>
+      )}
+
+      {/* overflow-x-auto on the table wrapper, not overflow-hidden: these
+         tables are wider than a phone, and hidden overflow clipped the
+         right-hand columns away instead of letting them scroll. The row
+         actions live in those columns, so below lg the rows could be read
+         and not used. */}
       {loading ? (
         <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-(--c-border)">
+        <div className="overflow-x-auto rounded-xl border border-(--c-border)">
           <table className="w-full text-left text-[13px]">
             <thead className="bg-white text-[12px] uppercase tracking-wide text-(--c-muted)">
               <tr>

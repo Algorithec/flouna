@@ -122,7 +122,7 @@ export function CancelOrderSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={isRide ? t("co.cancelRide") : t("co.cancelOrder")}
@@ -246,7 +246,7 @@ export function CancelOrderSheet({
             </p>
             <button
               onClick={onClose}
-              className="mt-6 h-[52px] w-full rounded-pill bg-ink text-[16px] font-bold text-white transition-opacity hover:opacity-90"
+              className="mt-6 h-[52px] w-full rounded-pill bg-ink-fill text-[16px] font-bold text-white transition-opacity hover:opacity-90"
             >
               {t("cx.done")}
             </button>

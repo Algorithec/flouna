@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Minus, Plus, Trash2, ShoppingBag, Utensils } from "lucide-react";
 import { api } from "@/lib/api";
@@ -33,8 +33,21 @@ export default function GroupCartPage({
   const [cart, setCart] = useState<GroupCart | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Bumped on either side of every change this device makes. The cart is
+  // polled every four seconds, and a poll already in flight when you tap minus
+  // answers with the cart as it was before: that answer landed after the one
+  // the DELETE returned and overwrote it, so the line came back, sat there for
+  // a poll, and vanished again. The stepper looked broken and a second tap
+  // removed a second line.
+  const writes = useRef(0);
+
   const load = useCallback(() => {
-    api<GroupCart>(`/api/groups/${id}`).then(setCart).catch(() => {});
+    const at = writes.current;
+    api<GroupCart>(`/api/groups/${id}`)
+      .then((c) => {
+        if (writes.current === at) setCart(c);
+      })
+      .catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -45,11 +58,13 @@ export default function GroupCartPage({
 
   async function removeItem(item: GroupItem) {
     setBusy(true);
+    writes.current += 1;
     try {
       setCart(await api<GroupCart>(`/api/groups/${id}/items/${item.id}`, { method: "DELETE" }));
     } catch (e) {
       toast(e instanceof Error ? e.message : t("grp.removeFailed"));
     } finally {
+      writes.current += 1;
       setBusy(false);
     }
   }
@@ -59,6 +74,7 @@ export default function GroupCartPage({
   // stepper honest without inventing an update route the cart does not have.
   async function addOne(item: GroupItem) {
     setBusy(true);
+    writes.current += 1;
     try {
       setCart(
         await api<GroupCart>(`/api/groups/${id}/items`, {
@@ -69,6 +85,7 @@ export default function GroupCartPage({
     } catch (e) {
       toast(e instanceof Error ? e.message : t("grp.addFailed"));
     } finally {
+      writes.current += 1;
       setBusy(false);
     }
   }
@@ -121,14 +138,14 @@ export default function GroupCartPage({
           {groups.map(({ member, items }) => (
             <Card key={member.userId} className="py-3.5">
               <div className="flex items-center gap-2.5">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[14px] font-bold text-accent">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[14px] font-bold text-accent-ink">
                   {member.name.trim().charAt(0).toUpperCase() || "?"}
                 </span>
                 <p className="min-w-0 flex-1 truncate text-[15px] font-bold text-ink">
                   {member.name}
                 </p>
                 {member.isYou && (
-                  <span className="shrink-0 rounded-pill bg-ink px-2.5 py-0.5 text-[11px] font-bold text-white">
+                  <span className="shrink-0 rounded-pill bg-ink-fill px-2.5 py-0.5 text-[11px] font-bold text-white">
                     {t("grp.youBadge")}
                   </span>
                 )}

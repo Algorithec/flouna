@@ -289,7 +289,7 @@ export default function DriverChatPage() {
                 key={q}
                 onClick={() => void send(q)}
                 disabled={sending}
-                className="tap-target shrink-0 rounded-pill border border-accent/40 bg-accent-soft/40 px-3 py-1.5 text-[12px] font-semibold text-accent disabled:opacity-60"
+                className="tap-target shrink-0 rounded-pill border border-accent/40 bg-accent-soft/40 px-3 py-1.5 text-[12px] font-semibold text-accent-ink disabled:opacity-60"
               >
                 {q}
               </button>
