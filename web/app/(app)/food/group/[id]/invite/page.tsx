@@ -160,7 +160,7 @@ export default function GroupInvitePage({
         <button
           onClick={() => copy("link")}
           disabled={!joinUrl}
-          className="tap-target flex shrink-0 items-center gap-1.5 rounded-pill bg-ink px-3.5 py-1.5 text-[12px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="tap-target flex shrink-0 items-center gap-1.5 rounded-pill bg-ink-fill px-3.5 py-1.5 text-[12px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {copied === "link" ? <Check size={13} /> : <Copy size={13} />}
           {copied === "link" ? t("grp.copied") : t("grp.copyLink")}

@@ -27,6 +27,12 @@ export default function GroupRidePage({
   const back = useBackTo("/rides");
   const [cart, setCart] = useState<GroupCart | null>(null);
   const [error, setError] = useState("");
+  // Separate from `error`, which belongs to the booking attempt. One state for
+  // both meant a refused booking wrote a message and the poll four seconds
+  // later wiped it, and a dropped poll wrote a message that nothing ever
+  // cleared — so the screen either lost the reason the booking failed or kept
+  // a stale failure line under a list that was loading fine.
+  const [loadError, setLoadError] = useState("");
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [hostUpi, setHostUpi] = useState("");
@@ -35,8 +41,11 @@ export default function GroupRidePage({
 
   const load = useCallback(() => {
     api<GroupCart>(`/api/groups/${id}`)
-      .then(setCart)
-      .catch((e) => setError(e instanceof Error ? e.message : t("od.loadFailed")));
+      .then((c) => {
+        setCart(c);
+        setLoadError("");
+      })
+      .catch((e) => setLoadError(e instanceof Error ? e.message : t("od.loadFailed")));
   }, [id, t]);
 
   // Poll so everyone sees riders joining (and the booked state) live.
@@ -95,7 +104,7 @@ export default function GroupRidePage({
   if (!cart) {
     return (
       <div className="mx-auto max-w-xl px-4 py-10">
-        <p className="text-[14px] text-cocoa">{error || t("dp.loading")}</p>
+        <p className="text-[14px] text-cocoa">{loadError || t("dp.loading")}</p>
       </div>
     );
   }

@@ -83,11 +83,19 @@ export function useCheckout(
      * payment inside a conversation can leave the conversation standing.
      */
     redirectTarget?: "_self" | "_modal";
+    /**
+     * Which method the picker opens on.
+     *
+     * A surface that already asked the question passes the answer, so the
+     * buyer is not asked it twice and given a different default the second
+     * time. Group checkout asks on its own screen.
+     */
+    initialMethod?: PayMethod;
   } = {},
 ) {
   const [status, setStatus] = useState<CheckoutStatus | null>(null);
   const [stage, setStage] = useState<PayStage>("select");
-  const [method, setMethod] = useState<PayMethod>("upi");
+  const [method, setMethod] = useState<PayMethod>(opts.initialMethod ?? "upi");
   const [failed, setFailed] = useState<FailedAttempt | null>(null);
   const [paidWithCash, setPaidWithCash] = useState(false);
   const [error, setError] = useState("");
