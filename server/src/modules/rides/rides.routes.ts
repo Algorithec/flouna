@@ -47,11 +47,18 @@ const DEMO_PLACES = [
  * failure or a throttled connection produced a 500 and took ride booking down
  * with it. That is the exact shape of a venue wifi, so it is the shape that
  * matters most.
+ *
+ * Reading the body is part of the call, so it is inside the same guard. It was
+ * not: a 200 carrying something other than JSON — which is precisely what a
+ * captive portal on a venue's wifi answers every request with — threw out of
+ * `response.json()` at the call site and became a 500, leaving the offline
+ * fallback sitting unused a few lines below.
  */
-async function tryFetch(url: URL, ms = 5000): Promise<Response | null> {
+async function tryFetchJson<T>(url: URL, ms = 5000): Promise<T | null> {
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(ms) });
-    return r.ok ? r : null;
+    if (!r.ok) return null;
+    return (await r.json()) as T;
   } catch {
     return null;
   }
@@ -74,23 +81,22 @@ ridesRouter.get("/reverse", async (req, res, next) => {
       url.searchParams.set("limit", "1");
       url.searchParams.set("apiKey", env.GEOAPIFY_KEY);
       // Bounded wait — a hanging geocode must not freeze the address form.
-      const r = await tryFetch(url);
-      if (r) {
-        const data = (await r.json()) as {
-          features?: Array<{
-            properties: {
-              name?: string;
-              housenumber?: string;
-              street?: string;
-              formatted?: string;
-              address_line1?: string;
-              suburb?: string;
-              city?: string;
-              state?: string;
-              postcode?: string;
-            };
-          }>;
-        };
+      const data = await tryFetchJson<{
+        features?: Array<{
+          properties: {
+            name?: string;
+            housenumber?: string;
+            street?: string;
+            formatted?: string;
+            address_line1?: string;
+            suburb?: string;
+            city?: string;
+            state?: string;
+            postcode?: string;
+          };
+        }>;
+      }>(url);
+      if (data) {
         const p = data.features?.[0]?.properties;
         if (p) {
           // Structured parts let the address form auto-fill itself from a
@@ -182,20 +188,19 @@ ridesRouter.get("/geocode", async (req, res, next) => {
         url.searchParams.set("bias", `proximity:${near.data.lng},${near.data.lat}`);
       }
       url.searchParams.set("apiKey", env.GEOAPIFY_KEY);
-      const r = await tryFetch(url);
-      if (r) {
-        const data = (await r.json()) as {
-          features?: Array<{
-            properties: {
-              name?: string;
-              formatted?: string;
-              suburb?: string;
-              city?: string;
-              lat: number;
-              lon: number;
-            };
-          }>;
-        };
+      const data = await tryFetchJson<{
+        features?: Array<{
+          properties: {
+            name?: string;
+            formatted?: string;
+            suburb?: string;
+            city?: string;
+            lat: number;
+            lon: number;
+          };
+        }>;
+      }>(url);
+      if (data) {
         return res.json({
           places: (data.features ?? []).map((f) => ({
             name: f.properties.name ?? f.properties.formatted ?? "Unknown",
