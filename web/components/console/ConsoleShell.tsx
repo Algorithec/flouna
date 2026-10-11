@@ -35,6 +35,7 @@ import {
   Gavel,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { roleSatisfies, type Operator, type Role } from "./useOperator";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; need: Role };
@@ -120,6 +121,11 @@ export function ConsoleShell({
   // for the page itself, which shredded every stat card and table on the
   // console. Below lg it becomes a drawer instead.
   const [navOpen, setNavOpen] = useState(false);
+  // The drawer is a dialog over the page, and every other sheet in the product
+  // closes on Escape. This one did not, so a keyboard user who opened the
+  // console nav on a narrow window could only leave it by tabbing past
+  // twenty-odd links to the scrim.
+  useEscapeToClose(navOpen, () => setNavOpen(false));
 
   async function signOut() {
     await api("/api/auth/logout", { method: "POST" }).catch(() => {});
@@ -146,8 +152,12 @@ export function ConsoleShell({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-56 shrink-0 flex-col text-white transition-transform lg:static lg:translate-x-0 ${
-          navOpen ? "translate-x-0" : "-translate-x-full"
+        // `max-lg:invisible` while closed, not only translated away. Off-screen
+        // is still in the tab order, so on a narrow window a keyboard user
+        // leaving the hamburger walked into twenty-odd links they could not
+        // see. Visibility is in the transition so the slide-out still plays.
+        className={`fixed inset-y-0 left-0 z-40 flex w-56 shrink-0 flex-col text-white transition-[transform,visibility] lg:visible lg:static lg:translate-x-0 ${
+          navOpen ? "translate-x-0" : "invisible -translate-x-full"
         }`}
         style={{ background: "var(--c-crimson)" }}
       >
@@ -234,7 +244,8 @@ export function ConsoleShell({
           <button
             onClick={() => setNavOpen(true)}
             aria-label="Open menu"
-            className="rounded-lg p-1.5 transition-colors hover:bg-white/10"
+            aria-expanded={navOpen}
+            className="tap-target rounded-lg p-1.5 transition-colors hover:bg-white/10"
           >
             <Menu size={20} />
           </button>

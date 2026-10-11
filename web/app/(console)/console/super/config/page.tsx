@@ -37,17 +37,28 @@ export default function SettingsPage() {
   const [cfg, setCfg] = useState<ConfigStatus | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // What is in each box while it is being typed, which is not the same as the
+  // number behind it. The percentage boxes are stored as basis points, so the
+  // value was round-tripped through Number on every keystroke: typing "4."
+  // became 4, React wrote "4" back into the box, the dot vanished, and the
+  // next keystroke made "45". An operator setting a 4.5% margin set 45%. The
+  // ONDC fields are clamped on the server; cashback share is not.
+  const [draft, setDraft] = useState<Partial<Record<keyof Settings, string>>>({});
 
   useEffect(() => {
     api<Settings>("/api/console/super/settings").then(setS).catch(() => {});
     api<ConfigStatus>("/api/console/super/config").then(setCfg).catch(() => {});
   }, []);
 
-  function setField(key: keyof Settings, display: number, bps?: boolean) {
+  function setField(key: keyof Settings, text: string, bps?: boolean) {
     if (!s) return;
+    setDraft((d) => ({ ...d, [key]: text }));
+    const n = Number(text);
+    // An empty or half-typed box leaves the stored number alone rather than
+    // writing a zero that was never meant.
+    if (text.trim() === "" || !Number.isFinite(n)) return;
     // % fields stored as basis points: 4% → 400 bps.
-    const raw = bps ? Math.round(display * 100) : Math.round(display);
-    setS({ ...s, [key]: raw });
+    setS({ ...s, [key]: bps ? Math.round(n * 100) : Math.round(n) });
   }
 
   async function save() {
@@ -60,6 +71,7 @@ export default function SettingsPage() {
         json: s,
       });
       setS(updated); // reflect any server-side clamping
+      setDraft({}); // so clamped values are shown, not what was typed
       setMsg("Saved. ONDC margins are clamped to DPIIT norms (3 to 6%).");
     } catch (err) {
       setMsg(err instanceof ApiClientError ? err.message : "Save failed.");
@@ -105,8 +117,8 @@ export default function SettingsPage() {
                       <input
                         type="number"
                         step={f.bps ? "0.1" : "1"}
-                        value={display}
-                        onChange={(e) => setField(f.key, Number(e.target.value), f.bps)}
+                        value={draft[f.key] ?? String(display)}
+                        onChange={(e) => setField(f.key, e.target.value, f.bps)}
                         className="w-20 rounded-md border border-(--c-border) bg-white px-2 py-1 text-right text-[13px] text-(--c-ink)"
                       />
                       <span className="w-6 text-(--c-muted)">{f.unit}</span>

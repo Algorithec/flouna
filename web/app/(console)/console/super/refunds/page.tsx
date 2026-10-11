@@ -24,11 +24,20 @@ export default function RefundsPage() {
   const [rejecting, setRejecting] = useState<string | null>(null); // paymentId with reason box open
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // A load that failed used to be written in as an empty queue, which this
+  // screen then reported as "No refunds awaiting review" with a green stat
+  // card. The one queue in the product where nothing happening means somebody
+  // is not getting their money back is the one that must never claim to be
+  // empty when it could not ask.
+  const [failed, setFailed] = useState(false);
 
   function load() {
     api<{ refunds: RefundItem[] }>("/api/console/super/refunds")
-      .then((d) => setQueue(d.refunds))
-      .catch(() => setQueue([]))
+      .then((d) => {
+        setQueue(d.refunds);
+        setFailed(false);
+      })
+      .catch(() => setFailed(true))
       .finally(() => setLoaded(true));
   }
   useEffect(load, []);
@@ -74,12 +83,18 @@ export default function RefundsPage() {
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard
           label="Awaiting review"
-          value={loaded ? queue.length : "No data"}
-          tone={queue.length > 0 ? "warn" : "good"}
+          value={failed ? "Unknown" : loaded ? queue.length : "No data"}
+          tone={failed ? "bad" : queue.length > 0 ? "warn" : "good"}
         />
         <StatCard
           label="Value in queue"
-          value={loaded ? rupees(queue.reduce((s, q) => s + q.amountPaise, 0)) : "No data"}
+          value={
+            failed
+              ? "Unknown"
+              : loaded
+                ? rupees(queue.reduce((s, q) => s + q.amountPaise, 0))
+                : "No data"
+          }
         />
       </div>
 
@@ -93,7 +108,24 @@ export default function RefundsPage() {
       )}
 
       <Card title="Queue (oldest first)">
-        {queue.length === 0 ? (
+        {failed ? (
+          <div className="px-4 py-10 text-center">
+            <p className="text-[13px] font-bold" style={{ color: "var(--c-red)" }}>
+              This queue could not be loaded
+            </p>
+            <p className="mt-1 text-[13px]" style={{ color: "var(--c-muted)" }}>
+              Do not read this as an empty queue. Refunds may be waiting.
+            </p>
+            <button
+              type="button"
+              onClick={load}
+              className="mt-3 rounded-lg px-3 py-2 text-[13px] font-medium"
+              style={{ border: "1px solid var(--c-border)", color: "var(--c-ink)" }}
+            >
+              Try again
+            </button>
+          </div>
+        ) : queue.length === 0 ? (
           <Empty>{loaded ? "No refunds awaiting review." : "Loading…"}</Empty>
         ) : (
           <Table head={["Order", "Customer", "Amount", "Method", "Flagged", "Decision"]}>
@@ -155,7 +187,16 @@ export default function RefundsPage() {
                         <CheckCircle2 size={13} /> Approve
                       </button>
                       <button
-                        onClick={() => setRejecting(r.paymentId)}
+                        // The reason box is one piece of state shared by every
+                        // row, and opening it did not clear what was in it. A
+                        // reason typed against one refund and abandoned was
+                        // waiting in the box on the next, ready to be
+                        // submitted and written into the audit trail as the
+                        // reason that refund was refused.
+                        onClick={() => {
+                          setReason("");
+                          setRejecting(r.paymentId);
+                        }}
                         disabled={busy === r.paymentId}
                         className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1.5 text-[12px] font-semibold disabled:opacity-50"
                         style={{ border: "1px solid var(--c-border)", color: "var(--c-red)" }}

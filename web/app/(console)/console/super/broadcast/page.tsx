@@ -15,10 +15,20 @@ export default function BroadcastPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // One tap used to push a notification to every subscribed device on the
+  // platform, with nothing in the way and nothing to undo it afterwards. The
+  // page's own subtitle says "use sparingly", which is not a guard. The button
+  // now asks once.
+  const [confirming, setConfirming] = useState(false);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    setConfirming(false);
     setBusy(true);
     setError(null);
     setResult(null);
@@ -59,7 +69,10 @@ export default function BroadcastPage() {
                 minLength={3}
                 maxLength={80}
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setConfirming(false);
+                }}
                 placeholder="e.g. New: live order tracking"
                 className="c-input mt-1.5 w-full rounded-lg px-3 py-2.5 text-[14px] outline-none"
               />
@@ -74,7 +87,10 @@ export default function BroadcastPage() {
                 maxLength={300}
                 rows={4}
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={(e) => {
+                  setBody(e.target.value);
+                  setConfirming(false);
+                }}
                 placeholder="Short, useful, worth interrupting someone for."
                 className="c-input mt-1.5 w-full resize-none rounded-lg px-3 py-2.5 text-[14px] outline-none"
               />
@@ -86,7 +102,10 @@ export default function BroadcastPage() {
               <input
                 maxLength={200}
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  setConfirming(false);
+                }}
                 placeholder="/home"
                 className="c-input c-mono mt-1.5 w-full rounded-lg px-3 py-2.5 text-[13px] outline-none"
               />
@@ -101,14 +120,38 @@ export default function BroadcastPage() {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={busy || title.trim().length < 3 || body.trim().length < 3}
-              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ background: "var(--c-maroon)" }}
-            >
-              <Send size={15} /> Send to all devices
-            </button>
+            {confirming && (
+              <p
+                className="flex items-start gap-2 rounded-lg px-3 py-2 text-[13px]"
+                style={{ background: "#fef3dc", color: "#b8690a" }}
+              >
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                This goes to every subscribed device and cannot be recalled.
+                Press again to send.
+              </p>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={busy || title.trim().length < 3 || body.trim().length < 3}
+                className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ background: confirming ? "var(--c-red)" : "var(--c-maroon)" }}
+              >
+                <Send size={15} />
+                {confirming ? "Confirm send" : "Send to all devices"}
+              </button>
+              {confirming && (
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--c-muted)" }}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </form>
         </Card>
 
@@ -145,9 +188,18 @@ export default function BroadcastPage() {
                   <>
                     <CheckCircle2 size={18} className="mt-0.5 shrink-0" style={{ color: "#1a7a4a" }} />
                     <div>
+                      {/* "Delivered" was an overclaim: `sent` counts the
+                          pushes the push service accepted, not the ones a
+                          phone showed. An accepted push on a device that is
+                          off, or has notifications muted, is counted here and
+                          never seen. */}
                       <p className="text-[14px] font-semibold" style={{ color: "var(--c-ink)" }}>
-                        Delivered to {result.sent} of {result.devices} device
+                        Accepted for {result.sent} of {result.devices} device
                         {result.devices === 1 ? "" : "s"}
+                      </p>
+                      <p className="mt-0.5 text-[12px]" style={{ color: "var(--c-muted)" }}>
+                        Accepted by the push service, which is not the same as
+                        shown on a phone.
                       </p>
                       {result.failed > 0 && (
                         <p className="mt-0.5 text-[12px]" style={{ color: "var(--c-muted)" }}>

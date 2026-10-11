@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Plus, Trash2, X } from "lucide-react";
 import { api } from "@/lib/api";
+import { useEscapeToClose } from "@/lib/useEscapeToClose";
 import { StatCard } from "@/components/console/ConsoleShell";
 import { ConsolePage, Card, Table, Badge, Empty } from "@/components/console/ui";
 
@@ -24,7 +25,13 @@ export default function ApiKeysPage() {
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({ name: "", client: "", scope: "read" });
   const [created, setCreated] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Escape closed the new-key form only while focus was already inside it, and
+  // nothing focused it on open, so in practice it closed neither dialog. Every
+  // other sheet in the product answers Escape.
+  useEscapeToClose(showNew && !busy, () => setShowNew(false));
 
   function load() {
     api<{ keys: Key[] }>("/api/console/super/api-keys")
@@ -36,22 +43,37 @@ export default function ApiKeysPage() {
   async function create(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    setError(null);
     try {
       const res = await api<{ key: string }>("/api/console/super/api-keys", {
         method: "POST",
         json: form,
       });
+      setCopied(false);
       setCreated(res.key); // show ONCE
       setShowNew(false);
       setForm({ name: "", client: "", scope: "read" });
       load();
+    } catch (err) {
+      // There was no catch, so a refused create became an unhandled rejection:
+      // the dialog sat there with the form filled in, no key, and no reason.
+      setError(err instanceof Error ? err.message : "Could not generate that key.");
     } finally {
       setBusy(false);
     }
   }
 
   async function revoke(id: string) {
-    await api(`/api/console/super/api-keys/${id}`, { method: "DELETE" }).catch(() => {});
+    setError(null);
+    try {
+      await api(`/api/console/super/api-keys/${id}`, { method: "DELETE" });
+    } catch (err) {
+      // The failure was swallowed and the list reloaded, so a key that is
+      // still live came back reading "Active" and the operator had no way to
+      // tell that from a revoke that worked. This is the screen somebody uses
+      // when a partner's key has leaked.
+      setError(err instanceof Error ? err.message : "Could not revoke that key.");
+    }
     load();
   }
 
@@ -73,6 +95,12 @@ export default function ApiKeysPage() {
           <Plus size={15} /> Generate key
         </button>
       </div>
+
+      {error && (
+        <p className="mb-4 flex items-center gap-2 rounded-lg bg-(--c-red)/10 px-3 py-2 text-[13px] text-(--c-red)">
+          <AlertTriangle size={15} /> {error}
+        </p>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard label="Active keys" value={active} tone="good" />
@@ -147,6 +175,7 @@ export default function ApiKeysPage() {
               <span className="text-[12px] text-(--c-muted)">Name</span>
               <input
                 required
+                autoFocus
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="mt-1 w-full rounded-lg border border-(--c-border) bg-white px-3 py-2 text-[14px] text-(--c-ink) outline-none focus:border-(--c-maroon)"
@@ -200,14 +229,32 @@ export default function ApiKeysPage() {
             </p>
             <div className="mt-4 flex items-center gap-2 rounded-lg border border-(--c-border) bg-white px-3 py-2.5">
               <code className="flex-1 break-all font-mono text-[12px] text-[#1a7a4a]">{created}</code>
+              {/* Copy said nothing either way. On the one secret the system
+                  will never show again, a clipboard write that was refused —
+                  no permission, or a non-secure origin, where the API is not
+                  even defined — looked exactly like one that worked. */}
               <button
-                onClick={() => navigator.clipboard?.writeText(created)}
+                onClick={() => {
+                  navigator.clipboard
+                    ?.writeText(created)
+                    .then(() => setCopied(true))
+                    .catch(() =>
+                      setError("Could not copy. Select the key above and copy it by hand."),
+                    );
+                }}
                 aria-label="Copy key"
                 className="shrink-0 text-(--c-muted) hover:text-(--c-ink)"
               >
-                <Copy size={15} />
+                {copied ? <Check size={15} className="text-[#1a7a4a]" /> : <Copy size={15} />}
               </button>
             </div>
+            {copied && (
+              <p className="mt-2 text-[12px] font-semibold text-[#1a7a4a]">
+                Copied to the clipboard.
+              </p>
+            )}
+            {/* Deliberately not closed by Escape: the secret is shown once, so
+                a stray key press must not be able to throw it away. */}
             <button
               onClick={() => setCreated(null)}
               className="mt-4 w-full rounded-lg border border-(--c-border) py-2 text-[13px] text-(--c-ink) hover:bg-[#f0e8da]"
