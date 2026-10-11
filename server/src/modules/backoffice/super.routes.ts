@@ -32,6 +32,9 @@ import {
 import { getConfig, updateConfig } from "./config.service.js";
 import { watcherSummary } from "../chat/llm/watcher.js";
 
+// Parsed, not coerced: see the note in admin.routes.ts.
+const pageParam = z.coerce.number().int().min(1).max(100_000).catch(1);
+
 export const superRouter = Router();
 superRouter.use(requireRole("super_admin"));
 
@@ -276,7 +279,7 @@ superRouter.get("/export/users.csv", async (req, res, next) => {
 superRouter.get("/audit", async (req, res, next) => {
   try {
     const action = typeof req.query.action === "string" ? req.query.action : undefined;
-    const page = Number(req.query.page) || 1;
+    const page = pageParam.parse(req.query.page);
     res.json(await auditPage({ action, page }));
   } catch (err) {
     next(err);

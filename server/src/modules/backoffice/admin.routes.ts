@@ -55,6 +55,15 @@ import {
   gmvByDomain,
 } from "./reporting.service.js";
 
+// A page number out of a URL, parsed rather than coerced. `Number(...) || 1`
+// let "1e400" through as Infinity, which reached Prisma as a skip it refuses:
+// the console answered 500 to a query string, and in a non-production
+// environment the body carried the query and the server's own file path with
+// it. A fractional page was worse than wrong — it was quietly accepted and
+// skipped a fraction of a row, so page 1.5 reported an empty list while page 1
+// had results.
+const pageParam = z.coerce.number().int().min(1).max(100_000).catch(1);
+
 export const adminRouter = Router();
 adminRouter.use(requireRole("admin")); // super_admin satisfies admin
 
@@ -139,7 +148,7 @@ adminRouter.get("/analytics", async (_req, res, next) => {
 adminRouter.get("/users", async (req, res, next) => {
   try {
     const q = typeof req.query.q === "string" ? req.query.q : undefined;
-    const page = Number(req.query.page) || 1;
+    const page = pageParam.parse(req.query.page);
     res.json(await searchUsers({ q, page }));
   } catch (err) {
     next(err);
@@ -186,7 +195,7 @@ adminRouter.get("/orders", async (req, res, next) => {
   try {
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
     const domain = typeof req.query.domain === "string" ? req.query.domain : undefined;
-    const page = Number(req.query.page) || 1;
+    const page = pageParam.parse(req.query.page);
     res.json(await listOrders({ status, domain, page }));
   } catch (err) {
     next(err);
@@ -217,7 +226,7 @@ adminRouter.post("/orders/:id/flag-refund", async (req, res, next) => {
 adminRouter.get("/tickets", async (req, res, next) => {
   try {
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
-    const page = Number(req.query.page) || 1;
+    const page = pageParam.parse(req.query.page);
     res.json(await listTickets({ status, page }));
   } catch (err) {
     next(err);
