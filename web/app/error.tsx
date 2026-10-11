@@ -36,7 +36,7 @@ export default function Error({
         <div className="mt-8 flex w-full flex-col gap-3">
           <button
             onClick={reset}
-            className="group flex h-13 items-center justify-center gap-2 rounded-pill bg-ink text-[15px] font-semibold text-white shadow-lift transition-all hover:gap-3 hover:bg-[#2c1500]"
+            className="group flex h-13 items-center justify-center gap-2 rounded-pill bg-ink-fill text-[15px] font-semibold text-white shadow-lift transition-all hover:gap-3 hover:bg-ink-fill-hover"
           >
             <RotateCcw size={17} className="transition-transform group-hover:-rotate-45" />
             Try again

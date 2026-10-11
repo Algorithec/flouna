@@ -5,8 +5,13 @@ type Variant = "primary" | "secondary" | "accent" | "ghost";
 type Size = "lg" | "md" | "sm";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-cocoa text-white hover:bg-[#7a5234] disabled:bg-cocoa/50",
-  secondary: "bg-beige text-ink hover:bg-[#e6d8cc] disabled:opacity-50",
+  // Both fills and both hovers are tokens now. `bg-cocoa` lightens in dark
+  // mode because it is also the secondary-text colour, so white type on it
+  // dropped to roughly 2:1 — on Pay, Place order and Book ride. The secondary
+  // hover was a fixed light beige, so in dark mode hovering turned near-white
+  // ink onto a near-white band.
+  primary: "bg-btn text-white hover:bg-btn-hover disabled:bg-btn/50",
+  secondary: "bg-beige text-ink hover:bg-beige-hover disabled:opacity-50",
   accent: "bg-accent text-white hover:bg-[#d4570f] disabled:bg-accent/50",
   ghost: "bg-transparent text-ink hover:bg-beige/60 disabled:opacity-50",
 };

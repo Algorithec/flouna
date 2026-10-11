@@ -54,7 +54,7 @@ export function ErrorView({
       )}
       <Link
         href={backHref}
-        className="mt-6 rounded-pill bg-ink px-6 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#2c1500]"
+        className="mt-6 rounded-pill bg-ink-fill px-6 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-ink-fill-hover"
       >
         {backLabel}
       </Link>
