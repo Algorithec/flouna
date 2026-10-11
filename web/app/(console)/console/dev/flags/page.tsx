@@ -69,6 +69,12 @@ export default function DevFlagsPage() {
         <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>
+      ) : flags.length === 0 ? (
+        // Rendered nothing at all before: a load that failed, and a server
+        // with no flags, both came out as a blank page under the heading.
+        <p className="py-16 text-center text-[14px] text-(--c-muted)">
+          No flags were returned. If that is unexpected, reload the page.
+        </p>
       ) : (
         <div className="space-y-2">
           {flags.map((flag) => (
@@ -80,11 +86,16 @@ export default function DevFlagsPage() {
                 <p className="font-mono text-[13px] text-(--c-ink)">{flag.key}</p>
                 <p className="mt-0.5 text-[12px] text-(--c-muted)">{flag.description}</p>
               </div>
+              {/* The switch had no accessible name at all: a screen reader
+                  read every row as "button, pressed", so which flag was being
+                  turned off was not announced anywhere. */}
               <button
                 onClick={() => toggle(flag)}
                 disabled={saving === flag.key}
-                aria-pressed={flag.enabled}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                role="switch"
+                aria-checked={flag.enabled}
+                aria-label={flag.key}
+                className={`tap-target relative h-6 w-11 shrink-0 rounded-full transition-colors ${
                   flag.enabled ? "bg-(--c-maroon)" : "bg-[#d9cdba]"
                 } disabled:opacity-60`}
               >

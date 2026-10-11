@@ -46,6 +46,11 @@ export default function DevAuditPage() {
         subtitle="Append-only record of privileged actions. Most recent first."
       />
 
+      {/* overflow-x-auto on the table wrapper, not overflow-hidden: these
+         tables are wider than a phone, and hidden overflow clipped the
+         right-hand columns away instead of letting them scroll. The row
+         actions live in those columns, so below lg the rows could be read
+         and not used. */}
       {loading ? (
         <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
@@ -55,7 +60,7 @@ export default function DevAuditPage() {
           No privileged actions recorded yet.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-(--c-border)">
+        <div className="overflow-x-auto rounded-xl border border-(--c-border)">
           <table className="w-full text-left text-[13px]">
             <thead className="bg-white text-[12px] uppercase tracking-wide text-(--c-muted)">
               <tr>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, UserPlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Loader2, CheckCircle2, UserPlus } from "lucide-react";
 import { api } from "@/lib/api";
 import { useOperator } from "@/components/console/useOperator";
 import { ConsoleShell, PageTitle } from "@/components/console/ConsoleShell";
@@ -31,14 +31,32 @@ export default function AdminSupportPage() {
   const [filter, setFilter] = useState("open");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  // A failed load used to be written in as an empty list, so the queue said
+  // "No tickets (open)" when it had not managed to ask — and somebody reading
+  // that walks away from a queue that is actually full.
+  const [failed, setFailed] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Changing the filter fires another request and the two need not come back
+  // in order: the late answer won, so the list could be showing resolved
+  // tickets under "Open".
+  const req = useRef(0);
 
   function load() {
+    const seq = ++req.current;
     api<{ tickets: Ticket[] }>(
       `/api/console/admin/tickets${filter ? `?status=${filter}` : ""}`,
     )
-      .then((d) => setTickets(d.tickets))
-      .catch(() => setTickets([]))
-      .finally(() => setLoading(false));
+      .then((d) => {
+        if (seq !== req.current) return;
+        setTickets(d.tickets);
+        setFailed(false);
+      })
+      .catch(() => {
+        if (seq === req.current) setFailed(true);
+      })
+      .finally(() => {
+        if (seq === req.current) setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -48,9 +66,15 @@ export default function AdminSupportPage() {
 
   async function patch(id: string, body: Record<string, unknown>) {
     setBusy(id);
+    setActionError(null);
     try {
       await api(`/api/console/admin/tickets/${id}`, { method: "PATCH", json: body });
       load();
+    } catch (err) {
+      // There was no catch at all, so a refused PATCH became an unhandled
+      // rejection: the button went back to normal, the ticket had not moved,
+      // and nothing on screen said so. Resolve looked like it worked.
+      setActionError(err instanceof Error ? err.message : "That did not go through.");
     } finally {
       setBusy(null);
     }
@@ -81,7 +105,29 @@ export default function AdminSupportPage() {
         </select>
       </div>
 
-      {loading ? (
+      {actionError && (
+        <p className="mb-3 flex items-center gap-2 rounded-lg bg-(--c-red)/10 px-3 py-2 text-[13px] text-(--c-red)">
+          <AlertTriangle size={15} /> {actionError}
+        </p>
+      )}
+
+      {failed ? (
+        <div className="rounded-xl border border-(--c-red)/40 bg-(--c-red)/5 p-4">
+          <p className="flex items-center gap-2 text-[14px] font-bold text-(--c-red)">
+            <AlertTriangle size={15} /> This queue could not be loaded
+          </p>
+          <p className="mt-1 text-[13px] text-(--c-muted)">
+            Do not read this as an empty queue. Tickets may be waiting.
+          </p>
+          <button
+            type="button"
+            onClick={load}
+            className="mt-3 rounded-lg border border-(--c-line) px-3 py-2 text-[13px] font-medium text-(--c-ink)"
+          >
+            Try again
+          </button>
+        </div>
+      ) : loading ? (
         <div className="flex justify-center py-16 text-(--c-muted)">
           <Loader2 className="animate-spin" />
         </div>

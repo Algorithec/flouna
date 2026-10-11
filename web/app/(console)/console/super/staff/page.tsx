@@ -101,7 +101,12 @@ export default function SuperStaffPage() {
         To add a new operator: have them sign up, then promote their account here.
       </p>
 
-      <div className="overflow-hidden rounded-xl border border-(--c-border)">
+      {/* overflow-x-auto on the table wrapper, not overflow-hidden: these
+        tables are wider than a phone, and hidden overflow clipped the
+        right-hand columns away instead of letting them scroll. The row
+        actions live in those columns, so below lg the rows could be read
+        and not used. */}
+      <div className="overflow-x-auto rounded-xl border border-(--c-border)">
         {loading ? (
           <div className="flex justify-center py-16 text-(--c-muted)">
             <Loader2 className="animate-spin" />

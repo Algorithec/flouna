@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, ArrowRightLeft, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import { ConsolePage, Card, Table, Badge, Empty } from "@/components/console/ui";
@@ -26,6 +26,20 @@ function actionTone(action: string) {
   return action.startsWith("on_") ? "purple" : "blue";
 }
 
+// Pretty-print, but never throw. This was `JSON.stringify(JSON.parse(x))`
+// inline in the render, so an envelope that is not valid JSON took the whole
+// console page down to the error boundary — on the one screen whose job is
+// reading envelopes, and for exactly the envelope most worth reading, because
+// a malformed body is usually what went wrong. The complaints screen already
+// does this the safe way.
+function pretty(raw: string): string {
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return raw;
+  }
+}
+
 const ACTIONS = ["", "search", "on_search", "select", "confirm", "on_confirm", "status", "on_status"];
 
 export default function TransactionsPage() {
@@ -42,15 +56,23 @@ export default function TransactionsPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Changing the action filter fires another request, and the two need not
+  // come back in order: the late answer won, so the table could be listing
+  // envelopes for an action the operator had already moved off.
+  const req = useRef(0);
   useEffect(() => {
+    const seq = ++req.current;
     api<{ transactions: Txn[]; total: number; mode: string; byAction: Record<string, number> }>(
       `/api/console/dev/transactions${filter ? `?action=${filter}` : ""}`,
     )
       .then((d) => {
+        if (seq !== req.current) return;
         setTxns(d.transactions);
         setMeta({ total: d.total, mode: d.mode, byAction: d.byAction });
       })
-      .catch(() => setTxns([]));
+      .catch(() => {
+        if (seq === req.current) setTxns([]);
+      });
   }, [filter]);
 
   function openDetail(id: string) {
@@ -90,7 +112,22 @@ export default function TransactionsPage() {
         ) : (
           <Table head={["Action", "Domain", "BPP", "Status", "Signed", "Latency", "When", ""]}>
             {txns.map((t) => (
-              <tr key={t.id} className="cursor-pointer hover:bg-[#f7f1e6]" onClick={() => openDetail(t.id)}>
+              // The row was the only way in and only answered a mouse: there
+              // was no keyboard route to any envelope on this screen.
+              <tr
+                key={t.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`Open ${t.action} envelope`}
+                className="cursor-pointer hover:bg-[#f7f1e6] focus-visible:bg-[#f7f1e6]"
+                onClick={() => openDetail(t.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openDetail(t.id);
+                  }
+                }}
+              >
                 <td className="px-4 py-2.5">
                   <Badge tone={actionTone(t.action)}>{t.action}</Badge>
                 </td>
@@ -161,7 +198,7 @@ export default function TransactionsPage() {
               <div className="mb-4">
                 <p className="mb-1 text-[12px] font-semibold text-(--c-muted)">Request envelope</p>
                 <pre className="overflow-x-auto rounded-lg border border-(--c-border) bg-white p-3 text-[11px] leading-relaxed text-(--c-ink)">
-                  {JSON.stringify(JSON.parse(open.request), null, 2)}
+                  {pretty(open.request)}
                 </pre>
               </div>
             )}
@@ -169,7 +206,7 @@ export default function TransactionsPage() {
               <div>
                 <p className="mb-1 text-[12px] font-semibold text-(--c-muted)">Callback envelope</p>
                 <pre className="overflow-x-auto rounded-lg border border-(--c-border) bg-white p-3 text-[11px] leading-relaxed text-(--c-ink)">
-                  {JSON.stringify(JSON.parse(open.response), null, 2)}
+                  {pretty(open.response)}
                 </pre>
               </div>
             )}

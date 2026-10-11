@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Loader2, KeyRound, ArrowLeft } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api";
@@ -14,6 +14,13 @@ function homeFor(role: Role): string {
   return "/console/login";
 }
 
+// The consumer OTP screen gates its resend behind the same countdown. Only the
+// server limits how many codes an address may have in flight, and it answers
+// the overrun with a 429 — which also happens to be the limit the verify call
+// shares, so an operator who taps a silent button a few times locks themselves
+// out of the console for the rate-limit window.
+const RESEND_SECONDS = 45;
+
 export default function ConsoleLoginPage() {
   const router = useRouter();
   const [step, setStep] = useState<"password" | "otp">("password");
@@ -22,6 +29,14 @@ export default function ConsoleLoginPage() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resendLeft, setResendLeft] = useState(RESEND_SECONDS);
+  const [resent, setResent] = useState(false);
+
+  useEffect(() => {
+    if (step !== "otp" || resendLeft <= 0) return;
+    const t = setTimeout(() => setResendLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [step, resendLeft]);
 
   // Step 1: password → triggers the emailed second factor for operators.
   async function submitPassword(e: React.FormEvent) {
@@ -31,6 +46,8 @@ export default function ConsoleLoginPage() {
     setError(null);
     try {
       await api("/api/auth/console/login", { method: "POST", json: { email, password } });
+      setResendLeft(RESEND_SECONDS);
+      setResent(false);
       setStep("otp");
     } catch (err) {
       // 404 (not an operator) is shown the same as bad credentials — no leak.
@@ -67,11 +84,22 @@ export default function ConsoleLoginPage() {
   }
 
   async function resend() {
+    if (resendLeft > 0 || busy) return;
+    setBusy(true);
     setError(null);
     try {
       await api("/api/auth/console/login", { method: "POST", json: { email, password } });
-    } catch {
-      /* keep quiet — the code from the first send is still valid */
+      setResendLeft(RESEND_SECONDS);
+      setResent(true);
+    } catch (err) {
+      // Said out loud rather than swallowed. A refusal here is normally the
+      // code allowance, and an operator who is told nothing reads the silence
+      // as a broken button and keeps pressing.
+      setError(
+        err instanceof ApiClientError ? err.message : "Could not send another code.",
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -201,14 +229,22 @@ export default function ConsoleLoginPage() {
               >
                 <ArrowLeft size={13} /> Back
               </button>
-              <button
-                type="button"
-                onClick={resend}
-                className="font-semibold hover:opacity-80"
-                style={{ color: "var(--c-red)" }}
-              >
-                Resend code
-              </button>
+              {resendLeft > 0 ? (
+                <span style={{ color: "var(--c-muted)" }}>
+                  {resent ? "New code sent · " : ""}Resend in{" "}
+                  {String(resendLeft).padStart(2, "0")}s
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={resend}
+                  disabled={busy}
+                  className="font-semibold hover:opacity-80 disabled:opacity-50"
+                  style={{ color: "var(--c-red)" }}
+                >
+                  Resend code
+                </button>
+              )}
             </div>
           </form>
         )}
