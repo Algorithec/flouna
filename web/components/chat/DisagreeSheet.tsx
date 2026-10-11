@@ -79,7 +79,7 @@ export function DisagreeSheet({
       role="dialog"
       aria-modal="true"
       aria-label={t("ds.label")}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) onClose();
       }}

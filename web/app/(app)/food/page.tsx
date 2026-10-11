@@ -409,7 +409,7 @@ export default function FoodLandingPage() {
             className="h-9 min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-cocoa/50"
           />
           <VoiceButton onTranscript={setQuery} onFinal={setQuery} />
-          <span className="flex size-[42px] shrink-0 items-center justify-center rounded-full bg-ink text-white">
+          <span className="flex size-[42px] shrink-0 items-center justify-center rounded-full bg-ink-fill text-white">
             <ArrowRight size={17} />
           </span>
         </div>

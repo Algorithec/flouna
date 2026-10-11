@@ -328,7 +328,7 @@ export default function OrderDetailPage({
           stays beneath it for questions that aren't a formal complaint. */}
       <Link
         href={`/orders/${order.id}/help`}
-        className="mt-4 flex items-center justify-center gap-2 rounded-pill bg-ink py-3.5 text-[14px] font-bold text-white transition-opacity hover:opacity-90"
+        className="mt-4 flex items-center justify-center gap-2 rounded-pill bg-ink-fill py-3.5 text-[14px] font-bold text-white transition-opacity hover:opacity-90"
       >
         <LifeBuoy size={16} /> {t("od.needHelp")}
       </Link>

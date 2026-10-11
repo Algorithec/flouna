@@ -156,7 +156,7 @@ export default function InvoicePage({
         </button>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-full bg-cocoa px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-ink"
+          className="flex items-center gap-2 rounded-full bg-btn px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-btn-hover"
         >
           <Printer size={15} /> {t("inv.print")}
         </button>

@@ -403,7 +403,7 @@ export function RideTracker({
                     onClick={(e) => e.preventDefault()}
                     title={t.driver.phoneMasked}
                     aria-label={tr("rt.call")}
-                    className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ink text-white transition-transform hover:scale-105"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ink-fill text-white transition-transform hover:scale-105"
                   >
                     <Phone size={17} />
                   </a>
