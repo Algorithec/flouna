@@ -90,7 +90,10 @@ export default function PaymentMethodsPage() {
               const expiryMonth = Number(mm);
               const expiryYear = Number(yy) < 100 ? 2000 + Number(yy) : Number(yy);
               if (!expiryMonth || !expiryYear || last4.length !== 4) {
-                throw new Error("Enter the last 4 digits and expiry as MM/YY");
+                // Was an English literal on a screen that is otherwise fully
+                // translated, so the one message a Hindi or Telugu customer
+                // actually hits while adding a card arrived in English.
+                throw new Error(t("pp.pay.cardFormat"));
               }
               return { type, label: brand, last4, expiryMonth, expiryYear };
             })()
