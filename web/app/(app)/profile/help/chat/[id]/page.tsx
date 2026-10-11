@@ -51,12 +51,21 @@ export default function SupportChatPage() {
   const [busy, setBusy] = useState(false);
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(() => {
     api<{ chat: Chat }>(`/api/support/chats/${params.id}`)
-      .then((d) => setChat(d.chat))
-      .catch(() => setChat(null));
+      .then((d) => {
+        setChat(d.chat);
+        setLoadFailed(false);
+      })
+      // A failure left `chat` null, which is the same state as the first
+      // render, so the screen said "Loading…" for as long as the customer was
+      // willing to wait. Somebody who has just been told to raise it here is
+      // the last person who should be left watching a spinner that is not
+      // waiting for anything.
+      .catch(() => setLoadFailed(true));
   }, [params.id]);
   useEffect(load, [load]);
 
@@ -65,7 +74,9 @@ export default function SupportChatPage() {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [chat?.messages.length]);
 
-  async function send(body: string) {
+  // `fromComposer` is what the customer typed, as opposed to a quick reply,
+  // whose value is a machine token and has no business appearing in the box.
+  async function send(body: string, fromComposer = false) {
     const text = body.trim();
     if (!text || busy) return;
     setBusy(true);
@@ -79,6 +90,12 @@ export default function SupportChatPage() {
       if (d.escalated) toast(t("pp.chat.passedToTeam"));
     } catch (err) {
       toast(err instanceof Error ? err.message : t("pp.chat.sendFailed"));
+      // Put the message back in the box. The composer was cleared before the
+      // request, so a send that failed threw away what the customer had
+      // written and left them nothing to retry — on the screen whose whole
+      // purpose is describing a problem, often at some length. Only if they
+      // have not started typing something else in the meantime.
+      if (fromComposer) setDraft((cur) => (cur.trim() ? cur : text));
     } finally {
       setBusy(false);
     }
@@ -121,7 +138,24 @@ export default function SupportChatPage() {
   if (!chat) {
     return (
       <div className="min-h-dvh bg-acct-bg px-4 py-10 text-center text-[13px] text-acct-muted">
-        {t("common.loading")}
+        {loadFailed ? (
+          <>
+            <p className="text-acct-ink">{t("pp.chat.loadFailed")}</p>
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <button
+                onClick={load}
+                className="tap-target rounded-pill border border-line bg-card px-5 py-2.5 text-[14px] font-bold text-acct-ink"
+              >
+                {t("ipay.tryAgain")}
+              </button>
+              <Link href="/profile/help" className="font-semibold hover:underline">
+                {t("pp.chat.backToHelp")}
+              </Link>
+            </div>
+          </>
+        ) : (
+          t("common.loading")
+        )}
       </div>
     );
   }
@@ -296,7 +330,7 @@ export default function SupportChatPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void send(draft);
+              void send(draft, true);
             }}
             className="flex items-center gap-2 rounded-pill bg-card px-4 py-2 shadow-soft"
           >
