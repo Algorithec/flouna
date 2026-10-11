@@ -16,6 +16,12 @@ import { auditFromReq } from "./audit.service.js";
 import { ondcNetwork, systemAlerts } from "./systemStatus.service.js";
 import { listTransactions, getTransaction } from "./ondc.service.js";
 
+// Parsed, not coerced: see the note in admin.routes.ts. A negative `limit`
+// reached Prisma as a negative take, which reads backwards from a cursor there
+// is none of — so `?limit=-5` answered 200 with an empty audit trail.
+const pageParam = z.coerce.number().int().min(1).max(100_000).catch(1);
+const limitParam = z.coerce.number().int().min(1).max(200).catch(50);
+
 export const devRouter = Router();
 
 // Every route here requires developer or super_admin. requireRole re-checks the
@@ -160,7 +166,7 @@ devRouter.get("/alerts", async (_req, res, next) => {
 devRouter.get("/transactions", async (req, res, next) => {
   try {
     const action = typeof req.query.action === "string" ? req.query.action : undefined;
-    const page = Number(req.query.page) || 1;
+    const page = pageParam.parse(req.query.page);
     res.json(await listTransactions({ action, page }));
   } catch (err) {
     next(err);
@@ -180,7 +186,7 @@ devRouter.get("/transactions/:id", async (req, res, next) => {
 // --- Audit trail (read-only slice; super-admin gets the full viewer too) ---
 devRouter.get("/audit", async (req, res, next) => {
   try {
-    const take = Math.min(Number(req.query.limit) || 50, 200);
+    const take = limitParam.parse(req.query.limit);
     const logs = await prisma.auditLog.findMany({
       orderBy: { createdAt: "desc" },
       take,
