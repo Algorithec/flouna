@@ -30,6 +30,7 @@ import { adminRouter } from "./modules/backoffice/admin.routes.js";
 import { superRouter } from "./modules/backoffice/super.routes.js";
 import { requestKey } from "./middleware/rateLimit.js";
 import { ondcRegistryRouter } from "./modules/ondc/registry.routes.js";
+import { ondcCallbacksRouter } from "./modules/ondc/index.js";
 
 export function createApp() {
   const app = express();
@@ -201,6 +202,8 @@ export function createApp() {
   // At the root rather than under /api: the ONDC registry derives both URLs
   // from the subscriber id (ondc.flouna.com), so this is where it looks.
   app.use(ondcRegistryRouter);
+  // Seller apps answer our requests here (on_search, on_select, ...), signed.
+  app.use(ondcCallbacksRouter());
   app.use("/api/auth", authRouter);
   // Privacy rights and cookie choices (privacy policy 6, cookie policy 1.3).
   app.use("/api/privacy", complianceRouter);
