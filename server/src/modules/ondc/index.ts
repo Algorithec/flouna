@@ -28,7 +28,8 @@ export function ondcCallbackDeps(): CallbackDeps | null {
           messageId: ctx.message_id ?? "unknown",
           action,
           domain: ctx.domain ?? "unknown",
-          bppId: ctx.bpp_id ?? senderId,
+          // The verified signer, never the context, which the sender writes.
+          bppId: senderId,
           response: raw,
           status: "ack",
           signed: true,
@@ -40,5 +41,5 @@ export function ondcCallbackDeps(): CallbackDeps | null {
 }
 
 export function ondcCallbacksRouter() {
-  return createCallbacksRouter(ondcCallbackDeps());
+  return createCallbacksRouter(ondcCallbackDeps(), { bapId: env.ONDC_SUBSCRIBER_ID });
 }

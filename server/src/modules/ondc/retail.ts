@@ -1,4 +1,4 @@
-import { buildContext } from "./context.js";
+import { buildContext, checkedFeePercent, hasAtMostDecimals } from "./context.js";
 
 // Food (ONDC:RET11, Beckn 1.2.0) message builders.
 //
@@ -40,7 +40,11 @@ const wireAddress = (a: Address) => ({
 
 const finderFee = (percent: number) => ({
   "@ondc/org/buyer_app_finder_fee_type": "percent",
-  "@ondc/org/buyer_app_finder_fee_amount": percent.toFixed(1),
+  // Whole and one decimal fees keep the "3.0" form the certified flows use;
+  // anything finer is stated exactly rather than rounded to a different fee.
+  "@ondc/org/buyer_app_finder_fee_amount": hasAtMostDecimals(checkedFeePercent(percent), 1)
+    ? percent.toFixed(1)
+    : percent.toFixed(2),
 });
 
 /** Asks the network what is available, optionally for a named dish, delivered to a point. */

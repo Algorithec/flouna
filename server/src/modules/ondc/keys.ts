@@ -48,8 +48,13 @@ export function answerChallenge(
   });
   const shared = crypto.diffieHellman({ privateKey: ourPrivate, publicKey: registryPublic });
   const decipher = crypto.createDecipheriv("aes-256-ecb", shared, null);
-  return Buffer.concat([
-    decipher.update(Buffer.from(challenge, "base64")),
-    decipher.final(),
-  ]).toString("utf8");
+  const plain = Buffer.concat([decipher.update(Buffer.from(challenge, "base64")), decipher.final()]);
+  // Padding alone is not proof of the right key: about one wrong key in 256
+  // produces output that happens to end in valid padding. The registry's
+  // challenge is printable text, and garbage from a wrong key essentially
+  // never is, so that is checked too.
+  if (plain.length === 0 || !plain.every((b) => b >= 0x20 && b <= 0x7e)) {
+    throw new Error("Challenge did not decrypt to text under this key");
+  }
+  return plain.toString("utf8");
 }

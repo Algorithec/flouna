@@ -48,3 +48,24 @@ export function buildContext(c: ContextInput): Record<string, unknown> {
   }
   return { ...base, country: "IND", city: c.city, core_version: "1.2.0" };
 }
+
+/**
+ * A finder fee percentage, checked. It goes on the wire as what the seller
+ * owes us, so a value that is not a real percentage must stop the message
+ * rather than be sent as "NaN" or rounded into a different fee.
+ */
+export function checkedFeePercent(percent: number): number {
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+    throw new Error(`Finder fee must be a percentage from 0 to 100, got ${percent}`);
+  }
+  if (!hasAtMostDecimals(percent, 2)) {
+    throw new Error(`Finder fee is limited to two decimal places, got ${percent}`);
+  }
+  return percent;
+}
+
+/** True when `n` has no more than `places` decimals, allowing for binary float error (0.07 * 100 is not 7). */
+export function hasAtMostDecimals(n: number, places: number): boolean {
+  const scaled = n * 10 ** places;
+  return Math.abs(scaled - Math.round(scaled)) < 1e-6;
+}
