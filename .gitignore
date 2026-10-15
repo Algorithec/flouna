@@ -48,3 +48,5 @@ server/prisma/pg-init.preview.sql
 model/flouna-fused-*/
 model/flouna-lora-*/
 .vscode/
+server/.ondc-keys.json
+server/.ondc-request-id.txt
