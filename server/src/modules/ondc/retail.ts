@@ -1,4 +1,4 @@
-import { buildContext, checkedFeePercent, hasAtMostDecimals } from "./context.js";
+import { buildContext, checkedAreaCode, checkedFeePercent, checkedGps, hasAtMostDecimals } from "./context.js";
 
 // Food (ONDC:RET11, Beckn 1.2.0) message builders.
 //
@@ -35,7 +35,7 @@ const wireAddress = (a: Address) => ({
   city: a.city,
   state: a.state,
   country: "IND",
-  area_code: a.areaCode,
+  area_code: checkedAreaCode(a.areaCode),
 });
 
 const finderFee = (percent: number) => ({
@@ -63,7 +63,9 @@ export function buildSearch(o: {
         ...(o.query ? { item: { descriptor: { name: o.query } } } : {}),
         fulfillment: {
           type: "Delivery",
-          ...(o.gps ? { end: { location: { gps: o.gps, ...(o.areaCode ? { address: { area_code: o.areaCode } } : {}) } } } : {}),
+          ...(o.gps
+            ? { end: { location: { gps: checkedGps(o.gps), ...(o.areaCode ? { address: { area_code: checkedAreaCode(o.areaCode) } } : {}) } } }
+            : {}),
         },
         payment: finderFee(o.finderFeePercent),
       },
@@ -81,6 +83,15 @@ export type CartLine = {
 };
 
 function wireItems(lines: CartLine[], locationId: string) {
+  if (lines.length === 0) throw new Error("An ONDC order needs at least one item");
+  for (const l of lines) {
+    if (!Number.isSafeInteger(l.count) || l.count < 1) throw new Error(`Item ${l.itemId} has a count of ${l.count}`);
+    // A seller ties an add-on to its dish through parent_item_id. Without it
+    // the add-on arrives as a separate, unattached item.
+    if (l.customizations?.length && !l.parentItemId) {
+      throw new Error(`Item ${l.itemId} has customisations but no parent item id to tie them to`);
+    }
+  }
   return lines.flatMap((l) => [
     {
       id: l.itemId,
@@ -119,7 +130,7 @@ export function buildSelect(o: OrderBase & { gps: string; areaCode: string }) {
       order: {
         provider: { id: o.providerId, locations: [{ id: o.locationId }] },
         items: wireItems(o.lines, o.locationId),
-        fulfillments: [{ end: { location: { gps: o.gps, address: { area_code: o.areaCode } } } }],
+        fulfillments: [{ end: { location: { gps: checkedGps(o.gps), address: { area_code: checkedAreaCode(o.areaCode) } } } }],
       },
     },
   };
@@ -156,7 +167,7 @@ export function buildInit(o: OrderBase & { billing: { name: string; phone: strin
             type: "Delivery",
             end: {
               contact: { email: o.delivery.email, phone: o.delivery.phone },
-              location: { gps: o.delivery.gps, address: wireAddress(o.delivery.address) },
+              location: { gps: checkedGps(o.delivery.gps), address: wireAddress(o.delivery.address) },
             },
           },
         ],
@@ -195,6 +206,7 @@ export function buildConfirm(
     };
   },
 ) {
+  checkConfirmPayment(o.quote, o.payment);
   const at = o.billing.at.toISOString();
   return {
     context: buildContext({ domain: DOMAIN, action: "confirm", city: o.city, transactionId: o.transactionId, bppId: o.bpp.id, bppUri: o.bpp.uri }),
@@ -221,7 +233,7 @@ export function buildConfirm(
             end: {
               person: { name: o.delivery.personName },
               contact: { phone: o.delivery.phone },
-              location: { gps: o.delivery.gps, address: wireAddress(o.delivery.address) },
+              location: { gps: checkedGps(o.delivery.gps), address: wireAddress(o.delivery.address) },
             },
           },
         ],
@@ -243,6 +255,39 @@ export function buildConfirm(
       },
     },
   };
+}
+
+/**
+ * The money in a confirm must agree with itself before it is sent. The amount
+ * is what the customer was charged, the quote is what the seller asked for,
+ * and if they differ we would be confirming an order at a price nobody agreed.
+ * When Flouna collects, the order must actually be paid and the seller's
+ * settlement details present, or we would be telling the seller it will be
+ * paid with no record of the payment and nowhere to send its share.
+ */
+function checkConfirmPayment(
+  quote: unknown,
+  p: {
+    collectedBy: "BAP" | "BPP";
+    amountPaise: number;
+    gatewayTransactionId?: string;
+    paid: boolean;
+    settlementDetails: SettlementDetail[];
+  },
+) {
+  const value = (quote as { price?: { value?: unknown } } | null)?.price?.value;
+  const quotedPaise =
+    typeof value === "string" && /^\d+(\.\d{1,2})?$/.test(value) ? Math.round(Number(value) * 100) : Number.NaN;
+  if (quotedPaise !== p.amountPaise) {
+    throw new Error(`Payment of ${rupees(p.amountPaise)} does not match the seller's quote of ${String(value)}`);
+  }
+  if (p.collectedBy === "BAP") {
+    if (!p.paid) throw new Error("Flouna collects this order, so it must be paid before it is confirmed");
+    if (!p.gatewayTransactionId) throw new Error("A paid order needs the payment's transaction id");
+    if (p.settlementDetails.length === 0) {
+      throw new Error("Flouna collects this order, so the seller's settlement details are needed");
+    }
+  }
 }
 
 /** Asks the seller where an order has got to. */

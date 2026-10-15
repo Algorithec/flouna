@@ -172,8 +172,14 @@ describe("ONDC review findings", () => {
 
   it("a seller's catalogue larger than 100 KB reaches the handler instead of being refused as too large", async () => {
     const big = JSON.stringify({ context: { action: "on_search" }, message: { catalog: { pad: "x".repeat(300_000) } } });
-    const res = await request(fullApp).post("/ondc/on_search").set("Content-Type", "application/json").send(big);
+    const res = await request(fullApp)
+      .post("/ondc/on_search")
+      .set("Content-Type", "application/json")
+      .set("Authorization", sign(big, realSeller, "seller.test", "s1"))
+      .send(big);
     expect(res.status).not.toBe(413);
+    // It reached the router: this test deployment has no ONDC identity.
+    expect(res.status).toBe(503);
   });
 
   it("a registry that never answers does not hang verification", async () => {

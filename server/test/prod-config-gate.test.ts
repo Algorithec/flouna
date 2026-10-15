@@ -12,7 +12,7 @@ const SAFE_PROD = {
   JWT_ACCESS_SECRET: "a".repeat(48),
   JWT_REFRESH_SECRET: "b".repeat(48),
   PROVIDER_MODE: "ondc",
-  ONDC_SUBSCRIBER_ID: "flouna.app",
+  ONDC_SUBSCRIBER_ID: "ondc.flouna.com",
   CASHFREE_APP_ID: "app-id",
   CASHFREE_SECRET_KEY: "secret-key",
   CASHFREE_ENV: "production",
@@ -71,6 +71,12 @@ describe("production config gate", () => {
     const { exited, errors } = await loadEnv({ ONDC_SUBSCRIBER_ID: undefined });
     expect(exited).toBe(true);
     expect(errors.join(" ")).toMatch(/ONDC_SUBSCRIBER_ID/);
+  });
+
+  it("refuses a subscriber id other than the one its ONDC messages carry", async () => {
+    const { exited, errors } = await loadEnv({ ONDC_SUBSCRIBER_ID: "www.flouna.com" });
+    expect(exited).toBe(true);
+    expect(errors.join(" ")).toMatch(/would be refused/);
   });
 
   it("refuses to start without payment credentials — checkout would dead-end", async () => {

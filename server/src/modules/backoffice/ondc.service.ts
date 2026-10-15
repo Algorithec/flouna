@@ -7,6 +7,7 @@
 import crypto from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
+import { BAP_URI } from "../ondc/context.js";
 
 // ONDC domain codes for the categories we transact.
 const DOMAIN_CODE: Record<string, string> = {
@@ -27,7 +28,8 @@ function context(action: string, domain: string, txnId: string, messageId: strin
     action,
     core_version: "1.2.0",
     bap_id: env.ONDC_SUBSCRIBER_ID ?? "flouna.bap.simulated",
-    bap_uri: env.ONDC_BASE_URL ?? "https://buyer.flouna.app",
+    // Our real callback address. ONDC_BASE_URL names the gateway, not us.
+    bap_uri: BAP_URI,
     transaction_id: txnId,
     message_id: messageId,
     timestamp: new Date().toISOString(),
