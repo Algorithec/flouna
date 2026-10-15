@@ -29,7 +29,10 @@ export type Participant = {
   valid_until: string;
 };
 
-type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<{
+type FetchLike = (
+  url: string,
+  init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal },
+) => Promise<{
   ok: boolean;
   status: number;
   json(): Promise<unknown>;
@@ -37,34 +40,60 @@ type FetchLike = (url: string, init: { method: string; headers: Record<string, s
 
 /** How long a looked-up key is trusted before asking again. */
 const CACHE_MS = 10 * 60_000;
+/**
+ * How long "the registry has no such key" is remembered. Short, so a seller
+ * that has just subscribed is not refused for ten minutes, and long enough
+ * that a burst of messages under a bad key id asks the registry once.
+ */
+const MISS_CACHE_MS = 60_000;
+/** The registry answers in well under a second; a hung lookup must not hold a seller's request open. */
+const LOOKUP_TIMEOUT_MS = 5_000;
+/**
+ * Lookups are keyed by whatever key id an incoming request names, before
+ * anything about it is verified, so the cache is bounded or anyone could grow
+ * it without limit by inventing ids.
+ */
+const MAX_CACHE_ENTRIES = 5_000;
 
 export function createRegistryClient(opts: {
   registryUrl: string;
   identity: SigningIdentity;
   fetch?: FetchLike;
   now?: () => number;
+  timeoutMs?: number;
+  maxCacheEntries?: number;
 }) {
   const doFetch: FetchLike = opts.fetch ?? ((url, init) => fetch(url, init));
   const now = opts.now ?? (() => Date.now());
+  const timeoutMs = opts.timeoutMs ?? LOOKUP_TIMEOUT_MS;
+  const maxEntries = opts.maxCacheEntries ?? MAX_CACHE_ENTRIES;
+  // Map keeps insertion order, so the first key is the oldest.
   const cache = new Map<string, { at: number; value: Participant | null }>();
 
   async function lookup(body: Record<string, string>): Promise<Participant[]> {
     const raw = JSON.stringify(body);
-    const res = await doFetch(opts.registryUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: createAuthorizationHeader(raw, opts.identity) },
-      body: raw,
-    });
-    if (!res.ok) throw new Error(`Registry lookup failed with HTTP ${res.status}`);
-    const data = await res.json();
-    return Array.isArray(data) ? (data as Participant[]) : [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await doFetch(opts.registryUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: createAuthorizationHeader(raw, opts.identity) },
+        body: raw,
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`Registry lookup failed with HTTP ${res.status}`);
+      const data = await res.json();
+      return Array.isArray(data) ? (data as Participant[]) : [];
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /** The participant's signing key for this key id, if it is usable now. */
   async function publicKeyFor(subscriberId: string, uniqueKeyId: string): Promise<string | null> {
     const key = `${subscriberId}|${uniqueKeyId}`;
     const hit = cache.get(key);
-    if (hit && now() - hit.at < CACHE_MS) return usableKey(hit.value, now());
+    if (hit && now() - hit.at < (hit.value ? CACHE_MS : MISS_CACHE_MS)) return usableKey(hit.value, now());
 
     let found: Participant | null;
     try {
@@ -76,11 +105,13 @@ export function createRegistryClient(opts: {
       // asks again.
       return null;
     }
+    cache.delete(key);
     cache.set(key, { at: now(), value: found });
+    while (cache.size > maxEntries) cache.delete(cache.keys().next().value!);
     return usableKey(found, now());
   }
 
-  return { lookup, publicKeyFor };
+  return { lookup, publicKeyFor, cacheSize: () => cache.size };
 }
 
 function usableKey(p: Participant | null, nowMs: number): string | null {

@@ -1,4 +1,4 @@
-import { buildContext } from "./context.js";
+import { buildContext, checkedFeePercent } from "./context.js";
 
 // Ride hailing (ONDC:TRV10, Beckn 2.0.1) message builders.
 //
@@ -42,7 +42,7 @@ function areaTags(pickup: Stop, drop: Stop) {
 const finderFeeTag = (percent: number) => ({
   descriptor: { code: "BUYER_FINDER_FEES" },
   display: false,
-  list: [{ descriptor: { code: "BUYER_FINDER_FEES_PERCENTAGE" }, value: String(percent) }],
+  list: [{ descriptor: { code: "BUYER_FINDER_FEES_PERCENTAGE" }, value: String(checkedFeePercent(percent)) }],
 });
 
 /** Asks ride providers what they can offer between two points. */

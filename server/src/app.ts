@@ -90,8 +90,16 @@ export function createApp() {
   const bulkJsonBody = express.json({ limit: "600kb", verify: keepRawBody });
   const UPLOAD_PATHS = [/^\/api\/complaints\/[^/]+\/evidence\/?$/];
   const BULK_PATHS = [/^\/api\/groups\/[^/]+\/chat\/history\/?$/];
+  // Seller apps answer a search with their whole catalogue in one on_search,
+  // and a restaurant's menu with images and customisations runs to megabytes.
+  // At 100 KB those answers were refused before their signature was checked.
+  const ondcJsonBody = express.json({ limit: "5mb", verify: keepRawBody });
+  const ONDC_CALLBACK_PATH = /^\/ondc\/on_[a-z_]+\/?$/;
   app.use((req, res, next) => {
     if (req.method === "POST") {
+      if (ONDC_CALLBACK_PATH.test(req.path)) {
+        return ondcJsonBody(req, res, next);
+      }
       if (UPLOAD_PATHS.some((re) => re.test(req.path))) {
         return uploadJsonBody(req, res, next);
       }
