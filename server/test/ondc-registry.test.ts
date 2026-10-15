@@ -9,6 +9,7 @@ import request from "supertest";
 // and nothing on our side would look wrong.
 
 const signing = crypto.generateKeyPairSync("ed25519");
+const otherEnc = crypto.generateKeyPairSync("x25519");
 const ourEnc = crypto.generateKeyPairSync("x25519");
 const registryEnc = crypto.generateKeyPairSync("x25519");
 const REQUEST_ID = "flouna-test-request-id";
@@ -21,9 +22,10 @@ let app: import("express").Express;
 
 beforeAll(async () => {
   process.env.ONDC_SIGNING_PRIVATE_KEY = Buffer.concat([seed, pubRaw]).toString("base64");
-  process.env.ONDC_ENCRYPTION_PRIVATE_KEY = ourEnc.privateKey
-    .export({ type: "pkcs8", format: "der" })
-    .toString("base64");
+  // Two subscriptions, two keys; the one the challenge uses is listed second.
+  process.env.ONDC_ENCRYPTION_PRIVATE_KEY = [otherEnc, ourEnc]
+    .map((k) => k.privateKey.export({ type: "pkcs8", format: "der" }).toString("base64"))
+    .join(",");
   process.env.ONDC_SITE_REQUEST_ID = REQUEST_ID;
   process.env.ONDC_REGISTRY_ENCRYPTION_PUBLIC_KEY = registryEnc.publicKey
     .export({ type: "spki", format: "der" })
