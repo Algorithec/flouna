@@ -128,6 +128,15 @@ const envSchema = z.object({
   ONDC_SUBSCRIBER_ID: z.string().optional(),
   ONDC_SIGNING_PRIVATE_KEY: z.string().optional(),
   ONDC_SIGNING_PUBLIC_KEY: z.string().optional(),
+  // The X25519 half of the key file the ONDC portal issues. Only used to
+  // answer the registry's on_subscribe challenge.
+  ONDC_ENCRYPTION_PRIVATE_KEY: z.string().optional(),
+  // Which registry is talking to us, which decides the public key its
+  // challenge is encrypted against. Pre-production until go-live.
+  ONDC_REGISTRY_ENV: z.enum(["preprod", "prod"]).default("preprod"),
+  // The id ondc-site-verification.html carries, signed. Any unique value; the
+  // same one has to go in the subscribe request when we send it ourselves.
+  ONDC_SITE_REQUEST_ID: z.string().optional(),
 
   // ₹50/month premium tier. Reuses the Cashfree gateway for the recurring
   // charge; falls back to a simulated activation in dev when unset.
