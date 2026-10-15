@@ -68,7 +68,9 @@ export function createRegistryClient(opts: {
   const timeoutMs = opts.timeoutMs ?? LOOKUP_TIMEOUT_MS;
   const maxEntries = opts.maxCacheEntries ?? MAX_CACHE_ENTRIES;
   // Map keeps insertion order, so the first key is the oldest.
-  const cache = new Map<string, { at: number; value: Participant | null }>();
+  // Every entry for the key id is kept: the registry lists a participant once
+  // per domain, and only one of those may be SUBSCRIBED.
+  const cache = new Map<string, { at: number; value: Participant[] }>();
 
   async function lookup(body: Record<string, string>): Promise<Participant[]> {
     const raw = JSON.stringify(body);
@@ -89,29 +91,46 @@ export function createRegistryClient(opts: {
     }
   }
 
+  // Lookups in flight, so a burst of messages from a seller we have not seen
+  // yet asks the registry once rather than once per message.
+  const inFlight = new Map<string, Promise<Participant[] | null>>();
+
   /** The participant's signing key for this key id, if it is usable now. */
   async function publicKeyFor(subscriberId: string, uniqueKeyId: string): Promise<string | null> {
     const key = `${subscriberId}|${uniqueKeyId}`;
     const hit = cache.get(key);
-    if (hit && now() - hit.at < (hit.value ? CACHE_MS : MISS_CACHE_MS)) return usableKey(hit.value, now());
+    if (hit && now() - hit.at < (hit.value.length ? CACHE_MS : MISS_CACHE_MS)) return firstUsable(hit.value, now());
 
-    let found: Participant | null;
-    try {
-      const list = await lookup({ subscriber_id: subscriberId, ukId: uniqueKeyId });
-      found = list.find((p) => p.subscriber_id === subscriberId && p.ukId === uniqueKeyId) ?? null;
-    } catch {
-      // An unreachable registry is not a reason to trust a stale or unknown
-      // key. Fail closed and do not cache the failure, so the next message
-      // asks again.
-      return null;
+    let pending = inFlight.get(key);
+    if (!pending) {
+      pending = lookup({ subscriber_id: subscriberId, ukId: uniqueKeyId })
+        .then((list) => {
+          const matches = list.filter((p) => p.subscriber_id === subscriberId && p.ukId === uniqueKeyId);
+          cache.delete(key);
+          cache.set(key, { at: now(), value: matches });
+          while (cache.size > maxEntries) cache.delete(cache.keys().next().value!);
+          return matches;
+        })
+        // An unreachable registry is not a reason to trust a stale or unknown
+        // key. Fail closed and do not cache the failure, so the next message
+        // asks again.
+        .catch(() => null)
+        .finally(() => inFlight.delete(key));
+      inFlight.set(key, pending);
     }
-    cache.delete(key);
-    cache.set(key, { at: now(), value: found });
-    while (cache.size > maxEntries) cache.delete(cache.keys().next().value!);
-    return usableKey(found, now());
+    const matches = await pending;
+    return matches ? firstUsable(matches, now()) : null;
   }
 
   return { lookup, publicKeyFor, cacheSize: () => cache.size };
+}
+
+function firstUsable(list: Participant[], nowMs: number): string | null {
+  for (const p of list) {
+    const k = usableKey(p, nowMs);
+    if (k) return k;
+  }
+  return null;
 }
 
 function usableKey(p: Participant | null, nowMs: number): string | null {

@@ -103,6 +103,10 @@ export async function verifyAuthorizationHeader(
   }
   if (parsed.created > now + CLOCK_SKEW_SECONDS) return { ok: false, reason: "not_yet_valid" };
   if (parsed.expires < now - CLOCK_SKEW_SECONDS) return { ok: false, reason: "expired" };
+  // The sender picks its own expiry. Without an age limit, a message signed
+  // with a far off one could be replayed long after we stopped remembering
+  // it. Nobody honest signs a message and sends it more than an hour later.
+  if (parsed.created < now - SIGNATURE_TTL_SECONDS - CLOCK_SKEW_SECONDS) return { ok: false, reason: "expired" };
 
   const publicKeyB64 = await lookupPublicKey(parsed.subscriberId, parsed.uniqueKeyId);
   if (!publicKeyB64) return { ok: false, reason: "unknown_key" };

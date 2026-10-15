@@ -25,6 +25,10 @@ export const CALLBACK_ACTIONS = [
   "on_update",
   "on_rating",
   "on_support",
+  // Complaints (IGM). Seller apps send these to the same base URL as every
+  // other answer, so without them a seller's reply to a complaint was a 404.
+  "on_issue",
+  "on_issue_status",
 ] as const;
 
 export type ReceivedCallback = {
@@ -66,6 +70,9 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
   // Digest of each stored message, by sender, with when it arrived. Map keeps
   // insertion order, so the oldest entry is the first one.
   const seen = new Map<string, number>();
+  // Messages being stored right now. A second copy that arrives meanwhile
+  // waits on the first instead of storing again, and shares its outcome.
+  const storing = new Map<string, Promise<void>>();
 
   function remembered(key: string, nowMs: number): boolean {
     const at = seen.get(key);
@@ -133,8 +140,15 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
       }
 
       // Stored before the ACK, so an ACK always means we have it.
-      await deps.record({ action, body, raw: rawBytes.toString("utf8"), senderId: sender.subscriberId });
-      remember(key, nowMs);
+      let pending = storing.get(key);
+      if (!pending) {
+        pending = deps
+          .record({ action, body, raw: rawBytes.toString("utf8"), senderId: sender.subscriberId })
+          .then(() => remember(key, Date.now()))
+          .finally(() => storing.delete(key));
+        storing.set(key, pending);
+      }
+      await pending;
       res.json(ACK);
     } catch (err) {
       // A registry key that is not a key, a lookup that throws, a database

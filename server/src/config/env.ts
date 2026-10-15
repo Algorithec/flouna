@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { subscriberIdProblem } from "../modules/ondc/context.js";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -208,6 +209,8 @@ if (isProd) {
         "the app then tells users it is a demo.",
     );
   }
+  const subscriberProblem = subscriberIdProblem(env.ONDC_SUBSCRIBER_ID);
+  if (subscriberProblem) problems.push(subscriberProblem);
   if (env.PROVIDER_MODE === "ondc" && !env.ONDC_SUBSCRIBER_ID) {
     problems.push("PROVIDER_MODE=ondc but ONDC_SUBSCRIBER_ID is unset, the adapter cannot sign requests");
   }

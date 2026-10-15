@@ -44,7 +44,10 @@ export async function sendSigned(
     });
     let parsed: { message?: { ack?: { status?: string } }; error?: unknown } = {};
     try {
-      parsed = JSON.parse(await res.text());
+      const json: unknown = JSON.parse(await res.text());
+      // "null" or a bare number is valid JSON but not an acknowledgement, and
+      // reading fields off it would throw and be misreported as a network failure.
+      if (json && typeof json === "object") parsed = json as typeof parsed;
     } catch {
       // A body that is not JSON is not an acknowledgement.
     }
