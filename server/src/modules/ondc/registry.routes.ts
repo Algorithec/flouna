@@ -99,17 +99,22 @@ ondcRegistryRouter.post("/ondc/on_subscribe", (req, res) => {
     res.status(400).json({ error: "Missing challenge" });
     return;
   }
-  try {
-    const answer = answerChallenge(
-      challenge,
-      encryptionKeyFrom(env.ONDC_ENCRYPTION_PRIVATE_KEY),
-      process.env.ONDC_REGISTRY_ENCRYPTION_PUBLIC_KEY ??
-        REGISTRY_ENCRYPTION_PUBLIC_KEY[env.ONDC_REGISTRY_ENV],
-    );
-    res.json({ answer });
-  } catch {
-    // A challenge we cannot decrypt is the registry telling us our key and
-    // its record disagree. Say so plainly rather than as a server fault.
-    res.status(400).json({ error: "Could not decrypt the challenge" });
+  // One key per subscription. The portal issues a fresh pair for every
+  // domain subscribed under ondc.flouna.com, and the challenge is encrypted to
+  // whichever one the registry is checking, so each is tried in turn. A wrong
+  // key fails AES padding rather than producing a plausible answer.
+  const registryPublic =
+    process.env.ONDC_REGISTRY_ENCRYPTION_PUBLIC_KEY ??
+    REGISTRY_ENCRYPTION_PUBLIC_KEY[env.ONDC_REGISTRY_ENV];
+  for (const key of env.ONDC_ENCRYPTION_PRIVATE_KEY.split(",").map((k) => k.trim()).filter(Boolean)) {
+    try {
+      res.json({ answer: answerChallenge(challenge, encryptionKeyFrom(key), registryPublic) });
+      return;
+    } catch {
+      // Not this subscription's key; try the next.
+    }
   }
+  // None of our keys decrypts it: the registry's record and ours disagree.
+  // Say so plainly rather than as a server fault.
+  res.status(400).json({ error: "Could not decrypt the challenge" });
 });
