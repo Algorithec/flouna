@@ -29,6 +29,8 @@ const KEYS: Record<string, string> = {
 };
 
 function testApp(recorded: ReceivedCallback[], over: Partial<CallbackDeps> = {}) {
+  // Stands in for the database's unique dedupe key.
+  const keys = new Set<string>();
   const a = express();
   a.use(
     express.json({
@@ -41,7 +43,10 @@ function testApp(recorded: ReceivedCallback[], over: Partial<CallbackDeps> = {})
     createCallbacksRouter({
       publicKeyFor: async (s, u) => KEYS[`${s}|${u}`] ?? null,
       record: async (cb) => {
+        if (keys.has(cb.dedupeKey)) return { duplicate: true };
+        keys.add(cb.dedupeKey);
         recorded.push(cb);
+        return { duplicate: false };
       },
       ...over,
     }),

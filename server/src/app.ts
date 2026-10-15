@@ -33,6 +33,7 @@ import { ondcRegistryRouter } from "./modules/ondc/registry.routes.js";
 import { ondcCallbacksRouter } from "./modules/ondc/index.js";
 import { CALLBACK_ACTIONS } from "./modules/ondc/callbacks.routes.js";
 import { parseAuthorizationHeader } from "./modules/ondc/signing.js";
+import { BUYER_ERRORS, nack } from "./modules/ondc/errors.js";
 
 export function createApp() {
   const app = express();
@@ -111,16 +112,13 @@ export function createApp() {
     standardHeaders: false,
     legacyHeaders: false,
     keyGenerator: (req) => "ondc:" + (req.ip ?? ""),
-    message: { message: { ack: { status: "NACK" } }, error: { type: "CORE-ERROR", code: "10000", message: "Too many requests" } },
+    message: nack(BUYER_ERRORS.INTERNAL_ERROR, "Too many requests, retry shortly"),
   });
   app.use((req, res, next) => {
     if (!isOndcCallback(req)) return next();
     ondcLimiter(req, res, () => {
       if (!parseAuthorizationHeader(req.get("authorization") ?? "")) {
-        res.status(401).json({
-          message: { ack: { status: "NACK" } },
-          error: { type: "POLICY-ERROR", code: "10003", message: "Signature not accepted: malformed" },
-        });
+        res.status(401).json(nack(BUYER_ERRORS.INVALID_SIGNATURE, "Signature not accepted: malformed"));
         return;
       }
       ondcJsonBody(req, res, next);
