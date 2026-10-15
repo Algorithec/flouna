@@ -1,6 +1,12 @@
 import { Router, type Request } from "express";
 import { BAP_ID } from "./context.js";
-import { digestOf, verifyAuthorizationHeader } from "./signing.js";
+import { BUYER_ERRORS, nack } from "./errors.js";
+import { digestOf, verifyAuthorizationHeader, type VerifyResult } from "./signing.js";
+
+/** A message outside its signature's time window is stale; anything else is an invalid signature. */
+function signatureError(reason: Extract<VerifyResult, { ok: false }>["reason"]) {
+  return reason === "expired" || reason === "not_yet_valid" ? BUYER_ERRORS.STALE_REQUEST : BUYER_ERRORS.INVALID_SIGNATURE;
+}
 
 // Where seller apps answer us.
 //
@@ -36,6 +42,8 @@ export type ReceivedCallback = {
   body: Record<string, unknown>;
   raw: string;
   senderId: string;
+  /** Signer and digest of the exact bytes: the same for every copy of one message. */
+  dedupeKey: string;
 };
 
 export type CallbackDeps = {
@@ -46,42 +54,23 @@ export type CallbackDeps = {
    * NACK so the seller app sends it again: an order confirmation we
    * acknowledged but never stored would be lost for good.
    */
-  record: (cb: ReceivedCallback) => Promise<void>;
+  record: (cb: ReceivedCallback) => Promise<RecordOutcome | void>;
 };
 
-/**
- * How long a delivered message is remembered, so a resend of the same bytes is
- * acknowledged without being stored twice. Longer than a signature can live
- * (an hour, plus clock allowance), so a replay can never outlast the memory.
- */
-const SEEN_MS = 2 * 60 * 60_000;
-const SEEN_MAX = 20_000;
+/** `duplicate` when this exact message was already stored, by this server or another. */
+export type RecordOutcome = { duplicate: boolean };
 
 const ACK = { message: { ack: { status: "ACK" } } };
-
-function nack(type: string, code: string, message: string) {
-  return { message: { ack: { status: "NACK" } }, error: { type, code, message } };
-}
 
 export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?: string } = {}) {
   const router = Router();
   // Messages addressed to any other buyer app are refused.
   const bapId = opts.bapId ?? BAP_ID;
-  // Digest of each stored message, by sender, with when it arrived. Map keeps
-  // insertion order, so the oldest entry is the first one.
-  const seen = new Map<string, number>();
   // Messages being stored right now. A second copy that arrives meanwhile
-  // waits on the first instead of storing again, and shares its outcome.
-  const storing = new Map<string, Promise<void>>();
-
-  function remembered(key: string, nowMs: number): boolean {
-    const at = seen.get(key);
-    return at !== undefined && nowMs - at < SEEN_MS;
-  }
-  function remember(key: string, nowMs: number) {
-    seen.set(key, nowMs);
-    while (seen.size > SEEN_MAX) seen.delete(seen.keys().next().value!);
-  }
+  // waits on the first instead of racing it to the database. Copies that
+  // arrive later, or at another server, are caught by the stored row's
+  // unique dedupe key instead.
+  const storing = new Map<string, Promise<RecordOutcome | void>>();
 
   router.post("/ondc/:action", async (req: Request, res, next) => {
     const action = req.params.action ?? "";
@@ -89,7 +78,7 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
     if (!(CALLBACK_ACTIONS as readonly string[]).includes(action)) return next();
 
     if (!deps) {
-      res.status(503).json(nack("CORE-ERROR", "10001", "ONDC is not configured on this deployment"));
+      res.status(503).json(nack(BUYER_ERRORS.INTERNAL_ERROR, "ONDC is not configured on this deployment"));
       return;
     }
 
@@ -100,53 +89,46 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
     const body = (req.body ?? {}) as Record<string, unknown>;
     const ctx = (body.context ?? {}) as Record<string, unknown>;
     if (!rawBytes?.length || ctx.action !== action) {
-      res.status(400).json(nack("CONTEXT-ERROR", "10002", "Context action does not match the endpoint"));
+      res.status(400).json(nack(BUYER_ERRORS.INVALID_RESPONSE, "Context action does not match the endpoint"));
       return;
     }
     if (ctx.bap_id !== bapId) {
-      res.status(400).json(nack("CONTEXT-ERROR", "10002", "Message is not addressed to this buyer app"));
+      res.status(400).json(nack(BUYER_ERRORS.INVALID_RESPONSE, "Message is not addressed to this buyer app"));
       return;
     }
 
     try {
       const sender = await verifyAuthorizationHeader(req.get("authorization"), rawBytes, deps.publicKeyFor);
       if (!sender.ok) {
-        res.status(401).json(nack("POLICY-ERROR", "10003", `Signature not accepted: ${sender.reason}`));
+        res.status(401).json(nack(signatureError(sender.reason), `Signature not accepted: ${sender.reason}`));
         return;
       }
       // A valid signature only proves who sent the message. Without this, any
       // registered participant could sign an on_confirm naming another seller
       // in its context and have it taken as that seller's.
       if (ctx.bpp_id !== sender.subscriberId) {
-        res.status(401).json(nack("POLICY-ERROR", "10003", "Signer is not the seller app named in the message"));
+        res.status(401).json(nack(BUYER_ERRORS.INVALID_SIGNATURE, "Signer is not the seller app named in the message"));
         return;
       }
       const gatewayHeader = req.get("x-gateway-authorization");
       if (gatewayHeader) {
         const gw = await verifyAuthorizationHeader(gatewayHeader, rawBytes, deps.publicKeyFor);
         if (!gw.ok) {
-          res.status(401).json(nack("POLICY-ERROR", "10003", `Gateway signature not accepted: ${gw.reason}`));
+          res.status(401).json(nack(signatureError(gw.reason), `Gateway signature not accepted: ${gw.reason}`));
           return;
         }
       }
 
-      const nowMs = Date.now();
-      const key = `${sender.subscriberId}|${digestOf(rawBytes)}`;
-      if (remembered(key, nowMs)) {
-        // A resend of something already stored. Acknowledge it, since the
-        // seller evidently did not see our first ACK, and store nothing.
-        res.json(ACK);
-        return;
-      }
-
-      // Stored before the ACK, so an ACK always means we have it.
-      let pending = storing.get(key);
+      // Stored before the ACK, so an ACK always means we have it. A copy of a
+      // message already stored is acknowledged too: the seller evidently did
+      // not see our first ACK, and storing it again would record it twice.
+      const dedupeKey = `${sender.subscriberId}|${digestOf(rawBytes)}`;
+      let pending = storing.get(dedupeKey);
       if (!pending) {
         pending = deps
-          .record({ action, body, raw: rawBytes.toString("utf8"), senderId: sender.subscriberId })
-          .then(() => remember(key, Date.now()))
-          .finally(() => storing.delete(key));
-        storing.set(key, pending);
+          .record({ action, body, raw: rawBytes.toString("utf8"), senderId: sender.subscriberId, dedupeKey })
+          .finally(() => storing.delete(dedupeKey));
+        storing.set(dedupeKey, pending);
       }
       await pending;
       res.json(ACK);
@@ -155,7 +137,7 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
       // that is down: refuse the message so the seller app retries it, rather
       // than leave the request open until the seller gives up.
       console.error("[ondc] could not take", action, err instanceof Error ? err.message : String(err));
-      if (!res.headersSent) res.status(500).json(nack("CORE-ERROR", "10000", "Could not process the message, retry"));
+      if (!res.headersSent) res.status(500).json(nack(BUYER_ERRORS.INTERNAL_ERROR, "Could not process the message, retry"));
     }
   });
 
