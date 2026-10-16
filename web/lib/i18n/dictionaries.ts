@@ -1304,7 +1304,7 @@ export const dictionaries = {
     "pa.orderNow": "Order now →",
     "gb.notConfigured": "Google sign-in is not configured yet",
     "gb.failed": "Google sign-in failed",
-    "ru.title": "Unlock more with Radius",
+    "ru.title": "Unlock more with Flouna Plus",
     "ru.sub": "Personalized suggestions, exclusive offers & more",
     "ru.bestPrices": "Best Prices",
     "ru.topRated": "Top Rated",
