@@ -2,6 +2,7 @@ import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
 import { createCallbacksRouter, type CallbackDeps } from "./callbacks.routes.js";
 import { createRegistryClient, REGISTRY_URL } from "./registryClient.js";
+import { applyOnIssue } from "../complaints/igm.network.js";
 
 /**
  * The live ONDC wiring, or null when this deployment has no ONDC identity.
@@ -27,6 +28,7 @@ export function ondcCallbackDeps(): CallbackDeps | null {
  */
 export const recordInbound: CallbackDeps["record"] = async ({ action, body, raw, senderId, dedupeKey }) => {
   const ctx = (body.context ?? {}) as Record<string, string | undefined>;
+  let duplicate = false;
   try {
     await prisma.ondcTransaction.create({
       data: {
@@ -45,10 +47,15 @@ export const recordInbound: CallbackDeps["record"] = async ({ action, body, raw,
     });
   } catch (err) {
     // The unique dedupe key: this exact message is already stored.
-    if ((err as { code?: string }).code === "P2002") return { duplicate: true };
-    throw err;
+    if ((err as { code?: string }).code !== "P2002") throw err;
+    duplicate = true;
   }
-  return { duplicate: false };
+  // A seller's answer to a complaint is applied to it here, duplicate or not:
+  // applying is idempotent, and if a first attempt failed after the row was
+  // stored, the seller's retry is what gets the complaint updated. A failure
+  // throws, so the seller is told to retry.
+  if (action === "on_issue") await applyOnIssue({ body, raw, senderId });
+  return { duplicate };
 };
 
 export function ondcCallbacksRouter() {
