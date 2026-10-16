@@ -43,8 +43,14 @@ function listing(dishId: string, platform: string) {
 }
 
 async function cartId(userId: string): Promise<string> {
-  const cart = await prisma.cart.upsert({ where: { userId }, create: { userId }, update: {}, select: { id: true } });
-  return cart.id;
+  // The first two requests from a new customer can race to create the cart
+  // the same way; the loser reads the winner's.
+  try {
+    return (await prisma.cart.upsert({ where: { userId }, create: { userId }, update: {}, select: { id: true } })).id;
+  } catch (err) {
+    if ((err as { code?: string }).code !== "P2002") throw err;
+    return (await prisma.cart.findUniqueOrThrow({ where: { userId }, select: { id: true } })).id;
+  }
 }
 
 export async function getCart(userId: string): Promise<CartView> {
@@ -87,7 +93,10 @@ export async function addItem(
   if (!listing(item.dishId, item.platform)) throw new ApiError(404, "That dish is not available on that platform");
   const id = await cartId(userId);
 
-  await prisma.$transaction(async (tx) => {
+  // Two taps on Add at once can both find no line and both create one. On
+  // Postgres the second is refused by the unique index; run it again and it
+  // finds the first one's line and adds to it, so both taps count.
+  const write = () => prisma.$transaction(async (tx) => {
     const existing = await tx.cartItem.findUnique({
       where: { cartId_dishId_platform: { cartId: id, dishId: item.dishId, platform: item.platform } },
     });
@@ -105,6 +114,12 @@ export async function addItem(
       data: { cartId: id, dishId: item.dishId, platform: item.platform, qty, decisionId: item.decisionId, addedVia: item.via ?? "app" },
     });
   });
+  try {
+    await write();
+  } catch (err) {
+    if ((err as { code?: string }).code !== "P2002") throw err;
+    await write();
+  }
   return getCart(userId);
 }
 

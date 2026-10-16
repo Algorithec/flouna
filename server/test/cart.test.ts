@@ -1,5 +1,5 @@
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { allQuotes } from "../src/modules/food/food.service.js";
 import { prisma } from "../src/lib/prisma.js";
 import { app, authedAgent } from "./helpers.js";
@@ -82,6 +82,30 @@ describe("cart", () => {
     // Gone for good, and the rest of the cart still prices.
     expect((await agent.get("/api/cart").expect(200)).body.removed).toBe(0);
     await agent.post("/api/orders/preview").send({ items: [{ dishId: a.dishId, platform: a.platform, qty: 1 }] }).expect(200);
+  });
+
+  it("counts every tap when Add is pressed twice at once", async () => {
+    const { agent } = await authedAgent();
+    const add = () => agent.post("/api/cart/items").send({ dishId: b.dishId, platform: b.platform });
+    const [x, y, z] = await Promise.all([add(), add(), add()]);
+    expect([x.status, y.status, z.status]).toEqual([200, 200, 200]);
+    const cart = (await agent.get("/api/cart").expect(200)).body;
+    expect(cart.lines).toHaveLength(1);
+    expect(cart.lines[0].qty).toBe(3);
+  });
+
+  it("still adds when the database refuses a duplicate line, as Postgres does under a double tap", async () => {
+    const { agent } = await authedAgent();
+    await agent.get("/api/cart").expect(200);
+    // The other tap's line won the race: the first attempt is refused the way
+    // Postgres refuses it, and the retry finds and adds to that line.
+    const spy = vi.spyOn(prisma, "$transaction").mockRejectedValueOnce(Object.assign(new Error("Unique constraint failed"), { code: "P2002" }));
+    try {
+      const res = await agent.post("/api/cart/items").send({ dishId: b.dishId, platform: b.platform }).expect(200);
+      expect(res.body.count).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("keeps each customer's cart to themselves", async () => {
