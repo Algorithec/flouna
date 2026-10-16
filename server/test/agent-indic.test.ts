@@ -62,6 +62,7 @@ describe("reading Hindi, Hinglish and Telugu instructions", () => {
     "बिरयानी दिखाओ",
     "నాకు బిర్యానీ కావాలి",
     "mera order cancel karo",
+    "charminar tak 4 logon ke liye ride book karo",
   ])("%s goes to search, not an action", (text) => {
     expect(parseInstruction(text)).toBeNull();
   });

@@ -68,7 +68,10 @@ export function parseIndic(text: string): AgentAction | null {
   }
 
   // Rides for a group, and the answer to "shared or just yours".
-  if (/(ride|cab|auto|राइड|कैब|ఆటో|క్యాబ్|రైడ్)/.test(t) && membersIn(t) && /(book|बुक|బుక్)/.test(t)) {
+  // With a destination it is a new ride search ("for 2 people to Charminar",
+  // "Charminar tak", "चारमीनार तक", "చార్మినార్ కి"), which search prices.
+  const destination = /\bto\s+[a-z]|\b(tak|jaana|jana)\b|तक|जाना|కి వెళ్ళ|వరకు/.test(t);
+  if (!destination && /(ride|cab|auto|राइड|कैब|ఆటో|క్యాబ్|రైడ్)/.test(t) && membersIn(t) && /(book|बुक|బుక్)/.test(t)) {
     return { kind: "ride.group", members: membersIn(t)! };
   }
   if (/^(sab saath|sab saath mein|ek saath|ek hi ride|सब साथ|एक साथ|एक ही राइड|అందరం కలిసి|ఒకే రైడ్)/.test(t)) {

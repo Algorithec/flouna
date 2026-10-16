@@ -185,11 +185,23 @@ export async function runAction(o: {
         const decisionId = state.shown?.items.some((i) => i.dishId === r.item.dishId && i.platform === r.item.platform)
           ? state.shown?.decisionId
           : undefined;
+        const before = (await getCart(userId)).lines.find((l) => l.dishId === r.item.dishId && l.platform === r.item.platform)?.qty ?? 0;
         const cart = await addItem(userId, { dishId: r.item.dishId, platform: r.item.platform, qty: action.qty, decisionId, via: "chat" });
         state = { ...state, focus: { at: now.toISOString(), ...r.item } };
-        const line = cart.lines.find((l) => l.dishId === r.item.dishId && l.platform === r.item.platform);
+        const have = cart.lines.find((l) => l.dishId === r.item.dishId && l.platform === r.item.platform)?.qty ?? 0;
+        const added = have - before;
+        // One order holds at most 20 of a dish; say what was actually added.
+        if (added < action.qty) {
+          return done(
+            added === 0
+              ? `You already have ${have} of ${r.item.name}, the most one order can hold.`
+              : `Added ${added} × ${r.item.name}. You now have ${have}, the most one order can hold.`,
+            { card: { type: "cart", cart }, effects: [{ type: "cart_changed" }] },
+            added > 0,
+          );
+        }
         const count = action.qty > 1 ? `${action.qty} × ` : "";
-        return done(`Added ${count}${r.item.name} to your cart. You have ${line?.qty ?? action.qty} of it, ${cart.count} item${cart.count === 1 ? "" : "s"} in total.`, {
+        return done(`Added ${count}${r.item.name} to your cart. You have ${have} of it, ${cart.count} item${cart.count === 1 ? "" : "s"} in total.`, {
           card: { type: "cart", cart },
           effects: [{ type: "cart_changed" }],
         });

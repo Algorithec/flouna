@@ -195,7 +195,13 @@ describe("reading ride instructions", () => {
     ["just my ride", { kind: "ride.group_mode", mode: "mine" }],
   ])("%s", (text, action) => expect(parseInstruction(text)).toEqual(action));
 
-  it.each(["book a cab to the airport", "Find the cheapest ride to the airport under ₹700", "ride to charminar"])("%s is a ride search", (text) =>
+  it.each([
+    "book a cab to the airport",
+    "Find the cheapest ride to the airport under ₹700",
+    "ride to charminar",
+    "book an auto for 2 people to charminar",
+    "i'll take a cab",
+  ])("%s is a ride search", (text) =>
     expect(parseInstruction(text)).toBeNull(),
   );
 });

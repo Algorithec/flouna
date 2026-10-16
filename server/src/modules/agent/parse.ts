@@ -106,7 +106,9 @@ function parseEnglish(message: string): AgentAction | null {
 
   // Rides for several people: chat asks what they mean before doing anything.
   const groupRide = t.match(/\b(book|get|arrange|need)\b.*\b(rides?|cabs?|autos?)\b.*\bfor (\d{1,2}|two|three|four|five|six|seven|eight|nine|ten)( people| persons?| of us| members?| friends?)?\b/);
-  if (groupRide) {
+  // With a destination ("for 2 people to Charminar") it is a new ride search,
+  // which the search flow prices; the question is only for the trip on screen.
+  if (groupRide && !/\bto\s+[a-z]/.test(t)) {
     const n = numberFrom(groupRide[3]);
     if (n && n >= 2 && n <= 10) return { kind: "ride.group", members: n };
   }
@@ -149,6 +151,8 @@ function parseEnglish(message: string): AgentAction | null {
     // nobody has seen. Only treat "order" as add when it points back at
     // something ("order it", "order the second one").
     if (add[1] === "order" && !/\b(it|that|this|them|those|second|third|first|option|same)\b/.test(rest)) return null;
+    // "I'll take a cab" is a ride, not a dish called "cab".
+    if (/\b(cab|cabs|taxi|auto|autos|rickshaw|bike|ride|rides|bus|metro|train)\b/.test(rest)) return null;
     const { qty, rest: what } = splitQty(rest);
     if (/\b(another|one more|same again)\b/.test(what) && !/\b(option|first|second|third)\b/.test(what)) {
       return { kind: "cart.add", target: { by: "last" }, qty };

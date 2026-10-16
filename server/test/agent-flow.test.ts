@@ -145,6 +145,17 @@ describe("chat carries out instructions (founder's Example A)", () => {
     expect((await cartOf(agent)).count).toBe(1);
   });
 
+  it("says how many were really added when the 20 a dish limit cuts an add short", async () => {
+    const { agent } = await authedAgent();
+    const r1 = await say(agent, "Find chicken biryani");
+    await say(agent, "add 18 of it", r1.sessionId);
+    const r = await say(agent, "add 5 of it", r1.sessionId);
+    expect(r.message.content).toMatch(/Added 2 .* You now have 20, the most one order can hold/);
+    const full = await say(agent, "add another", r1.sessionId);
+    expect(full.message.content).toMatch(/already have 20/);
+    expect(full.message.action!.ok).toBe(false);
+  });
+
   it("removes and changes quantities by name", async () => {
     const { agent } = await authedAgent();
     const r1 = await say(agent, "Find chicken biryani");
