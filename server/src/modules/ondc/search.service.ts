@@ -163,27 +163,53 @@ function matching(offers: OndcOffer[], query: string): OndcOffer[] {
   return top > 0 ? offers.filter((o) => score(o) >= top - 1e-9) : [];
 }
 
+/**
+ * Parsed seller answers by transaction row. Bounded: a catalogue can be a few
+ * hundred dishes, and only the searches open right now need to be here.
+ */
+const parsedAnswers = new Map<string, OndcOffer[]>();
+const PARSED_MAX = 100;
+function rememberParsed(id: string, offers: OndcOffer[]) {
+  parsedAnswers.delete(id);
+  parsedAnswers.set(id, offers);
+  while (parsedAnswers.size > PARSED_MAX) parsedAnswers.delete(parsedAnswers.keys().next().value!);
+}
+/** How many catalogues have been parsed, for tests. */
+export let catalogueParses = 0;
+
 /** Everything seller apps have answered so far, for the customer who searched. */
 export async function ondcSearchResults(searchId: string, userId: string, now = new Date()): Promise<SearchResults> {
   const search = await prisma.ondcSearch.findUnique({ where: { id: searchId } });
   if (!search || search.userId !== userId) throw new ApiError(404, "Search not found");
 
+  // The app asks every few seconds while sellers answer, and each answer is a
+  // whole catalogue that never changes once stored. Each is fetched and
+  // parsed once, then served from memory.
   const answers = await prisma.ondcTransaction.findMany({
     where: { txnId: searchId, action: "on_search" },
     orderBy: { createdAt: "asc" },
-    select: { response: true },
+    select: { id: true },
   });
+  const unread = answers.filter((a) => !parsedAnswers.has(a.id)).map((a) => a.id);
+  if (unread.length) {
+    const rows = await prisma.ondcTransaction.findMany({ where: { id: { in: unread } }, select: { id: true, response: true } });
+    for (const row of rows) {
+      let offers: OndcOffer[] = [];
+      try {
+        offers = parseOnSearch(JSON.parse(row.response ?? "null"));
+      } catch {
+        offers = [];
+      }
+      catalogueParses++;
+      rememberParsed(row.id, offers);
+    }
+  }
   // Latest answer wins for each dish: a seller app may refresh its catalogue
   // within one search.
   const byKey = new Map<string, OndcOffer>();
   for (const a of answers) {
-    let body: unknown;
-    try {
-      body = JSON.parse(a.response ?? "null");
-    } catch {
-      continue;
-    }
-    for (const o of parseOnSearch(body)) byKey.set(`${o.seller.bppId}|${o.seller.providerId}|${o.seller.locationId}|${o.itemId}`, o);
+    const offers = parsedAnswers.get(a.id) ?? [];
+    for (const o of offers) byKey.set(`${o.seller.bppId}|${o.seller.providerId}|${o.seller.locationId}|${o.itemId}`, o);
   }
   const from = { lat: search.lat, lng: search.lng };
   const offers = matching([...byKey.values()], search.query)

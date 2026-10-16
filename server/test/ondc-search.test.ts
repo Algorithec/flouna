@@ -187,3 +187,21 @@ describe("keeping ONDC searches only as long as they are useful", () => {
     expect(rows.every((r) => r.response === null && r.bppId)).toBe(true);
   });
 });
+
+describe("reading results while sellers answer", () => {
+  it("parses each seller's catalogue once, however often the app asks", async () => {
+    const mod = await import("../src/modules/ondc/search.service.js");
+    const c = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
+    const started = (await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send: async () => ({ ack: true, status: 200 }) })) as { searchId: string };
+    await answer("Easy_Pay", started.searchId).expect(200);
+    const before = mod.catalogueParses;
+    const first = await ondcSearchResults(started.searchId, c.userId);
+    for (let i = 0; i < 5; i++) await ondcSearchResults(started.searchId, c.userId);
+    expect(mod.catalogueParses - before).toBe(1);
+    // A new seller answering is read once too, and joins the results.
+    await answer("DIGILEDGE", started.searchId).expect(200);
+    const again = await ondcSearchResults(started.searchId, c.userId);
+    expect(mod.catalogueParses - before).toBe(2);
+    expect(again.offers.length).toBeGreaterThanOrEqual(first.offers.length);
+  });
+});
