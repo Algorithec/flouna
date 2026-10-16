@@ -86,8 +86,19 @@ export async function loadState(sessionId: string): Promise<AgentState> {
   }
 }
 
-export async function saveState(sessionId: string, state: AgentState): Promise<void> {
-  await prisma.chatSession.update({ where: { id: sessionId }, data: { agentState: JSON.stringify(state) } });
+/**
+ * Saves the memory. `readAt` is when the caller loaded the copy it is saving:
+ * a trip the booking card reported after that moment was never seen by the
+ * caller, so it is kept rather than overwritten by the older copy. Without it
+ * a message answered while the card was pricing the trip wiped the trip out.
+ */
+export async function saveState(sessionId: string, state: AgentState, opts: { readAt?: string } = {}): Promise<void> {
+  let next = state;
+  if (opts.readAt) {
+    const current = await loadState(sessionId);
+    if (current.ride && current.ride.at > opts.readAt) next = { ...state, ride: current.ride };
+  }
+  await prisma.chatSession.update({ where: { id: sessionId }, data: { agentState: JSON.stringify(next) } });
 }
 
 /**

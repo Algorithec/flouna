@@ -558,10 +558,11 @@ chatRouter.post(
 
       // An instruction ("add that too", "create a group order for 4") is
       // carried out against what this conversation remembers.
+      const memoryReadAt = new Date().toISOString();
       const memory = await loadState(session.id);
       const done = verdict.ok ? await handleInstruction(message.trim(), req.userId!, memory) : null;
       if (done) {
-        await saveState(session.id, done.state);
+        await saveState(session.id, done.state, { readAt: memoryReadAt });
         const saved = await prisma.chatMessage.create({
           data: {
             sessionId: session.id,
@@ -594,7 +595,7 @@ chatRouter.post(
 
       if (payload.intent.domain === "action") {
         const acted = await handleModelAction(payload.intent.action, req.userId!, memory);
-        await saveState(session.id, acted.state);
+        await saveState(session.id, acted.state, { readAt: memoryReadAt });
         const saved = await prisma.chatMessage.create({
           data: {
             sessionId: session.id,
@@ -612,7 +613,7 @@ chatRouter.post(
       }
 
       // What was shown becomes what "that" and "the second one" refer to.
-      await saveState(session.id, rememberRecommendation(memory, payload.recommendation, message.trim()));
+      await saveState(session.id, rememberRecommendation(memory, payload.recommendation, message.trim()), { readAt: memoryReadAt });
 
       const assistantMessage = await prisma.chatMessage.create({
         data: {
