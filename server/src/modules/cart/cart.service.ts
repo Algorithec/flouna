@@ -27,10 +27,15 @@ export type CartView = {
     image?: string;
     /** Unit base price today, before offers. Checkout reprices. */
     pricePaise: number;
-    /** False when the dish or this platform's listing has left the catalogue. */
     available: boolean;
   }[];
   count: number;
+  /**
+   * Lines dropped just now because their dish or listing left the catalogue.
+   * Kept, they would make every price check and checkout of the whole cart
+   * fail; the app says how many went so the customer is not left wondering.
+   */
+  removed: number;
 };
 
 function listing(dishId: string, platform: string) {
@@ -47,7 +52,10 @@ export async function getCart(userId: string): Promise<CartView> {
     where: { userId },
     include: { items: { orderBy: { createdAt: "asc" } } },
   });
-  const lines = (cart?.items ?? []).map((i) => {
+  const gone = (cart?.items ?? []).filter((i) => !listing(i.dishId, i.platform));
+  if (gone.length) await prisma.cartItem.deleteMany({ where: { id: { in: gone.map((i) => i.id) } } });
+  const kept = (cart?.items ?? []).filter((i) => !gone.includes(i));
+  const lines = kept.map((i) => {
     const q = listing(i.dishId, i.platform);
     return {
       dishId: i.dishId,
@@ -62,7 +70,7 @@ export async function getCart(userId: string): Promise<CartView> {
       available: Boolean(q),
     };
   });
-  return { lines, count: lines.reduce((s, l) => s + l.qty, 0) };
+  return { lines, count: lines.reduce((s, l) => s + l.qty, 0), removed: gone.length };
 }
 
 /**

@@ -39,13 +39,16 @@ export type CartLine = {
   decisionId?: string;
 };
 
-type ServerCart = { lines: (CartLine & { available: boolean; addedVia: string })[]; count: number };
+type ServerCart = { lines: (CartLine & { available: boolean; addedVia: string })[]; count: number; removed?: number };
 
 type CartContextValue = {
   lines: CartLine[];
   count: number;
   /** False until the server's cart has arrived the first time. */
   ready: boolean;
+  /** Dishes the server removed because they left the menu, since last seen. */
+  removed: number;
+  dismissRemoved: () => void;
   add: (line: Omit<CartLine, "qty">, qty?: number) => void;
   setQty: (dishId: string, platform: string, qty: number) => void;
   remove: (dishId: string, platform: string) => void;
@@ -102,6 +105,7 @@ const toLines = (c: ServerCart): CartLine[] =>
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [ready, setReady] = useState(false);
+  const [removed, setRemoved] = useState(0);
   // Answers can arrive out of order. Only the latest request may set the cart.
   const seq = useRef(0);
 
@@ -109,6 +113,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const mine = ++seq.current;
     try {
       const cart = await request();
+      if (cart.removed) setRemoved((n) => n + cart.removed!);
       if (mine === seq.current) setLines(toLines(cart));
     } catch {
       // Refused or offline: show what the server actually has.
@@ -193,9 +198,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     void apply(() => api<ServerCart>("/api/cart", { method: "DELETE" }));
   }, [apply]);
 
+  const dismissRemoved = useCallback(() => setRemoved(0), []);
+
   const value = useMemo(
-    () => ({ lines, count: lines.reduce((s, l) => s + l.qty, 0), ready, add, setQty, remove, clear, refresh }),
-    [lines, ready, add, setQty, remove, clear, refresh],
+    () => ({ lines, count: lines.reduce((s, l) => s + l.qty, 0), ready, removed, dismissRemoved, add, setQty, remove, clear, refresh }),
+    [lines, ready, removed, dismissRemoved, add, setQty, remove, clear, refresh],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
