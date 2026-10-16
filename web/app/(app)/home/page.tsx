@@ -29,7 +29,6 @@ import {
 } from "@/components/chat/RecommendationCards";
 import { VoiceButton } from "@/components/chat/VoiceButton";
 import { ThinkingSteps } from "@/components/chat/ThinkingSteps";
-import { RadiusUpsell } from "@/components/chat/RadiusUpsell";
 import { PredictionBanner } from "@/components/chat/PredictionBanner";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
@@ -461,7 +460,6 @@ function ChatHome() {
                         <Sparkles size={13} />
                         {t("hm.viewFull")}
                       </Link>
-                      <RadiusUpsell />
                     </>
                   )}
                 </div>

@@ -94,7 +94,7 @@ const TRANSLATED = [
   "components/auth/RequireAuth.tsx",
   "components/brand/FlounaLogo.tsx",
   "components/chat/PredictionBanner.tsx",
-  "components/chat/RadiusUpsell.tsx",
+  "components/chat/PlusUpsell.tsx",
   "components/chat/TemporaryChatContext.tsx",
   "components/chat/ThinkingSteps.tsx",
   "components/chat/VoiceButton.tsx",

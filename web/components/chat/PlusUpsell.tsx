@@ -22,7 +22,7 @@ function subscriptionStatus(): Promise<PlusStatus> {
   return statusRequest;
 }
 
-export function RadiusUpsell({ href = "/profile/rewards" }: { href?: string }) {
+export function PlusUpsell({ href = "/profile/rewards" }: { href?: string }) {
   const { t } = useI18n();
   const [status, setStatus] = useState<PlusStatus | null>(null);
 
