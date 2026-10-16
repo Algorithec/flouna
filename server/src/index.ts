@@ -14,6 +14,7 @@ import { sweepPlusMemberships } from "./modules/subscription/subscription.servic
 import { initMonitoring, captureError } from "./lib/monitoring.js";
 import { seedDemoCoupons } from "./data/coupons.js";
 import { shouldSync, syncSchema } from "./lib/schemaSync.js";
+import { pruneOndcSearches } from "./modules/ondc/search.service.js";
 
 initMonitoring();
 
@@ -127,6 +128,9 @@ const cleanup = setInterval(
       await pruneDecisionLogs(DECISION_LOG_RETENTION_DAYS);
       // The watcher's readings carry message text, so they go on the same clock.
       await pruneIntentWatches(DECISION_LOG_RETENTION_DAYS);
+      // ONDC searches carry the customer's location and every seller's whole
+      // catalogue; neither is needed once the results have been read.
+      await pruneOndcSearches();
       // Erasures whose grace period has run out. A deletion that only happens
       // while somebody is watching a screen is not a deletion, and the promise
       // in the privacy policy is measured in days, not in attention.

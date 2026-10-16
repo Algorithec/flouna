@@ -205,3 +205,23 @@ export async function ondcSearchResults(searchId: string, userId: string, now = 
     offers,
   };
 }
+
+/** How long a search, and the catalogues sellers answered it with, are kept. */
+export const SEARCH_RETENTION_DAYS = 7;
+
+/**
+ * Housekeeping, run hourly. A search's results are read within seconds, yet
+ * each seller's answer is its whole catalogue (megabytes) and each search
+ * records where the customer was. The searches go, location and all; the
+ * transaction log keeps a row for every answer, without the catalogue, so the
+ * record of who answered stays for audit.
+ */
+export async function pruneOndcSearches(now = new Date(), days = SEARCH_RETENTION_DAYS) {
+  const cutoff = new Date(now.getTime() - days * 86_400_000);
+  const emptied = await prisma.ondcTransaction.updateMany({
+    where: { action: "on_search", createdAt: { lt: cutoff }, response: { not: null } },
+    data: { response: null },
+  });
+  const searches = await prisma.ondcSearch.deleteMany({ where: { createdAt: { lt: cutoff } } });
+  return { catalogues: emptied.count, searches: searches.count };
+}

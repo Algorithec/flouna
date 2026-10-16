@@ -168,3 +168,22 @@ describe("searching ONDC sellers", () => {
     expect(stdCodeFor("Atlantis")).toBeNull();
   });
 });
+
+describe("keeping ONDC searches only as long as they are useful", () => {
+  it("drops old searches and their catalogues, keeping who answered", async () => {
+    const { pruneOndcSearches } = await import("../src/modules/ondc/search.service.js");
+    const c = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
+    const started = (await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send: async () => ({ ack: true, status: 200 }) })) as { searchId: string };
+    await answer("Easy_Pay", started.searchId).expect(200);
+    const later = new Date(Date.now() + 8 * 86_400_000);
+    // A search from just now is untouched by a run today.
+    await pruneOndcSearches(new Date());
+    expect(await prisma.ondcSearch.count({ where: { id: started.searchId } })).toBe(1);
+    // Eight days on, the search and its location are gone, and so is the catalogue body.
+    await pruneOndcSearches(later);
+    expect(await prisma.ondcSearch.count({ where: { id: started.searchId } })).toBe(0);
+    const rows = await prisma.ondcTransaction.findMany({ where: { txnId: started.searchId, action: "on_search" } });
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.response === null && r.bppId)).toBe(true);
+  });
+});
