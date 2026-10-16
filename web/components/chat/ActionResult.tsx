@@ -19,6 +19,7 @@ export function ActionResult({ action, onReply, live }: { action: ChatAction; on
   if (card.type === "cart") return <CartCard cart={card.cart} />;
   if (card.type === "group") return <GroupCard group={card.group} joinPath={card.joinPath} />;
   if (card.type === "confirm" && live) return <ConfirmButtons onReply={onReply} />;
+  if (card.type === "choice" && live) return <ChoiceButtons options={card.options} onReply={onReply} />;
   return null;
 }
 
@@ -137,6 +138,37 @@ function ConfirmButtons({ onReply }: { onReply: (text: string) => void }) {
       <button type="button" disabled={answered} onClick={() => answer("no")} className="tap-target flex-1 rounded-pill border border-line px-4 py-2.5 text-[13px] font-semibold text-ink disabled:opacity-50">
         {t("ag.no")}
       </button>
+    </div>
+  );
+}
+
+/**
+ * Set answers to a question, such as one shared ride or just your own. The
+ * labels are the server's; each button sends its reply as the customer's
+ * next message, exactly as if typed.
+ */
+function ChoiceButtons({ options, onReply }: { options: { label: string; reply: string }[]; onReply: (text: string) => void }) {
+  const { t } = useI18n();
+  const [answered, setAnswered] = useState(false);
+  const label = (reply: string, fallback: string) =>
+    reply === "one shared ride" ? t("ag.sharedRide") : reply === "just my ride" ? t("ag.justMine") : fallback;
+  return (
+    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+      {options.map((o) => (
+        <button
+          key={o.reply}
+          type="button"
+          disabled={answered}
+          onClick={() => {
+            if (answered) return;
+            setAnswered(true);
+            onReply(o.reply);
+          }}
+          className="tap-target flex-1 rounded-pill border border-accent/50 px-4 py-2.5 text-[13px] font-semibold text-accent-ink disabled:opacity-50"
+        >
+          {label(o.reply, o.label)}
+        </button>
+      ))}
     </div>
   );
 }

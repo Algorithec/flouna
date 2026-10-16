@@ -320,6 +320,51 @@ export async function addGroupItem(o: { cartId: string; userId: string; dishId: 
   return summarize(cart.id, o.userId);
 }
 
+/**
+ * Opens a shared ride: the trip priced on the server from its coordinates,
+ * never from the client, and only for vehicles with more than one seat.
+ * Shared by the create route and chat ("one shared ride for all four").
+ */
+export async function openRideGroup(o: {
+  hostId: string;
+  provider: string;
+  productName: string;
+  pickup: string;
+  drop: string;
+  pickupLat: number;
+  pickupLng: number;
+  dropLat: number;
+  dropLng: number;
+  expectedMembers?: number;
+}) {
+  // Snapshot the trip server-side — fare from our engine, never the client.
+  const route = await fetchRoute(o.pickupLat, o.pickupLng, o.dropLat, o.dropLng, env.ORS_KEY, env.GOOGLE_MAPS_API_KEY);
+  const quote = quoteRides({ distanceKm: route.distanceKm, rideMinutes: route.rideMinutes }).find(
+    (q) => q.provider === o.provider && q.productName === o.productName,
+  );
+  if (!quote) throw new ApiError(404, "That ride option is no longer available");
+  const seats = SEATS[quote.vehicle];
+  if (!seats) throw new ApiError(400, "Only autos and cabs can be shared");
+  if (o.expectedMembers && o.expectedMembers > seats) {
+    throw new ApiError(400, `A ${quote.displayName} seats ${seats}, so it cannot take ${o.expectedMembers} people`);
+  }
+  const rideDetails = JSON.stringify({
+    pickup: o.pickup,
+    drop: o.drop,
+    pickupLat: o.pickupLat,
+    pickupLng: o.pickupLng,
+    dropLat: o.dropLat,
+    dropLng: o.dropLng,
+    provider: quote.provider,
+    productName: quote.productName,
+    displayName: quote.displayName,
+    vehicle: quote.vehicle,
+    farePaise: quote.effectivePaise,
+    seats,
+  } satisfies RideSnapshot);
+  return openGroupCart({ hostId: o.hostId, domain: "ride", platform: quote.provider, rideDetails, expectedMembers: o.expectedMembers });
+}
+
 export { summarize as groupSummary };
 
 // ---------- create ----------
@@ -350,50 +395,11 @@ groupsRouter.post(
         | z.infer<typeof createFoodGroup>
         | z.infer<typeof createRideGroup>;
 
-      let platform: string;
-      let rideDetails: string | null = null;
       if (body.domain === "ride") {
-        // Snapshot the trip server-side — fare from our engine, never the client.
-        const route = await fetchRoute(
-          body.ride.pickupLat,
-          body.ride.pickupLng,
-          body.ride.dropLat,
-          body.ride.dropLng,
-          env.ORS_KEY,
-          env.GOOGLE_MAPS_API_KEY,
-        );
-        const quote = quoteRides({
-          distanceKm: route.distanceKm,
-          rideMinutes: route.rideMinutes,
-        }).find(
-          (q) =>
-            q.provider === body.ride.provider &&
-            q.productName === body.ride.productName,
-        );
-        if (!quote) throw new ApiError(404, "That ride option is no longer available");
-        const seats = SEATS[quote.vehicle];
-        if (!seats) {
-          throw new ApiError(400, "Only autos and cabs can be shared");
-        }
-        platform = quote.provider;
-        rideDetails = JSON.stringify({
-          pickup: body.ride.pickup,
-          drop: body.ride.drop,
-          pickupLat: body.ride.pickupLat,
-          pickupLng: body.ride.pickupLng,
-          dropLat: body.ride.dropLat,
-          dropLng: body.ride.dropLng,
-          provider: quote.provider,
-          productName: quote.productName,
-          displayName: quote.displayName,
-          vehicle: quote.vehicle,
-          farePaise: quote.effectivePaise,
-          seats,
-        } satisfies RideSnapshot);
-      } else {
-        platform = body.platform;
+        return res.status(201).json(await openRideGroup({ hostId: req.userId!, ...body.ride }));
       }
-
+      const platform = body.platform;
+      const rideDetails: string | null = null;
       res.status(201).json(await openGroupCart({ hostId: req.userId!, domain: body.domain, platform, rideDetails }));
     } catch (err) {
       next(err);

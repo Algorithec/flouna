@@ -55,6 +55,18 @@ export const actionSchema = z.discriminatedUnion("kind", [
   // Things that need the customer's own hand (a code, a fingerprint): chat
   // takes them to the screen rather than doing it for them.
   z.object({ kind: z.literal("navigate"), to: z.enum(["cart", "orders", "settings", "security", "profile", "groups", "help", "rewards"]) }),
+  // "Choose the second option": a ride if rides were shown last, else a dish.
+  z.object({
+    kind: z.literal("select"),
+    index: z.number().int().min(0).max(19).nullable(),
+    pick: z.enum(["cheapest", "fastest"]).nullable(),
+  }),
+  // "Book it": the selected ride, through the booking card's own Book button.
+  z.object({ kind: z.literal("ride.book") }),
+  // "Book rides for four, one only for me": asks which they mean first.
+  z.object({ kind: z.literal("ride.group"), members: z.number().int().min(2).max(10) }),
+  // The answer to that question.
+  z.object({ kind: z.literal("ride.group_mode"), mode: z.enum(["shared", "mine"]) }),
   z.object({ kind: z.literal("confirm") }),
   z.object({ kind: z.literal("cancel") }),
 ]);

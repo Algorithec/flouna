@@ -36,6 +36,7 @@ import { useTheme } from "@/components/theme/ThemeContext";
 import { LANGUAGES, type Lang } from "@/lib/i18n/dictionaries";
 import { notifyCartChanged } from "@/lib/cart";
 import { ActionResult } from "@/components/chat/ActionResult";
+import { RIDE_COMMAND_EVENT } from "@/components/chat/inline/InlineRideBooking";
 import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
 import { type TILE_THEMES } from "@/components/ui/CategoryTile";
 import type { ChatMessage, FoodQuote } from "@/components/chat/types";
@@ -261,6 +262,7 @@ function ChatHome() {
         else if (e.type === "language" && LANGUAGES.some((l) => l.code === e.value)) setLang(e.value as Lang);
         else if (e.type === "theme") setTheme(e.value);
         else if (e.type === "navigate" && e.path.startsWith("/")) router.push(e.path);
+        else if (e.type === "ride_command") window.dispatchEvent(new CustomEvent(RIDE_COMMAND_EVENT, { detail: e }));
       }
       // A temporary chat has no server session and must never touch the URL —
       // a ?chat= param would make it restorable, which is the whole point of
@@ -443,6 +445,8 @@ function ChatHome() {
                     <div className="mt-3">
                       <RideRecommendation
                         rec={m.recommendation}
+                        chatSessionId={temporary ? null : sessionId}
+                        cardKey={m.id}
                         compact
                         onBook={(orderId) =>
                           setOrdered((o) => ({ ...o, [m.id]: orderId }))

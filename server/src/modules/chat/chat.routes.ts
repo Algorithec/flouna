@@ -34,6 +34,7 @@ import { watchIntent } from "./llm/watcher.js";
 import { readWithConfidence } from "./llm/demo.js";
 import { env } from "../../config/env.js";
 import { EMPTY_STATE, handleInstruction, loadState, rememberRecommendation, saveState } from "../agent/index.js";
+import { rideContextSchema, type RideContext } from "../agent/state.js";
 
 // Paise → "₹123" for chat copy.
 const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
@@ -607,6 +608,29 @@ chatRouter.post(
           recommendation: payload.recommendation ?? null,
         },
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// The booking card in a conversation reports the trip it priced and its
+// options in the order shown, so "choose the second option" means the second
+// one on screen. Only used to tell which option was meant: booking re-prices
+// the trip on the server and refuses a fare that has moved.
+chatRouter.post(
+  "/sessions/:id/ride",
+  validateBody(rideContextSchema.omit({ at: true }).strict()),
+  async (req, res, next) => {
+    try {
+      const session = await prisma.chatSession.findFirst({ where: { id: req.params.id, userId: req.userId! }, select: { id: true } });
+      if (!session) throw new ApiError(404, "Chat not found");
+      const memory = await loadState(session.id);
+      const ride = { ...(req.body as Omit<RideContext, "at">), at: new Date().toISOString() };
+      // A new trip or a re-priced list keeps the customer's tap on an option
+      // only if the card said which.
+      await saveState(session.id, { ...memory, ride });
+      res.status(204).end();
     } catch (err) {
       next(err);
     }

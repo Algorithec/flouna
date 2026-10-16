@@ -17,6 +17,35 @@ const shownItem = z.object({
 });
 export type ShownItem = z.infer<typeof shownItem>;
 
+const place = z.object({ name: z.string().max(160), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
+
+/** One ride option as the booking card showed it. */
+export const rideOptionSchema = z.object({
+  provider: z.string().max(20),
+  productName: z.string().max(60),
+  displayName: z.string().max(60),
+  vehicle: z.string().max(20),
+  effectivePaise: z.number().int().nonnegative(),
+  pickupEtaMinutes: z.number().int().nonnegative().max(600).optional(),
+});
+export type RideOption = z.infer<typeof rideOptionSchema>;
+
+/**
+ * The trip the chat's booking card priced, and its options in the order they
+ * were shown, so "the second option" means the second one on screen. Used
+ * only to tell which option was meant: booking re-prices on the server.
+ */
+export const rideContextSchema = z.object({
+  at: z.string(),
+  /** Which booking card in the conversation reported it. */
+  card: z.string().max(80),
+  pickup: place,
+  drop: place,
+  options: z.array(rideOptionSchema).min(1).max(12),
+  selected: z.number().int().min(0).max(11).optional(),
+});
+export type RideContext = z.infer<typeof rideContextSchema>;
+
 export const stateSchema = z.object({
   v: z.literal(1),
   /** The last list chat showed, in the order it was shown. */
@@ -27,6 +56,8 @@ export const stateSchema = z.object({
   focus: z.object({ at: z.string(), dishId: z.string(), platform: z.string(), name: z.string() }).optional(),
   /** The group order made in this conversation, for "add it to the group". */
   groupId: z.string().optional(),
+  /** The ride the booking card in this conversation last priced. */
+  ride: rideContextSchema.optional(),
   /** An action waiting for the customer's yes. */
   pending: z.object({ action: actionSchema, summary: z.string(), expiresAt: z.string() }).optional(),
 });

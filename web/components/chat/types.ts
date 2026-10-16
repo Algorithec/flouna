@@ -147,13 +147,15 @@ export type ChatAction = {
         group: { id: string; code: string; expectedMembers: number | null; members: { userId: string; name: string }[] };
       }
     | { type: "confirm"; summary: string }
-    | { type: "settings"; changed: Record<string, unknown> };
+    | { type: "settings"; changed: Record<string, unknown> }
+    | { type: "choice"; options: { label: string; reply: string }[] };
   /** What the app should do on this device. Applied once, when the reply arrives. */
   effects?: (
     | { type: "language"; value: string }
     | { type: "theme"; value: "light" | "dark" }
     | { type: "navigate"; path: string }
     | { type: "cart_changed" }
+    | { type: "ride_command"; card: string; command: "select" | "book"; provider: string; productName: string }
   )[];
 };
 

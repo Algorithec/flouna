@@ -98,6 +98,37 @@ export function parseInstruction(message: string): AgentAction | null {
   }
   if (/\b(show|open|see|view)\b.*\b(my )?group( order)?\b/.test(t)) return { kind: "group.show" };
 
+  // Rides for several people: chat asks what they mean before doing anything.
+  const groupRide = t.match(/\b(book|get|arrange|need)\b.*\b(rides?|cabs?|autos?)\b.*\bfor (\d{1,2}|two|three|four|five|six|seven|eight|nine|ten)( people| persons?| of us| members?| friends?)?\b/);
+  if (groupRide) {
+    const n = numberFrom(groupRide[3]);
+    if (n && n >= 2 && n <= 10) return { kind: "ride.group", members: n };
+  }
+  // The answer to that question.
+  if (/^(one |a )?shared( ride| cab| auto)?( for (all|everyone|us))?$|^(all|everyone) together$|^ride together$/.test(t)) {
+    return { kind: "ride.group_mode", mode: "shared" };
+  }
+  if (/^(just|only) (my|me|mine)( ride| one)?( for now)?$|^(book )?(only|just) mine$|^separate( rides)?$/.test(t)) {
+    return { kind: "ride.group_mode", mode: "mine" };
+  }
+
+  // Choosing among what was shown: "choose the second option", "the cheapest one".
+  const choose = t.match(/^(?:please |ok |okay )?(?:choose|select|pick|take|go with|i'?ll go with|i'?ll take|i want|book|let'?s do|give me)\s+(?:the\s+)?(.*)$/);
+  if (choose) {
+    const rest = choose[1]!;
+    if (/^(cheapest|lowest|least expensive)( one| option| ride)?$/.test(rest)) return { kind: "select", index: null, pick: "cheapest" };
+    if (/^(fastest|quickest|nearest)( one| option| ride)?$/.test(rest)) return { kind: "select", index: null, pick: "fastest" };
+    const ord = rest.match(/^(first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th|sixth|6th)( one| option| ride| result)?$/);
+    if (ord) return { kind: "select", index: ORDINALS[ord[1]!]!, pick: null };
+    const num = rest.match(/^(?:option|number|no\.?|#)\s*(\d{1,2})$/);
+    if (num && Number(num[1]) >= 1) return { kind: "select", index: Number(num[1]) - 1, pick: null };
+  }
+  // "Book it": the ride already chosen. "Book a cab to the airport" is a new
+  // search and is left to it.
+  if (/^(?:please |ok |okay |yes )?(book|confirm)( it| that| this| that one| this one| the (ride|cab|auto|bike|booking)| my ride| the selected (one|ride))?( please| now)?$/.test(t)) {
+    return { kind: "ride.book" };
+  }
+
   // Cart.
   if (/\b(clear|empty|reset)\b.*\b(cart|basket)\b/.test(t)) return { kind: "cart.clear" };
   if (/\b(show|open|see|view|what'?s in|whats in|check)\b.*\b(cart|basket)\b/.test(t) || /^(my )?(cart|basket)$/.test(t)) {

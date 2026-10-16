@@ -14,7 +14,10 @@ export type { AgentOutcome } from "./execute.js";
 export async function handleInstruction(message: string, userId: string, state: AgentState): Promise<AgentOutcome | null> {
   const action = parseInstruction(message);
   if (!action) return null;
-  const s = action.kind === "confirm" || action.kind === "cancel" ? state : { ...state, pending: undefined };
+  // A confirmation, a cancel, or the answer to a question with set answers
+  // keeps the question; anything else withdraws it.
+  const keeps = action.kind === "confirm" || action.kind === "cancel" || action.kind === "ride.group_mode";
+  const s = keeps ? state : { ...state, pending: undefined };
   return runAction({ action, userId, state: s });
 }
 

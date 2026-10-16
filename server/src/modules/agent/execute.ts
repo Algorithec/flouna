@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../middleware/error.js";
 import { addItem, clearCart, getCart, removeItem, setQty, type CartView } from "../cart/cart.service.js";
-import { addGroupItem, groupSummary, openGroupCart } from "../groups/groups.routes.js";
+import { addGroupItem, groupSummary, openGroupCart, openRideGroup } from "../groups/groups.routes.js";
 import { quotesForDish } from "../food/food.service.js";
 import { ROUTES, type AgentAction, type Target } from "./actions.js";
 import { PENDING_MS, type AgentState, type ShownItem } from "./state.js";
@@ -22,13 +22,18 @@ export type ClientEffect =
   | { type: "language"; value: string }
   | { type: "theme"; value: "light" | "dark" }
   | { type: "navigate"; path: string }
-  | { type: "cart_changed" };
+  | { type: "cart_changed" }
+  // For the booking card that reported this trip: select an option, or book
+  // it with the card's own Book button.
+  | { type: "ride_command"; card: string; command: "select" | "book"; provider: string; productName: string };
 
 export type ActionCard =
   | { type: "cart"; cart: CartView }
   | { type: "group"; group: Awaited<ReturnType<typeof groupSummary>>; joinPath: string }
   | { type: "confirm"; summary: string }
-  | { type: "settings"; changed: Record<string, unknown> };
+  | { type: "settings"; changed: Record<string, unknown> }
+  // A question with set answers; each sends its reply as the customer's next message.
+  | { type: "choice"; options: { label: string; reply: string }[] };
 
 export type AgentOutcome = {
   reply: string;
@@ -111,8 +116,13 @@ function resolveInCart(target: Target, state: AgentState, cart: CartView): Resol
 }
 
 /** Actions that wait for a yes, with the question asked. */
-function needsConfirmation(action: AgentAction): string | null {
+function needsConfirmation(action: AgentAction, state: AgentState): string | null {
   if (action.kind === "cart.clear") return "Clear everything in your cart?";
+  if (action.kind === "ride.book") {
+    const r = state.ride;
+    const o = r?.options[r.selected ?? 0];
+    if (r && o) return `Book ${o.displayName} from ${r.pickup.name} to ${r.drop.name} for about ${rupees(o.effectivePaise)}? You'll pay in the next step.`;
+  }
   if (action.kind === "settings.visibility" && action.value === "everyone") return "Make your profile visible to everyone on Flouna?";
   return null;
 }
@@ -142,7 +152,7 @@ export async function runAction(o: {
     return runAction({ action: pending.action, userId, state, now, confirmed: true });
   }
 
-  const question = needsConfirmation(action);
+  const question = needsConfirmation(action, state);
   if (question && !o.confirmed) {
     state = { ...state, pending: { action, summary: question, expiresAt: new Date(now.getTime() + PENDING_MS).toISOString() } };
     return done(question, { card: { type: "confirm", summary: question } });
@@ -229,6 +239,57 @@ export async function runAction(o: {
         return done(`Switching to ${LANG_LABEL[action.lang]}.`, { effects: [{ type: "language", value: action.lang }] });
       case "settings.theme":
         return done(`Switched to ${action.theme} mode.`, { effects: [{ type: "theme", value: action.theme }] });
+      case "select":
+        return selectShown(action, state, now, done, (s) => (state = s));
+      case "ride.book": {
+        const r = state.ride;
+        const o = r?.options[r.selected ?? 0];
+        if (!r || !o) return done("Set your pickup and drop in the ride card first, then tell me which ride to book.", {}, false);
+        return done(`Booking ${o.displayName}. Pay below to confirm the ride; it isn't booked until then.`, {
+          effects: [{ type: "ride_command", card: r.card, command: "book", provider: o.provider, productName: o.productName }],
+        });
+      }
+      case "ride.group": {
+        if (!state.ride) return done("Set your pickup and drop in the ride card first, then I can arrange rides for everyone.", {}, false);
+        const question = `Do you want one shared ride for all ${action.members} of you, or just your own ride for now?`;
+        state = { ...state, pending: { action, summary: question, expiresAt: new Date(now.getTime() + PENDING_MS).toISOString() } };
+        return done(question, {
+          card: {
+            type: "choice",
+            options: [
+              { label: "One shared ride", reply: "one shared ride" },
+              { label: "Just my ride", reply: "just my ride" },
+            ],
+          },
+        });
+      }
+      case "ride.group_mode": {
+        const pending = state.pending && new Date(state.pending.expiresAt) > now ? state.pending.action : undefined;
+        state = { ...state, pending: undefined };
+        if (!pending || pending.kind !== "ride.group") return done("There's nothing waiting for that answer.", {}, false);
+        const r = state.ride;
+        const o = r?.options[r.selected ?? 0];
+        if (!r || !o) return done("Set your pickup and drop in the ride card first.", {}, false);
+        if (action.mode === "mine") {
+          return runAction({ action: { kind: "ride.book" }, userId, state, now });
+        }
+        const group = await openRideGroup({
+          hostId: userId,
+          provider: o.provider,
+          productName: o.productName,
+          pickup: r.pickup.name,
+          drop: r.drop.name,
+          pickupLat: r.pickup.lat,
+          pickupLng: r.pickup.lng,
+          dropLat: r.drop.lat,
+          dropLng: r.drop.lng,
+          expectedMembers: pending.members,
+        });
+        state = { ...state, groupId: group.id };
+        return done(`Shared ${o.displayName} for ${pending.members} set up from ${r.pickup.name} to ${r.drop.name}. Share the link or QR code so the others can join; the fare is split between everyone who rides.`, {
+          card: { type: "group", group, joinPath: `/food/group?code=${group.code}` },
+        });
+      }
       case "navigate": {
         const why = action.to === "security" ? " That one needs you to confirm it yourself, with a code or your fingerprint, so I'll take you there." : "";
         return done(`Opening ${action.to}.${why}`, { effects: [{ type: "navigate", path: ROUTES[action.to] }] });
@@ -317,4 +378,47 @@ export function commonPlatform(
     if (all && (!best || total < best.totalPaise)) best = { platform, totalPaise: total };
   }
   return best;
+}
+
+/**
+ * "Choose the second option" or "the cheapest one", against whichever list
+ * was shown last. A ride is selected and offered for booking; a dish is
+ * selected but not added, because showing is not doing.
+ */
+function selectShown(
+  action: Extract<AgentAction, { kind: "select" }>,
+  state: AgentState,
+  now: Date,
+  done: (reply: string, extra?: Omit<AgentOutcome["action"], "kind" | "ok">, ok?: boolean) => AgentOutcome,
+  setState: (s: AgentState) => void,
+): AgentOutcome {
+  const ride = state.ride;
+  const food = state.shown;
+  const ridesNewer = ride && (!food || ride.at >= food.at);
+  if (ridesNewer) {
+    const opts = ride.options;
+    let i = action.index ?? 0;
+    if (action.pick === "cheapest") i = opts.reduce((best, o, k) => (o.effectivePaise < opts[best]!.effectivePaise ? k : best), 0);
+    if (action.pick === "fastest") i = opts.reduce((best, o, k) => ((o.pickupEtaMinutes ?? 999) < (opts[best]!.pickupEtaMinutes ?? 999) ? k : best), 0);
+    const o = opts[i];
+    if (!o) return done(`There ${opts.length === 1 ? "is only 1 option" : `are only ${opts.length} options`} on screen. Which one did you mean?`, {}, false);
+    const eta = o.pickupEtaMinutes !== undefined ? `, pickup in about ${o.pickupEtaMinutes} min` : "";
+    const question = `${o.displayName}, ${rupees(o.effectivePaise)}${eta}, from ${ride.pickup.name} to ${ride.drop.name}. Book it? You'll pay in the next step.`;
+    setState({
+      ...state,
+      ride: { ...ride, selected: i },
+      pending: { action: { kind: "ride.book" }, summary: question, expiresAt: new Date(now.getTime() + PENDING_MS).toISOString() },
+    });
+    return done(question, {
+      card: { type: "confirm", summary: question },
+      effects: [{ type: "ride_command", card: ride.card, command: "select", provider: o.provider, productName: o.productName }],
+    });
+  }
+  if (!food) return done("Search for something first, then tell me which one you want.", {}, false);
+  let item = action.index !== null ? food.items[action.index] : undefined;
+  if (action.pick === "cheapest") item = [...food.items].sort((a, b) => a.pricePaise - b.pricePaise)[0];
+  if (action.pick === "fastest") return done("I can't tell delivery times apart from here. Say which one, for example \"the second one\".", {}, false);
+  if (!item) return done(`I only showed ${food.items.length} option${food.items.length === 1 ? "" : "s"}. Which one did you mean?`, {}, false);
+  setState({ ...state, focus: { at: now.toISOString(), dishId: item.dishId, platform: item.platform, name: item.name } });
+  return done(`${item.name} from ${item.restaurant}, ${rupees(item.pricePaise)}. Say "add it" to put it in your cart.`);
 }

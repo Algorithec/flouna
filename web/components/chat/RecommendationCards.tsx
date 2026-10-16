@@ -269,10 +269,14 @@ export function RideRecommendation({
   rec,
   onBook,
   compact = false,
+  chatSessionId,
+  cardKey,
 }: {
   rec: Extract<Recommendation, { type: "ride" }>;
   onBook?: (orderId: string) => void;
   compact?: boolean;
+  chatSessionId?: string | null;
+  cardKey?: string;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -334,6 +338,8 @@ export function RideRecommendation({
           decisionId={rec.decisionId}
           fareLimitPaise={rec.fareLimitPaise}
           pickupLimitMinutes={rec.pickupLimitMinutes}
+          chatSessionId={chatSessionId}
+          cardKey={cardKey}
         />
       ) : (
         <>
