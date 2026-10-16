@@ -256,6 +256,31 @@ export function searchFoodTraced(opts: SearchOpts): {
     substituted = rawTerms.length > 0 && direct.length > 0;
   } else {
     note("keyword_no_match", dishes.length - matched.length);
+    // A named dish is that dish. "Chicken biryani" matches every chicken dish
+    // on "chicken", and those partial matches were ranked beside the biryanis,
+    // where a favourites bonus could put a customer's usual momos first. Each
+    // word the customer typed counts for more the fewer dishes it matches, so
+    // "biryani" outweighs "chicken", and only the dishes scoring highest stay.
+    // A one word search, or one where every word is as common as the others,
+    // keeps everything it matched.
+    if (direct.length > 1) {
+      const hits = (d: (typeof dishes)[number], t: string) =>
+        t.length >= 3
+          ? d.keywords.some((k) => k.includes(t) || t.includes(k)) || d.name.toLowerCase().includes(t)
+          : d.keywords.includes(t);
+      const weight = new Map<string, number>();
+      for (const t of direct) {
+        const df = dishes.filter((d) => hits(d, t)).length;
+        if (df > 0) weight.set(t, Math.log(dishes.length / df));
+      }
+      const score = (d: (typeof dishes)[number]) => direct.reduce((s, t) => s + (hits(d, t) ? (weight.get(t) ?? 0) : 0), 0);
+      const top = Math.max(...matched.map(score));
+      if (top > 0) {
+        const before = matched.length;
+        matched = matched.filter((d) => score(d) >= top - 1e-9);
+        note("less_specific_match", before - matched.length);
+      }
+    }
   }
 
   if (opts.dietary && opts.dietary !== "any") {
