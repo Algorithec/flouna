@@ -46,6 +46,9 @@ export const ACTION_CODES = [
   "REFUND_INITIATED",
   "REFUND_COMPLETED",
   "STATUS_REQUESTED",
+  // The seller says it has carried out the resolution. Distinct from the
+  // customer accepting one, which is a promise, not a delivery.
+  "RESOLVED",
   "CLOSED",
 ] as const;
 export type ActionCode = (typeof ACTION_CODES)[number];
@@ -73,6 +76,7 @@ const STATUS_AFTER: Partial<Record<ActionCode, ComplaintStatus>> = {
   INFO_PROVIDED: "PROCESSING",
   RESOLUTION_PROPOSED: "PROCESSING",
   RESOLUTION_ACCEPTED: "RESOLVED",
+  RESOLVED: "RESOLVED",
   ESCALATED: "PROCESSING",
   CLOSED: "CLOSED",
 };
@@ -114,6 +118,7 @@ const DEFAULT_DESCRIPTION: Record<ActionCode, string> = {
   REFUND_INITIATED: "Refund started",
   REFUND_COMPLETED: "Refund completed",
   STATUS_REQUESTED: "Status update requested",
+  RESOLVED: "Seller marked the complaint resolved",
   CLOSED: "Complaint closed",
 };
 
@@ -399,6 +404,12 @@ export async function provideInformation(
     data: { infoRequestedAt: null, infoRequest: null },
   });
 
+  // Told to the seller after it is recorded here, and never allowed to fail
+  // the customer's reply: the adapter records what it held back and why.
+  await igmAdapter
+    .sendAction(complaint.id, { code: "INFO_PROVIDED", shortDesc: message.slice(0, 300) })
+    .catch(() => {});
+
   return { ok: true };
 }
 
@@ -446,6 +457,14 @@ export async function decideResolution(
     actionBy: "CONSUMER",
     actorId: userId,
   });
+
+  await igmAdapter
+    .sendAction(complaint.id, {
+      code: decision === "accepted" ? "RESOLUTION_ACCEPTED" : "RESOLUTION_REJECTED",
+      shortDesc: decision === "accepted" ? "Resolution accepted" : "Resolution rejected",
+      resolutionRowId: resolution.id,
+    })
+    .catch(() => {});
 
   if (decision === "accepted" && resolution.amountPaise != null) {
     await prisma.complaintRefund.create({
@@ -519,6 +538,9 @@ export async function escalateComplaint(
     actionBy: "CONSUMER",
     actorId: userId,
   });
+  await igmAdapter
+    .sendAction(complaint.id, { code: "ESCALATED", shortDesc: reason.slice(0, 300) || "Escalated by the customer" })
+    .catch(() => {});
 
   return { level };
 }
