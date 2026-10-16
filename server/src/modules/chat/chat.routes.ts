@@ -33,7 +33,7 @@ import { istStartOfDay, istTimeLabel } from "../../lib/istTime.js";
 import { watchIntent } from "./llm/watcher.js";
 import { readWithConfidence } from "./llm/demo.js";
 import { env } from "../../config/env.js";
-import { EMPTY_STATE, handleInstruction, loadState, rememberRecommendation, saveState } from "../agent/index.js";
+import { EMPTY_STATE, handleInstruction, handleModelAction, loadState, rememberRecommendation, saveState } from "../agent/index.js";
 import { rideContextSchema, type RideContext } from "../agent/state.js";
 
 // Paise → "₹123" for chat copy.
@@ -169,6 +169,10 @@ async function buildAssistantPayload(
   // against it. Not awaited: the customer's reply never waits for it, and
   // nothing it returns reaches them.
   void watchIntent(message, intent, served.provider);
+
+  // An instruction the rules did not recognise, read by the model. Carried
+  // out by the caller, which holds the conversation's memory.
+  if (intent.domain === "action") return { reply: intent.reply, intent, served };
 
   // Faculty 3: the situation this decision is made in (time + weather). Built
   // once and layered onto food/ride advice. Never blocks — degrades offline.
@@ -512,6 +516,14 @@ chatRouter.post(
               reply: FIREWALL_REPLIES[verdict.reason],
               intent: { domain: "out_of_scope", reply: FIREWALL_REPLIES[verdict.reason] },
             };
+        if (payload.intent.domain === "action") {
+          const acted = await handleModelAction(payload.intent.action, req.userId!, EMPTY_STATE);
+          return res.json({
+            sessionId: null,
+            temporary: true,
+            message: { id: `tmp-${Date.now()}`, role: "assistant", content: acted.reply, domain: "action", action: acted.action, recommendation: null },
+          });
+        }
         return res.json({
           sessionId: null,
           temporary: true,
@@ -579,6 +591,25 @@ chatRouter.post(
             reply: FIREWALL_REPLIES[verdict.reason],
             intent: { domain: "out_of_scope", reply: FIREWALL_REPLIES[verdict.reason] },
           };
+
+      if (payload.intent.domain === "action") {
+        const acted = await handleModelAction(payload.intent.action, req.userId!, memory);
+        await saveState(session.id, acted.state);
+        const saved = await prisma.chatMessage.create({
+          data: {
+            sessionId: session.id,
+            role: "assistant",
+            content: acted.reply,
+            intent: JSON.stringify({ domain: "action", action: acted.action }),
+            provider: payload.served?.provider ?? null,
+            providerDepth: payload.served?.depth ?? null,
+          },
+        });
+        return res.json({
+          sessionId: session.id,
+          message: { id: saved.id, role: "assistant", content: acted.reply, at: saved.createdAt.toISOString(), domain: "action", action: acted.action, recommendation: null },
+        });
+      }
 
       // What was shown becomes what "that" and "the second one" refer to.
       await saveState(session.id, rememberRecommendation(memory, payload.recommendation, message.trim()));

@@ -1,4 +1,5 @@
 import { parseInstruction } from "./parse.js";
+import { actionFromModel } from "./fromModel.js";
 import { runAction, type AgentOutcome } from "./execute.js";
 import { rememberFood, type AgentState } from "./state.js";
 
@@ -19,6 +20,24 @@ export async function handleInstruction(message: string, userId: string, state: 
   const keeps = action.kind === "confirm" || action.kind === "cancel" || action.kind === "ride.group_mode";
   const s = keeps ? state : { ...state, pending: undefined };
   return runAction({ action, userId, state: s });
+}
+
+/**
+ * An instruction as the model read it. Checked against the same action schema
+ * the rules produce; anything that does not fit is answered plainly rather
+ * than guessed at. Like any instruction, it withdraws a pending question.
+ */
+export async function handleModelAction(raw: unknown, userId: string, state: AgentState): Promise<AgentOutcome> {
+  const action = actionFromModel(raw);
+  if (!action) {
+    return {
+      reply: "I couldn't work out what to do there. Could you say it another way?",
+      action: { kind: "cart.show", ok: false },
+      state,
+    };
+  }
+  const keeps = action.kind === "ride.group_mode";
+  return runAction({ action, userId, state: keeps ? state : { ...state, pending: undefined } });
 }
 
 /** After a recommendation, remember what was shown so "the second one" and "that" refer to it. */
