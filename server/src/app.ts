@@ -10,6 +10,7 @@ import { requireRole } from "./middleware/auth.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { chatRouter } from "./modules/chat/chat.routes.js";
 import { foodRouter } from "./modules/food/food.routes.js";
+import { cartRouter } from "./modules/cart/cart.routes.js";
 import { ordersRouter } from "./modules/orders/orders.routes.js";
 import { ridesRouter } from "./modules/rides/rides.routes.js";
 import { paymentsRouter } from "./modules/payments/payments.routes.js";
@@ -207,6 +208,7 @@ export function createApp() {
   app.use("/api/chat", chatRouter);
   app.use("/api/food", foodRouter);
   app.use("/api/orders", ordersRouter);
+  app.use("/api/cart", cartRouter);
   app.use("/api/complaints", complaintsRouter);
   // ONDC network callbacks. Outside /api on purpose: no session, no cookies.
   app.use("/webhooks/ondc/igm", igmWebhookRouter);

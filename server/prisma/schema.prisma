@@ -103,6 +103,7 @@ model User {
   addresses            Address[]
   chatSessions         ChatSession[]
   orders               Order[]
+  cart                 Cart?
   payments             Payment[]
   otpCodes             OtpCode[]
   refreshTokens        RefreshToken[]
@@ -1406,5 +1407,37 @@ model IntentWatch {
   error           String?
 
   @@index([createdAt])
+}
+
+// The customer's cart, held on the server so the app and chat act on the same
+// one. Only what was chosen is stored: dish, listing and quantity. Names and
+// prices are read from the catalogue every time, so a stored copy can never
+// drift from what checkout charges.
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id         String   @id @default(cuid())
+  cartId     String
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  dishId     String
+  platform   String
+  qty        Int
+  // The ranking this line came from, when it came from one, so checkout can
+  // pair the order with the recommendation it followed.
+  decisionId String?
+  // "app" or "chat": which surface put it there.
+  addedVia   String   @default("app")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([cartId, dishId, platform])
+  @@index([cartId])
 }
 
