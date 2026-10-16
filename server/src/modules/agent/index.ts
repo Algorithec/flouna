@@ -1,0 +1,33 @@
+import { parseInstruction } from "./parse.js";
+import { runAction, type AgentOutcome } from "./execute.js";
+import { rememberFood, type AgentState } from "./state.js";
+
+export { loadState, saveState, EMPTY_STATE, type AgentState } from "./state.js";
+export type { AgentOutcome } from "./execute.js";
+
+/**
+ * Handles a message if it is an instruction, or returns null so it goes on to
+ * the usual recommendation flow. Any other message withdraws a question chat
+ * asked: "Clear your cart?" followed by a search, then a "yes" much later,
+ * must not clear anything.
+ */
+export async function handleInstruction(message: string, userId: string, state: AgentState): Promise<AgentOutcome | null> {
+  const action = parseInstruction(message);
+  if (!action) return null;
+  const s = action.kind === "confirm" || action.kind === "cancel" ? state : { ...state, pending: undefined };
+  return runAction({ action, userId, state: s });
+}
+
+/** After a recommendation, remember what was shown so "the second one" and "that" refer to it. */
+export function rememberRecommendation(state: AgentState, recommendation: unknown, message: string): AgentState {
+  const rec = recommendation as
+    | { type?: string; best?: FoodLike; alternatives?: FoodLike[]; decisionId?: string; food?: { best?: FoodLike; alternatives?: FoodLike[]; decisionId?: string } | null }
+    | null
+    | undefined;
+  const food = rec?.type === "food" ? rec : rec?.type === "combo" ? rec.food : null;
+  const cleared = { ...state, pending: undefined };
+  if (!food?.best) return cleared;
+  return rememberFood(cleared, { best: food.best, alternatives: food.alternatives ?? [] }, message, food.decisionId);
+}
+
+type FoodLike = { dishId: string; platform: string; name: string; restaurant: string; effectivePaise: number };

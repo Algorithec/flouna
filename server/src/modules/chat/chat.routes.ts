@@ -33,6 +33,7 @@ import { istStartOfDay, istTimeLabel } from "../../lib/istTime.js";
 import { watchIntent } from "./llm/watcher.js";
 import { readWithConfidence } from "./llm/demo.js";
 import { env } from "../../config/env.js";
+import { EMPTY_STATE, handleInstruction, loadState, rememberRecommendation, saveState } from "../agent/index.js";
 
 // Paise → "₹123" for chat copy.
 const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
@@ -494,6 +495,16 @@ chatRouter.post(
 
       // ---- temporary chat: compute the answer, write nothing to the DB ----
       if (temporary) {
+        // Instructions still work, with no memory: nothing is kept between
+        // temporary messages, so "add that" has nothing to point at.
+        const done = verdict.ok ? await handleInstruction(message.trim(), req.userId!, EMPTY_STATE) : null;
+        if (done) {
+          return res.json({
+            sessionId: null,
+            temporary: true,
+            message: { id: `tmp-${Date.now()}`, role: "assistant", content: done.reply, domain: "action", action: done.action, recommendation: null },
+          });
+        }
         const payload: AssistantPayload = verdict.ok
           ? await buildAssistantPayload(message.trim(), req.userId!)
           : {
@@ -532,12 +543,44 @@ chatRouter.post(
         data: { sessionId: session.id, role: "user", content: message.trim().slice(0, 500) },
       });
 
+      // An instruction ("add that too", "create a group order for 4") is
+      // carried out against what this conversation remembers.
+      const memory = await loadState(session.id);
+      const done = verdict.ok ? await handleInstruction(message.trim(), req.userId!, memory) : null;
+      if (done) {
+        await saveState(session.id, done.state);
+        const saved = await prisma.chatMessage.create({
+          data: {
+            sessionId: session.id,
+            role: "assistant",
+            content: done.reply,
+            intent: JSON.stringify({ domain: "action", action: done.action }),
+            provider: "agent",
+          },
+        });
+        return res.json({
+          sessionId: session.id,
+          message: {
+            id: saved.id,
+            role: "assistant",
+            content: done.reply,
+            at: saved.createdAt.toISOString(),
+            domain: "action",
+            action: done.action,
+            recommendation: null,
+          },
+        });
+      }
+
       const payload: AssistantPayload = verdict.ok
         ? await buildAssistantPayload(message.trim(), req.userId!)
         : {
             reply: FIREWALL_REPLIES[verdict.reason],
             intent: { domain: "out_of_scope", reply: FIREWALL_REPLIES[verdict.reason] },
           };
+
+      // What was shown becomes what "that" and "the second one" refer to.
+      await saveState(session.id, rememberRecommendation(memory, payload.recommendation, message.trim()));
 
       const assistantMessage = await prisma.chatMessage.create({
         data: {
