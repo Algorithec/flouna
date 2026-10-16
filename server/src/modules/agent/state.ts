@@ -58,6 +58,12 @@ export const stateSchema = z.object({
   groupId: z.string().optional(),
   /** The ride the booking card in this conversation last priced. */
   ride: rideContextSchema.optional(),
+  /**
+   * What kind of answer chat gave last. "That" and "the second one" point at
+   * the newest list, so after a ride or a product search they must not reach
+   * back to dishes shown before it.
+   */
+  asked: z.object({ kind: z.enum(["food", "ride", "shop"]), at: z.string() }).optional(),
   /** An action waiting for the customer's yes. */
   pending: z.object({ action: actionSchema, summary: z.string(), expiresAt: z.string() }).optional(),
 });

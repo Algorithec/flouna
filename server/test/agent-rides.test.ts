@@ -148,6 +148,28 @@ describe("rides by text (founder's Example B)", () => {
     expect(sel.message.action!.effects ?? []).toEqual([]);
   });
 
+  it("does not pick an old dish when the newest thing asked for was a ride", async () => {
+    const { agent } = await authedAgent();
+    const r = await say(agent, "Find chicken biryani");
+    // A ride asked for, but the card has not priced the trip yet.
+    await say(agent, "ride to Charminar", r.sessionId);
+    const sel = await say(agent, "choose the second option", r.sessionId);
+    expect(sel.message.action!.ok).toBe(false);
+    expect(sel.message.content).toMatch(/pickup and drop/);
+    // And "add it" does not add the biryani from before the ride either.
+    const add = await say(agent, "add it", r.sessionId);
+    expect(add.message.action!.ok).toBe(false);
+    expect(((await agent.get("/api/cart").expect(200)).body as { count: number }).count).toBe(0);
+  });
+
+  it("does not pick a dish when the newest list was products", async () => {
+    const { agent } = await authedAgent();
+    const r = await say(agent, "Find chicken biryani");
+    await say(agent, "running shoes under 3000", r.sessionId);
+    const sel = await say(agent, "choose the second one", r.sessionId);
+    expect(sel.message.action!.ok).toBe(false);
+  });
+
   it("selects a dish without adding it, then adds it on request", async () => {
     const { agent } = await authedAgent();
     const r = await say(agent, "Find chicken biryani");

@@ -47,9 +47,15 @@ export function rememberRecommendation(state: AgentState, recommendation: unknow
     | null
     | undefined;
   const food = rec?.type === "food" ? rec : rec?.type === "combo" ? rec.food : null;
-  const cleared = { ...state, pending: undefined };
+  const at = new Date().toISOString();
+  const cleared: AgentState = { ...state, pending: undefined };
+  if (rec?.type === "ride") {
+    // A new trip: the last one's options no longer apply.
+    return { ...cleared, ride: undefined, asked: { kind: "ride", at } };
+  }
+  if (rec?.type === "shop") return { ...cleared, asked: { kind: "shop", at } };
   if (!food?.best) return cleared;
-  return rememberFood(cleared, { best: food.best, alternatives: food.alternatives ?? [] }, message, food.decisionId);
+  return { ...rememberFood(cleared, { best: food.best, alternatives: food.alternatives ?? [] }, message, food.decisionId), asked: { kind: "food", at } };
 }
 
 type FoodLike = { dishId: string; platform: string; name: string; restaurant: string; effectivePaise: number };

@@ -65,9 +65,28 @@ function nameMatches(asked: string, name: string) {
 
 type Resolved = { ok: true; item: { dishId: string; platform: string; name: string } } | { ok: false; reply: string };
 
+/**
+ * Why the newest answer was not a list of dishes, if it was not: a ride or
+ * products asked for after the dishes and not acted on since.
+ */
+function newerNonFood(state: AgentState): "ride" | "shop" | null {
+  const asked = state.asked;
+  if (!asked || asked.kind === "food") return null;
+  const newest = [state.shown?.at, state.focus?.at, state.ride?.at].filter(Boolean).sort().at(-1);
+  return !newest || asked.at > newest ? asked.kind : null;
+}
+
+const NOT_FOOD: Record<"ride" | "shop", string> = {
+  ride: "The last thing you asked for was a ride. Set your pickup and drop in the ride card, then tell me which one.",
+  shop: "The last thing I showed you was products, and I can't pick those from here yet. Tap the one you want.",
+};
+
 /** The item an add instruction points at, from what chat showed or last acted on. */
 function resolveForAdd(target: Target, state: AgentState): Resolved {
   const shown = state.shown;
+  // "That" and "the second one" mean the newest list. A name still finds a dish shown earlier.
+  const other = target.by === "name" ? null : newerNonFood(state);
+  if (other) return { ok: false, reply: NOT_FOOD[other] };
   if (target.by === "position") {
     const item = shown?.items[target.index];
     if (item) return { ok: true, item };
@@ -394,6 +413,8 @@ function selectShown(
 ): AgentOutcome {
   const ride = state.ride;
   const food = state.shown;
+  const other = newerNonFood(state);
+  if (other) return done(NOT_FOOD[other], {}, false);
   const ridesNewer = ride && (!food || ride.at >= food.at);
   if (ridesNewer) {
     const opts = ride.options;
