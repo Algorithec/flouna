@@ -77,7 +77,16 @@ export type StartOutcome = { searchId: string } | { unavailable: string };
 export async function startOndcSearch(
   userId: string,
   query: string,
-  opts: { send?: Send; identity?: () => SigningIdentity | null } = {},
+  opts: {
+    send?: Send;
+    identity?: () => SigningIdentity | null;
+    /**
+     * False returns as soon as the search is recorded and sends it in the
+     * background, for chat, which should not wait on the network to answer.
+     * Its status then shows whether the gateway took it.
+     */
+    wait?: boolean;
+  } = {},
 ): Promise<StartOutcome> {
   const id = (opts.identity ?? identity)();
   if (!id) return { unavailable: "ONDC is not configured on this deployment" };
@@ -99,24 +108,33 @@ export async function startOndcSearch(
     gps: `${address.lat.toFixed(6)},${address.lng.toFixed(6)}`,
     areaCode: address.pincode,
   });
-  const result = await (opts.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(GATEWAY_URL[env.ONDC_REGISTRY_ENV], "search", envelope, id);
-
+  // Recorded before sending, so answers that arrive quickly have a search to
+  // belong to.
   await prisma.ondcSearch.create({
-    data: { id: searchId, userId, query: query.slice(0, 80), lat: address.lat, lng: address.lng, city, status: result.ack ? "sent" : "refused" },
+    data: { id: searchId, userId, query: query.slice(0, 80), lat: address.lat, lng: address.lng, city, status: "sending" },
   });
-  await prisma.ondcTransaction.create({
-    data: {
-      txnId: searchId,
-      messageId: envelope.context.message_id as string,
-      action: "search",
-      domain: "ONDC:RET11",
-      request: JSON.stringify(envelope),
-      status: result.ack ? "ack" : "nack",
-      signed: true,
-      simulated: false,
-    },
-  });
-  if (!result.ack) return { unavailable: "The ONDC network did not accept the search just now" };
+  const send = async () => {
+    const result = await (opts.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(GATEWAY_URL[env.ONDC_REGISTRY_ENV], "search", envelope, id);
+    await prisma.ondcSearch.update({ where: { id: searchId }, data: { status: result.ack ? "sent" : "refused" } });
+    await prisma.ondcTransaction.create({
+      data: {
+        txnId: searchId,
+        messageId: envelope.context.message_id as string,
+        action: "search",
+        domain: "ONDC:RET11",
+        request: JSON.stringify(envelope),
+        status: result.ack ? "ack" : "nack",
+        signed: true,
+        simulated: false,
+      },
+    });
+    return result.ack;
+  };
+  if (opts.wait === false) {
+    void send().catch((err: unknown) => console.error("[ondc] search send failed", err instanceof Error ? err.message : String(err)));
+    return { searchId };
+  }
+  if (!(await send())) return { unavailable: "The ONDC network did not accept the search just now" };
   return { searchId };
 }
 

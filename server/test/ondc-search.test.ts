@@ -150,6 +150,17 @@ describe("searching ONDC sellers", () => {
     });
   });
 
+  it("can return at once and send in the background, reporting a refusal through its status", async () => {
+    const c = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
+    let release!: (r: { ack: boolean; status: number }) => void;
+    const gate = new Promise<{ ack: boolean; status: number }>((r) => (release = r));
+    const started = (await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send: () => gate, wait: false })) as { searchId: string };
+    expect((await ondcSearchResults(started.searchId, c.userId)).status).toBe("searching");
+    release({ ack: false, status: 503 });
+    await new Promise((r) => setTimeout(r, 100));
+    expect((await ondcSearchResults(started.searchId, c.userId)).status).toBe("refused");
+  });
+
   it("names cities the way ONDC does", () => {
     expect(stdCodeFor("Bengaluru")).toBe("std:080");
     expect(stdCodeFor("BENGALURU URBAN")).toBe("std:080");
