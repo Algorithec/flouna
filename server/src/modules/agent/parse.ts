@@ -1,3 +1,4 @@
+import { parseIndic } from "./parseIndic.js";
 import type { AgentAction, Target } from "./actions.js";
 
 // Reads an instruction into an action, or returns null when the message is
@@ -71,6 +72,11 @@ const TOGGLES: [RegExp, Extract<AgentAction, { kind: "settings.toggle" }>["setti
 ];
 
 export function parseInstruction(message: string): AgentAction | null {
+  // English first, so its exact meanings stand; then Hindi, Hinglish and Telugu.
+  return parseEnglish(message) ?? parseIndic(message);
+}
+
+function parseEnglish(message: string): AgentAction | null {
   const t = message
     .toLowerCase()
     .replace(/[’']/g, "'")
