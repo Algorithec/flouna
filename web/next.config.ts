@@ -14,7 +14,13 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const target = process.env.API_PROXY_TARGET;
     if (!target) return [];
-    return [{ source: "/api/:path*", destination: `${target}/api/:path*` }];
+    return [
+      { source: "/api/:path*", destination: `${target}/api/:path*` },
+      // The live connection (price alerts) takes the same route, for the same
+      // reason. The client asks for "/socket.io" without a trailing slash, so
+      // it is not redirected first; the API expects the slash.
+      { source: "/socket.io", destination: `${target}/socket.io/` },
+    ];
   },
 };
 
