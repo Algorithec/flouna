@@ -546,6 +546,10 @@ model GroupCart {
   // crew can offer what they ordered last time.
   crewId      String?
   crew        GroupCrew? @relation(fields: [crewId], references: [id], onDelete: SetNull)
+  // How many people the host said the order is for, counting the host
+  // ("a group order for four"). Shown as joined of expected; it never stops
+  // anyone joining or limits the order.
+  expectedMembers Int?
   orderId     String? // set once the host places the combined order
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -884,6 +888,11 @@ model ChatSession {
   userId    String
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String?
+  // What chat remembers between messages (JSON, see agent/state.ts): what it
+  // last showed, what was last added, the active group, an action awaiting
+  // confirmation. Kept as explicit state rather than re-read from the
+  // transcript, so "add that too" means exactly one thing.
+  agentState String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   messages  ChatMessage[]

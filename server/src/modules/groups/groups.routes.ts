@@ -43,6 +43,7 @@ type CartWithItems = {
   name: string | null;
   emoji: string | null;
   crewId: string | null;
+  expectedMembers: number | null;
   orderId: string | null;
   items: {
     id: string;
@@ -98,6 +99,7 @@ async function summarize(cartId: string, viewerId: string) {
     name: cart.name,
     emoji: cart.emoji,
     crewId: cart.crewId,
+    expectedMembers: cart.expectedMembers ?? null,
     orderId: cart.orderId,
     hostId: cart.hostId,
     isHost: cart.hostId === viewerId,
@@ -244,6 +246,82 @@ async function takeSeat(cartId: string, userId: string, seats: number) {
   }
 }
 
+/**
+ * Opens a group order with the host as its first member. Shared by the
+ * create route and chat ("create a group order for four"), so both make the
+ * same thing.
+ */
+export async function openGroupCart(o: {
+  hostId: string;
+  domain: "food" | "ride";
+  platform: string;
+  rideDetails?: string | null;
+  expectedMembers?: number;
+}) {
+  // Retry on the rare code collision.
+  let cart;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      cart = await prisma.groupCart.create({
+        data: {
+          code: generateCode(),
+          hostId: o.hostId,
+          domain: o.domain,
+          platform: o.platform,
+          rideDetails: o.rideDetails ?? null,
+          expectedMembers: o.expectedMembers ?? null,
+        },
+      });
+      break;
+    } catch {
+      /* unique collision — try a new code */
+    }
+  }
+  if (!cart) throw new ApiError(500, "Could not create group order");
+  await addMember(cart.id, o.hostId); // host is a member
+  return summarize(cart.id, o.hostId);
+}
+
+/**
+ * Adds a member's own dish to a food group order. The item is theirs alone:
+ * nothing here copies it to anyone else. Shared by the route and chat.
+ */
+export async function addGroupItem(o: { cartId: string; userId: string; dishId: string; qty: number }) {
+  // H2: only members (host or someone who joined via code) may add items.
+  const cart = await assertMember(o.cartId, o.userId);
+  if (cart.domain === "ride") {
+    throw new ApiError(400, "This is a shared ride, there's nothing to add");
+  }
+  if (cart.status !== "open") throw new ApiError(409, "This group order is closed");
+
+  // Price comes from the cart's platform — server-trusted, never the client.
+  const quote = quotesForDish(o.dishId).find((q) => q.platform === cart.platform);
+  if (!quote) throw new ApiError(404, "That dish isn't available on this platform");
+
+  await prisma.groupCartItem.create({
+    data: {
+      cartId: cart.id,
+      userId: o.userId,
+      dishId: o.dishId,
+      name: quote.name,
+      pricePaise: quote.effectivePaise,
+      qty: o.qty,
+    },
+  });
+
+  // Let the host know someone added to the order.
+  if (cart.hostId !== o.userId) {
+    void sendPushToUser(cart.hostId, {
+      title: "Someone joined your group order 🍴",
+      body: `${quote.name} was added.`,
+      url: `/food/group/${cart.id}`,
+    });
+  }
+  return summarize(cart.id, o.userId);
+}
+
+export { summarize as groupSummary };
+
 // ---------- create ----------
 const createFoodGroup = z.object({
   domain: z.literal("food").default("food"),
@@ -316,27 +394,7 @@ groupsRouter.post(
         platform = body.platform;
       }
 
-      // Retry on the rare code collision.
-      let cart;
-      for (let attempt = 0; attempt < 5; attempt++) {
-        try {
-          cart = await prisma.groupCart.create({
-            data: {
-              code: generateCode(),
-              hostId: req.userId!,
-              domain: body.domain,
-              platform,
-              rideDetails,
-            },
-          });
-          break;
-        } catch {
-          /* unique collision — try a new code */
-        }
-      }
-      if (!cart) throw new ApiError(500, "Could not create group order");
-      await addMember(cart.id, req.userId!); // host is a member
-      res.status(201).json(await summarize(cart.id, req.userId!));
+      res.status(201).json(await openGroupCart({ hostId: req.userId!, domain: body.domain, platform, rideDetails }));
     } catch (err) {
       next(err);
     }
@@ -603,37 +661,7 @@ groupsRouter.post(
   async (req, res, next) => {
     try {
       const { dishId, qty } = req.body as { dishId: string; qty: number };
-      // H2: only members (host or someone who joined via code) may add items.
-      const cart = await assertMember(req.params.id!, req.userId!);
-      if (cart.domain === "ride") {
-        throw new ApiError(400, "This is a shared ride, there's nothing to add");
-      }
-      if (cart.status !== "open") throw new ApiError(409, "This group order is closed");
-
-      // Price comes from the cart's platform — server-trusted, never the client.
-      const quote = quotesForDish(dishId).find((q) => q.platform === cart.platform);
-      if (!quote) throw new ApiError(404, "That dish isn't available on this platform");
-
-      await prisma.groupCartItem.create({
-        data: {
-          cartId: cart.id,
-          userId: req.userId!,
-          dishId,
-          name: quote.name,
-          pricePaise: quote.effectivePaise,
-          qty,
-        },
-      });
-
-      // Let the host know someone added to the order.
-      if (cart.hostId !== req.userId!) {
-        void sendPushToUser(cart.hostId, {
-          title: "Someone joined your group order 🍴",
-          body: `${quote.name} was added.`,
-          url: `/food/group/${cart.id}`,
-        });
-      }
-      res.status(201).json(await summarize(cart.id, req.userId!));
+      res.status(201).json(await addGroupItem({ cartId: req.params.id!, userId: req.userId!, dishId, qty }));
     } catch (err) {
       next(err);
     }
