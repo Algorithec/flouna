@@ -11,7 +11,9 @@ import { env } from "../../config/env.js";
 // ONDC domain codes for the categories we transact.
 const DOMAIN_CODE: Record<string, string> = {
   food: "ONDC:RET11", // F&B
-  ride: "ONDC:TRV11", // mobility
+  // TRV10 is ride hailing, the domain we are registered for. TRV11 is a
+  // different one (unreserved tickets such as metro and bus).
+  ride: "ONDC:TRV10", // mobility
 };
 
 // A minimal, correctly-shaped Beckn context block. Real signing happens at the
