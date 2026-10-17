@@ -25,6 +25,34 @@ declare global {
   }
 }
 
+// Google's script is loaded once per page, however many buttons mount or
+// re-render, and set up once: the button that is on screen now receives the
+// credential through activeCallback.
+let googleScript: Promise<void> | null = null;
+function loadGoogle(): Promise<void> {
+  if (window.google) return Promise.resolve();
+  googleScript ??= new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      googleScript = null;
+      reject(new Error("Google sign-in could not load"));
+    };
+    document.head.appendChild(script);
+  });
+  return googleScript.catch(() => undefined);
+}
+
+let initialized = false;
+let activeCallback: (credential: string) => void = () => {};
+function initializeOnce(clientId: string, callback: (credential: string) => void) {
+  if (initialized || !window.google) return;
+  window.google.accounts.id.initialize({ client_id: clientId, callback: ({ credential }) => callback(credential) });
+  initialized = true;
+}
+
 export function GoogleButton({
   onError,
   label = "Google",
@@ -48,26 +76,34 @@ export function GoogleButton({
       ? "border-line bg-card text-ink shadow-soft"
       : "border-auth-line bg-auth-alt text-auth-alt-ink";
 
+  // What a successful Google sign-in does, kept current without setting
+  // Google up again: initialize() may only be called once per page, and a
+  // later call replaces the earlier callback, so it used to run again on
+  // every language change and Google warned that it was "called multiple
+  // times".
+  const onCredential = useRef<(credential: string) => void>(() => {});
+  useEffect(() => {
+    onCredential.current = async (credential: string) => {
+      try {
+        const d = await api<{ user: User }>("/api/auth/google", {
+          method: "POST",
+          json: { credential },
+        });
+        setUser(d.user);
+        router.replace("/home");
+      } catch (e) {
+        onError(e instanceof Error ? e.message : t("gb.failed"));
+      }
+    };
+  }, [router, setUser, onError, t]);
+
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || !ref.current) return;
-
-    const init = () => {
-      if (!window.google || !ref.current) return;
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: async ({ credential }) => {
-          try {
-            const d = await api<{ user: User }>("/api/auth/google", {
-              method: "POST",
-              json: { credential },
-            });
-            setUser(d.user);
-            router.replace("/home");
-          } catch (e) {
-            onError(e instanceof Error ? e.message : t("gb.failed"));
-          }
-        },
-      });
+    let alive = true;
+    void loadGoogle().then(() => {
+      if (!alive || !window.google || !ref.current) return;
+      initializeOnce(GOOGLE_CLIENT_ID, (credential) => activeCallback(credential));
+      activeCallback = (credential) => onCredential.current(credential);
       // Size to the actual slot — a fixed width overflows the half-width grid
       // cell on small screens.
       const slot = ref.current.parentElement?.clientWidth ?? 320;
@@ -84,18 +120,11 @@ export function GoogleButton({
         width: Math.max(120, Math.min(400, slot)),
       });
       setReady(true);
+    });
+    return () => {
+      alive = false;
     };
-
-    if (window.google) {
-      init();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.onload = init;
-    document.head.appendChild(script);
-  }, [router, setUser, onError, t]);
+  }, []);
 
   if (!GOOGLE_CLIENT_ID) {
     const handleDevLogin = async () => {

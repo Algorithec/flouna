@@ -26,7 +26,7 @@ import { WhyBest, RideWhyBest, ShopWhyBest } from "./WhyBest";
 import { InlineRideBooking } from "./inline/InlineRideBooking";
 import { PlatformChip } from "./PlatformMark";
 import { FlounaInsights, cheaperVehicleHack, bundleHack } from "./FlounaInsights";
-import { RadiusUpsell } from "./RadiusUpsell";
+import { PlusUpsell } from "./PlusUpsell";
 import {
   RideBestCard,
   RideOptionRow,
@@ -206,7 +206,7 @@ export function FoodRecommendation({
       </Link>
 
       <FlounaInsights {...insightProps} />
-      <RadiusUpsell href="/food" />
+      <PlusUpsell href="/food" />
     </ResultStack>
   );
 }
@@ -391,7 +391,7 @@ export function RideRecommendation({
             hidden={shown.length - preview.length}
             onShow={() => setExpanded(true)}
           />
-          <RadiusUpsell href="/rides" />
+          <PlusUpsell href="/rides" />
         </>
       )}
     </ResultStack>
@@ -549,7 +549,7 @@ export function ShopRecommendation({
         quote={rec.best.reviewSummary?.trim() || undefined}
         offers={rec.best.offers ?? []}
       />
-      <RadiusUpsell href="/shop" />
+      <PlusUpsell href="/shop" />
     </ResultStack>
   );
 }

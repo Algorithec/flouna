@@ -357,10 +357,17 @@ function Row({
 }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <span className="shrink-0 text-cocoa">{label}</span>
+      {/* The label wraps and the amount keeps its width. The other way round,
+          a long translated label ("saved against the next best option" in
+          Tamil) pushed the amount off a 320px screen. */}
+      <span className="min-w-0 flex-1 break-words text-cocoa">{label}</span>
       <span
         className={cn(
-          "min-w-0 text-right text-ink",
+          "text-right text-ink",
+          // Amounts are short and keep their width; a long text value (a
+          // payment method not recorded) wraps within its share instead of
+          // squeezing the label into breaking mid-word.
+          mono ? "min-w-0" : "max-w-[55%] shrink-0 break-words",
           bold && "text-[15px] font-bold",
           accent && "font-medium text-success",
           // A raw order id wrapped with break-all + text-right staircases —
