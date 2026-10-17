@@ -367,9 +367,12 @@ async function createGroup(
   }
 
   let group = await openGroupCart({ hostId: userId, domain: "food", platform, expectedMembers: action.members ?? undefined });
+  // Add all items to the group first; only remove from cart after all
+  // succeed, so a failure halfway doesn't leave items in neither place.
   for (const line of mine) {
     group = await addGroupItem({ cartId: group.id, userId, dishId: line.dishId, qty: line.qty });
-    // Moved, not copied: left in the cart too, it would be ordered twice.
+  }
+  for (const line of mine) {
     await removeItem(userId, line);
   }
   setState({ ...state, groupId: group.id, focus: state.focus ? { ...state.focus, at: now.toISOString() } : undefined });

@@ -93,31 +93,32 @@ export async function addItem(
   if (!listing(item.dishId, item.platform)) throw new ApiError(404, "That dish is not available on that platform");
   const id = await cartId(userId);
 
-  // Two taps on Add at once can both find no line and both create one. On
-  // Postgres the second is refused by the unique index; run it again and it
-  // finds the first one's line and adds to it, so both taps count.
-  const write = () => prisma.$transaction(async (tx) => {
-    const existing = await tx.cartItem.findUnique({
-      where: { cartId_dishId_platform: { cartId: id, dishId: item.dishId, platform: item.platform } },
-    });
+  const where = { cartId_dishId_platform: { cartId: id, dishId: item.dishId, platform: item.platform } };
+  const write = async () => {
+    const existing = await prisma.cartItem.findUnique({ where });
     if (existing) {
-      await tx.cartItem.update({
-        where: { id: existing.id },
-        data: { qty: Math.min(MAX_QTY, existing.qty + qty), ...(item.decisionId ? { decisionId: item.decisionId } : {}) },
-      });
+      // Atomic increment avoids the lost-update under READ COMMITTED where
+      // two taps both read the same qty and both write qty+1.
+      await prisma.cartItem.update({ where: { id: existing.id }, data: { qty: { increment: qty }, ...(item.decisionId ? { decisionId: item.decisionId } : {}) } });
+      // Clamp to MAX_QTY in a second write guarded by the condition, so
+      // concurrent adds cannot push past the cap.
+      await prisma.cartItem.updateMany({ where: { id: existing.id, qty: { gt: MAX_QTY } }, data: { qty: MAX_QTY } });
       return;
     }
-    if ((await tx.cartItem.count({ where: { cartId: id } })) >= MAX_LINES) {
+    if ((await prisma.cartItem.count({ where: { cartId: id } })) >= MAX_LINES) {
       throw new ApiError(400, `A cart holds at most ${MAX_LINES} different dishes`);
     }
-    await tx.cartItem.create({
+    await prisma.cartItem.create({
       data: { cartId: id, dishId: item.dishId, platform: item.platform, qty, decisionId: item.decisionId, addedVia: item.via ?? "app" },
     });
-  });
+  };
   try {
     await write();
   } catch (err) {
-    if ((err as { code?: string }).code !== "P2002") throw err;
+    const code = (err as { code?: string }).code;
+    // P2002: unique constraint (two creates raced), P2034: serialization
+    // failure, SQLITE_BUSY: SQLite write contention.
+    if (code !== "P2002" && code !== "P2034" && !String(err).includes("SQLITE_BUSY")) throw err;
     await write();
   }
   return getCart(userId);
