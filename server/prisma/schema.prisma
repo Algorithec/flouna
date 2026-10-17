@@ -1426,7 +1426,7 @@ model OndcSearch {
   lat       Float
   lng       Float
   city      String // STD code form, e.g. "std:080"
-  // "sent" once the gateway acknowledged it, "refused" if it did not.
+  // "sending" until the gateway responds, "sent" once acknowledged, "refused" if it did not or the send threw.
   status    String
   createdAt DateTime @default(now())
 

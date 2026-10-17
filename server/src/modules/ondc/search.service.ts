@@ -131,7 +131,10 @@ export async function startOndcSearch(
     return result.ack;
   };
   if (opts.wait === false) {
-    void send().catch((err: unknown) => console.error("[ondc] search send failed", err instanceof Error ? err.message : String(err)));
+    void send().catch(async (err: unknown) => {
+      console.error("[ondc] search send failed", err instanceof Error ? err.message : String(err));
+      await prisma.ondcSearch.update({ where: { id: searchId }, data: { status: "refused" } }).catch(() => {});
+    });
     return { searchId };
   }
   if (!(await send())) return { unavailable: "The ONDC network did not accept the search just now" };
