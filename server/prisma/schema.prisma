@@ -1108,6 +1108,10 @@ model OndcTransaction {
   signed    Boolean  @default(true) // request carried an Ed25519 signature
   latencyMs Int? // round-trip for request→callback, when known
   simulated Boolean  @default(true) // pre-registration synthetic record
+  // Signer and digest of an inbound message's exact bytes. Unique, so a seller
+  // resending the same message stores it once however many servers are
+  // running and however long ago the first copy came. Null on rows we wrote.
+  dedupeKey String?  @unique
   createdAt DateTime @default(now())
 
   @@index([txnId])

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { subscriberIdProblem } from "../modules/ondc/context.js";
+import { commercialTerms } from "../modules/ondc/commercial.js";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -140,6 +142,15 @@ const envSchema = z.object({
   // The unique key id ONDC issued with the signing key above. Together they
   // identify us on every signed message and registry lookup.
   ONDC_UNIQUE_KEY_ID: z.string().optional(),
+  // Commercial terms on ONDC, the founder's to set. Read and checked by
+  // modules/ondc/commercial.ts, which explains each and its default.
+  ONDC_FOOD_PAYMENT_COLLECTOR: z.string().optional(),
+  ONDC_FINDER_FEE_PERCENT: z.string().optional(),
+  ONDC_SETTLEMENT_ACCOUNT_NUMBER: z.string().optional(),
+  ONDC_SETTLEMENT_IFSC: z.string().optional(),
+  ONDC_SETTLEMENT_UPI: z.string().optional(),
+  ONDC_SETTLEMENT_BENEFICIARY: z.string().optional(),
+  ONDC_STATIC_TERMS_URL: z.string().optional(),
 
   // ₹50/month premium tier. Reuses the Cashfree gateway for the recurring
   // charge; falls back to a simulated activation in dev when unset.
@@ -208,6 +219,16 @@ if (isProd) {
         "the app then tells users it is a demo.",
     );
   }
+  const subscriberProblem = subscriberIdProblem(env.ONDC_SUBSCRIBER_ID);
+  if (subscriberProblem) problems.push(subscriberProblem);
+  // A term set to something that cannot go on the wire stops the server: it
+  // would otherwise fail on the first order, in front of a customer.
+  let ondcTerms: ReturnType<typeof commercialTerms> | null = null;
+  try {
+    ondcTerms = commercialTerms(process.env);
+  } catch (err) {
+    problems.push((err as Error).message);
+  }
   if (env.PROVIDER_MODE === "ondc" && !env.ONDC_SUBSCRIBER_ID) {
     problems.push("PROVIDER_MODE=ondc but ONDC_SUBSCRIBER_ID is unset, the adapter cannot sign requests");
   }
@@ -251,6 +272,10 @@ if (isProd) {
   }
   if (!env.VAPID_PUBLIC_KEY) {
     warnings.push("VAPID_PUBLIC_KEY unset, web push notifications are disabled");
+  }
+  // Only worth saying once this deployment actually speaks ONDC.
+  if (env.ONDC_SUBSCRIBER_ID && ondcTerms) {
+    for (const u of ondcTerms.unconfirmed) warnings.push(`${u} (founder decision pending)`);
   }
   if (warnings.length > 0) {
     console.warn("Starting with reduced functionality:");

@@ -12,7 +12,7 @@ const SAFE_PROD = {
   JWT_ACCESS_SECRET: "a".repeat(48),
   JWT_REFRESH_SECRET: "b".repeat(48),
   PROVIDER_MODE: "ondc",
-  ONDC_SUBSCRIBER_ID: "flouna.app",
+  ONDC_SUBSCRIBER_ID: "ondc.flouna.com",
   CASHFREE_APP_ID: "app-id",
   CASHFREE_SECRET_KEY: "secret-key",
   CASHFREE_ENV: "production",
@@ -73,6 +73,12 @@ describe("production config gate", () => {
     expect(errors.join(" ")).toMatch(/ONDC_SUBSCRIBER_ID/);
   });
 
+  it("refuses a subscriber id other than the one its ONDC messages carry", async () => {
+    const { exited, errors } = await loadEnv({ ONDC_SUBSCRIBER_ID: "www.flouna.com" });
+    expect(exited).toBe(true);
+    expect(errors.join(" ")).toMatch(/would be refused/);
+  });
+
   it("refuses to start without payment credentials — checkout would dead-end", async () => {
     for (const missing of ["CASHFREE_APP_ID", "CASHFREE_SECRET_KEY"]) {
       const { exited, errors } = await loadEnv({ [missing]: undefined });
@@ -85,6 +91,26 @@ describe("production config gate", () => {
     expect((await loadEnv({ DATABASE_URL: "file:./dev.db" })).exited).toBe(true);
     expect((await loadEnv({ JWT_ACCESS_SECRET: "short" })).exited).toBe(true);
     expect((await loadEnv({ WEB_ORIGIN: "http://flouna.app" })).exited).toBe(true);
+  });
+
+  it("refuses an ONDC commercial term that cannot go on the wire", async () => {
+    const { exited, errors } = await loadEnv({ ONDC_FINDER_FEE_PERCENT: "lots" });
+    expect(exited).toBe(true);
+    expect(errors.join(" ")).toMatch(/ONDC_FINDER_FEE_PERCENT/);
+  });
+
+  it("starts with ONDC commercial terms on their defaults, naming each as pending", async () => {
+    const { exited, warns } = await loadEnv({});
+    expect(exited).toBe(false);
+    expect(warns.join(" ")).toMatch(/ONDC_FINDER_FEE_PERCENT is unset.*founder decision pending/);
+    const set = await loadEnv({
+      ONDC_FOOD_PAYMENT_COLLECTOR: "BPP",
+      ONDC_FINDER_FEE_PERCENT: "3",
+      ONDC_SETTLEMENT_UPI: "algorithec@hdfcbank",
+      ONDC_SETTLEMENT_BENEFICIARY: "Algorithec Private Limited",
+      ONDC_STATIC_TERMS_URL: "https://flouna.com/ondc/terms",
+    });
+    expect(set.warns.join(" ")).not.toMatch(/founder decision pending/);
   });
 
   it("warns without refusing when a feature is merely switched off", async () => {

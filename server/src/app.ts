@@ -31,6 +31,9 @@ import { superRouter } from "./modules/backoffice/super.routes.js";
 import { requestKey } from "./middleware/rateLimit.js";
 import { ondcRegistryRouter } from "./modules/ondc/registry.routes.js";
 import { ondcCallbacksRouter } from "./modules/ondc/index.js";
+import { CALLBACK_ACTIONS } from "./modules/ondc/callbacks.routes.js";
+import { parseAuthorizationHeader } from "./modules/ondc/signing.js";
+import { BUYER_ERRORS, nack } from "./modules/ondc/errors.js";
 
 export function createApp() {
   const app = express();
@@ -90,7 +93,40 @@ export function createApp() {
   const bulkJsonBody = express.json({ limit: "600kb", verify: keepRawBody });
   const UPLOAD_PATHS = [/^\/api\/complaints\/[^/]+\/evidence\/?$/];
   const BULK_PATHS = [/^\/api\/groups\/[^/]+\/chat\/history\/?$/];
+  // Seller apps answer a search with their whole catalogue in one on_search,
+  // and a restaurant's menu with images and customisations runs to megabytes.
+  // At 100 KB those answers were refused before their signature was checked.
+  //
+  // A body that size is only read for a request that at least carries a
+  // well formed ONDC signature header, and behind its own per address limit
+  // that runs before parsing: the general limiters below sit after the body
+  // parser, so on their own they would let anyone make us parse 5 MB at will.
+  // The registry handshake (on_subscribe) is unsigned and not covered here.
+  const ondcJsonBody = express.json({ limit: "5mb", verify: keepRawBody });
+  const ondcCallbackPaths = new Set(CALLBACK_ACTIONS.map((a) => `/ondc/${a}`));
+  const isOndcCallback = (req: express.Request) =>
+    req.method === "POST" && ondcCallbackPaths.has(req.path.replace(/\/+$/, ""));
+  const ondcLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: env.NODE_ENV === "test" ? 100_000 : 1_200,
+    standardHeaders: false,
+    legacyHeaders: false,
+    keyGenerator: (req) => "ondc:" + (req.ip ?? ""),
+    message: nack(BUYER_ERRORS.INTERNAL_ERROR, "Too many requests, retry shortly"),
+  });
   app.use((req, res, next) => {
+    if (!isOndcCallback(req)) return next();
+    ondcLimiter(req, res, () => {
+      if (!parseAuthorizationHeader(req.get("authorization") ?? "")) {
+        res.status(401).json(nack(BUYER_ERRORS.INVALID_SIGNATURE, "Signature not accepted: malformed"));
+        return;
+      }
+      ondcJsonBody(req, res, next);
+    });
+  });
+  app.use((req, res, next) => {
+    // Already parsed by the ONDC branch above.
+    if (isOndcCallback(req)) return next();
     if (req.method === "POST") {
       if (UPLOAD_PATHS.some((re) => re.test(req.path))) {
         return uploadJsonBody(req, res, next);

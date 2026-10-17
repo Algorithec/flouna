@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
 import { recordAction, type ActionCode } from "./complaints.service.js";
+import { NetworkIgmAdapter, type CustomerIgmAction } from "./igm.network.js";
 
 // ONDC IGM protocol adapter.
 //
@@ -9,13 +10,10 @@ import { recordAction, type ActionCode } from "./complaints.service.js";
 // lives behind `IgmAdapter`. A spec version bump changes an implementation
 // here; it does not reach the database, the API or the screens.
 //
-// What is deliberately NOT in this file: payload construction. The guide states
-// plainly that endpoint URLs, headers, signing, subscriber IDs, context values
-// and the JSON schema must come from the live ONDC specification, and that
-// inventing enum values or field names is wrong. Guessing them would produce
-// issues the network rejects and — worse — code that looks finished. So the
-// mapping functions are declared and left unimplemented, with exactly what each
-// one needs written down.
+// The wire format itself (IGM 2.0.0) lives in modules/ondc/igm.ts, and the
+// network adapter that sends and applies it in ./igm.network.ts. This file
+// keeps the interface, the adapter used while ONDC is not configured, and the
+// older webhook's event type.
 
 /** The four protocol actions from the guide. */
 export type IgmAction =
@@ -54,7 +52,11 @@ export interface IgmAdapter {
   /** Send a complaint as an `issue`. */
   sendIssue(complaintId: string): Promise<{ sent: boolean; reason?: string }>;
   /** Ask the network for the current state of an issue. */
-  requestStatus(complaintId: string): Promise<{ sent: boolean; reason?: string }>;
+  /**
+   * Re-send the issue with one of the customer's actions appended. IGM 2.0
+   * has no issue_status: both sides re-send the whole issue as it moves.
+   */
+  sendAction(complaintId: string, action: CustomerIgmAction): Promise<{ sent: boolean; reason?: string }>;
   /**
    * Translate a raw inbound callback into a normalised event.
    *
@@ -96,8 +98,8 @@ class PendingSpecAdapter implements IgmAdapter {
     return this.queue(complaintId, "issue");
   }
 
-  requestStatus(complaintId: string) {
-    return this.queue(complaintId, "issue_status");
+  sendAction(complaintId: string) {
+    return this.queue(complaintId, "issue");
   }
 
   parseCallback(): InboundIgmEvent | null {
@@ -107,34 +109,22 @@ class PendingSpecAdapter implements IgmAdapter {
 }
 
 /**
- * The real adapter. Intentionally unimplemented.
- *
- * To finish it we need, from the ONDC onboarding environment:
- *   - the IGM spec version being targeted
- *   - gateway/participant endpoint URLs
- *   - subscriber id and signing keys (ed25519), plus the auth header format
- *   - context field values (domain, country, city, bap_id, bap_uri, ttl)
- *   - the controlled enums: issue category, sub-category, action codes,
- *     actor types and resolution types
- *
- * Each method should then: build the payload from our Complaint, sign it,
- * POST it, and persist the exchange to ComplaintMessage. Nothing about the
- * complaint model needs to change for that.
+ * The network adapter, created on first use. igm.network imports the complaint
+ * service, which imports this file, so at the moment this module runs the
+ * network class may not be defined yet; building it lazily keeps that cycle
+ * harmless whichever module loads first.
  */
-class NetworkIgmAdapter implements IgmAdapter {
-  readonly live = true;
-
-  async sendIssue(): Promise<{ sent: boolean; reason?: string }> {
-    throw new Error("IGM network adapter is not implemented yet");
-  }
-
-  async requestStatus(): Promise<{ sent: boolean; reason?: string }> {
-    throw new Error("IGM network adapter is not implemented yet");
-  }
-
-  parseCallback(): InboundIgmEvent | null {
-    throw new Error("IGM network adapter is not implemented yet");
-  }
+function liveAdapter(): IgmAdapter {
+  let inner: NetworkIgmAdapter | undefined;
+  const get = () => (inner ??= new NetworkIgmAdapter());
+  return {
+    live: true,
+    sendIssue: (complaintId) => get().sendIssue(complaintId),
+    sendAction: (complaintId, action) => get().sendAction(complaintId, action),
+    // IGM 2.0 answers arrive at /ondc/on_issue, signed, and are applied there
+    // (applyOnIssue). The old webhook path is not how ONDC delivers them.
+    parseCallback: () => null,
+  };
 }
 
 /**
@@ -145,7 +135,7 @@ class NetworkIgmAdapter implements IgmAdapter {
  */
 export const igmAdapter: IgmAdapter =
   process.env.ONDC_IGM_ENABLED === "true"
-    ? new NetworkIgmAdapter()
+    ? liveAdapter()
     : new PendingSpecAdapter();
 
 /**

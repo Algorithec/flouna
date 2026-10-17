@@ -50,3 +50,8 @@ model/flouna-lora-*/
 .vscode/
 server/.ondc-keys.json
 server/.ondc-request-id.txt
+server/.ondc-preprod-keys.json
+server/.ondc-preprod-keys-ride.json
+server/.ondc-no-token.txt
+server/.ondc-keys-ondcsub-*.json
+server/.ondc-no-token-*.txt

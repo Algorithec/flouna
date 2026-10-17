@@ -27,6 +27,7 @@ export type ContextInput = {
 };
 
 export function buildContext(c: ContextInput): Record<string, unknown> {
+  if (!/^std:\d{2,5}$/.test(c.city)) throw new Error(`ONDC city must be an STD code such as std:080, got ${c.city}`);
   const base = {
     domain: c.domain,
     action: c.action,
@@ -47,4 +48,71 @@ export function buildContext(c: ContextInput): Record<string, unknown> {
     };
   }
   return { ...base, country: "IND", city: c.city, core_version: "1.2.0" };
+}
+
+/**
+ * A finder fee percentage, checked. It goes on the wire as what the seller
+ * owes us, so a value that is not a real percentage must stop the message
+ * rather than be sent as "NaN" or rounded into a different fee.
+ */
+export function checkedFeePercent(percent: number): number {
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+    throw new Error(`Finder fee must be a percentage from 0 to 100, got ${percent}`);
+  }
+  if (!hasAtMostDecimals(percent, 2)) {
+    throw new Error(`Finder fee is limited to two decimal places, got ${percent}`);
+  }
+  return percent;
+}
+
+/** True when `n` has no more than `places` decimals, allowing for binary float error (0.07 * 100 is not 7). */
+export function hasAtMostDecimals(n: number, places: number): boolean {
+  const scaled = n * 10 ** places;
+  return Math.abs(scaled - Math.round(scaled)) < 1e-6;
+}
+
+// Checks on values that go on the wire. A seller app that receives a malformed
+// one either refuses the message, with an error that rarely says which field,
+// or worse, accepts it and delivers somewhere else. Stopping here names it.
+
+/** "lat,lng" in decimal degrees, as ONDC writes every location. */
+export function checkedGps(gps: string): string {
+  const m = /^\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/.exec(gps);
+  if (!m || Math.abs(Number(m[1])) > 90 || Math.abs(Number(m[2])) > 180) {
+    throw new Error(`ONDC gps must be "lat,lng" in degrees, got ${gps}`);
+  }
+  return gps;
+}
+
+/** An Indian PIN code. */
+export function checkedAreaCode(code: string): string {
+  if (!/^[1-9]\d{5}$/.test(code)) throw new Error(`ONDC area code must be a 6 digit PIN, got ${code}`);
+  return code;
+}
+
+/** A public https address, for anything a seller app is told to fetch. */
+export function checkedHttpsUrl(url: string, what: string): string {
+  let ok = false;
+  try {
+    ok = new URL(url).protocol === "https:";
+  } catch {
+    ok = false;
+  }
+  if (!ok) throw new Error(`${what} must be an https URL, got ${url}`);
+  return url;
+}
+
+/**
+ * Why a configured subscriber id cannot be used, or null if it can.
+ *
+ * Outgoing messages name BAP_ID as the buyer app, and incoming ones are
+ * refused unless they are addressed to the configured id. If the two differ,
+ * every seller's answer is refused while our own requests look fine.
+ */
+export function subscriberIdProblem(configured: string | undefined): string | null {
+  if (!configured || configured === BAP_ID) return null;
+  return (
+    `ONDC_SUBSCRIBER_ID is ${configured} but outgoing ONDC messages name ${BAP_ID} as the buyer app, ` +
+    "so every seller's answer would be refused as addressed to someone else"
+  );
 }

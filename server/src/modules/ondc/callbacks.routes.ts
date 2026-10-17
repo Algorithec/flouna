@@ -1,5 +1,12 @@
 import { Router, type Request } from "express";
-import { verifyAuthorizationHeader } from "./signing.js";
+import { BAP_ID } from "./context.js";
+import { BUYER_ERRORS, nack } from "./errors.js";
+import { digestOf, verifyAuthorizationHeader, type VerifyResult } from "./signing.js";
+
+/** A message outside its signature's time window is stale; anything else is an invalid signature. */
+function signatureError(reason: Extract<VerifyResult, { ok: false }>["reason"]) {
+  return reason === "expired" || reason === "not_yet_valid" ? BUYER_ERRORS.STALE_REQUEST : BUYER_ERRORS.INVALID_SIGNATURE;
+}
 
 // Where seller apps answer us.
 //
@@ -24,6 +31,10 @@ export const CALLBACK_ACTIONS = [
   "on_update",
   "on_rating",
   "on_support",
+  // Complaints (IGM). Seller apps send these to the same base URL as every
+  // other answer, so without them a seller's reply to a complaint was a 404.
+  "on_issue",
+  "on_issue_status",
 ] as const;
 
 export type ReceivedCallback = {
@@ -31,23 +42,35 @@ export type ReceivedCallback = {
   body: Record<string, unknown>;
   raw: string;
   senderId: string;
+  /** Signer and digest of the exact bytes: the same for every copy of one message. */
+  dedupeKey: string;
 };
 
 export type CallbackDeps = {
   /** Registered signing key for a subscriber and key id, or null. */
   publicKeyFor: (subscriberId: string, uniqueKeyId: string) => Promise<string | null>;
-  /** Persists a verified message. Failures here must not turn into a NACK. */
-  record: (cb: ReceivedCallback) => Promise<void>;
+  /**
+   * Persists a verified message. If it throws, the message is refused with a
+   * NACK so the seller app sends it again: an order confirmation we
+   * acknowledged but never stored would be lost for good.
+   */
+  record: (cb: ReceivedCallback) => Promise<RecordOutcome | void>;
 };
+
+/** `duplicate` when this exact message was already stored, by this server or another. */
+export type RecordOutcome = { duplicate: boolean };
 
 const ACK = { message: { ack: { status: "ACK" } } };
 
-function nack(code: string, message: string) {
-  return { message: { ack: { status: "NACK" } }, error: { type: "CONTEXT-ERROR", code, message } };
-}
-
-export function createCallbacksRouter(deps: CallbackDeps | null) {
+export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?: string } = {}) {
   const router = Router();
+  // Messages addressed to any other buyer app are refused.
+  const bapId = opts.bapId ?? BAP_ID;
+  // Messages being stored right now. A second copy that arrives meanwhile
+  // waits on the first instead of racing it to the database. Copies that
+  // arrive later, or at another server, are caught by the stored row's
+  // unique dedupe key instead.
+  const storing = new Map<string, Promise<RecordOutcome | void>>();
 
   router.post("/ondc/:action", async (req: Request, res, next) => {
     const action = req.params.action ?? "";
@@ -55,39 +78,67 @@ export function createCallbacksRouter(deps: CallbackDeps | null) {
     if (!(CALLBACK_ACTIONS as readonly string[]).includes(action)) return next();
 
     if (!deps) {
-      res.status(503).json(nack("10001", "ONDC is not configured on this deployment"));
+      res.status(503).json(nack(BUYER_ERRORS.INTERNAL_ERROR, "ONDC is not configured on this deployment"));
       return;
     }
 
-    const raw = (req as Request & { rawBody?: Buffer }).rawBody?.toString("utf8") ?? "";
+    // The signature covers the bytes as sent. Decoding them to a string and
+    // back would alter anything that is not valid UTF-8, and a genuine
+    // message would then fail to verify.
+    const rawBytes = (req as Request & { rawBody?: Buffer }).rawBody;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const ctx = (body.context ?? {}) as Record<string, unknown>;
-    if (!raw || ctx.action !== action) {
-      res.status(400).json(nack("10002", "Context action does not match the endpoint"));
+    if (!rawBytes?.length || ctx.action !== action) {
+      res.status(400).json(nack(BUYER_ERRORS.INVALID_RESPONSE, "Context action does not match the endpoint"));
+      return;
+    }
+    if (ctx.bap_id !== bapId) {
+      res.status(400).json(nack(BUYER_ERRORS.INVALID_RESPONSE, "Message is not addressed to this buyer app"));
       return;
     }
 
-    const sender = await verifyAuthorizationHeader(req.get("authorization"), raw, deps.publicKeyFor);
-    if (!sender.ok) {
-      res.status(401).json(nack("10003", `Signature not accepted: ${sender.reason}`));
-      return;
-    }
-    const gatewayHeader = req.get("x-gateway-authorization");
-    if (gatewayHeader) {
-      const gw = await verifyAuthorizationHeader(gatewayHeader, raw, deps.publicKeyFor);
-      if (!gw.ok) {
-        res.status(401).json(nack("10003", `Gateway signature not accepted: ${gw.reason}`));
+    try {
+      const sender = await verifyAuthorizationHeader(req.get("authorization"), rawBytes, deps.publicKeyFor);
+      if (!sender.ok) {
+        res.status(401).json(nack(signatureError(sender.reason), `Signature not accepted: ${sender.reason}`));
         return;
       }
-    }
+      // A valid signature only proves who sent the message. Without this, any
+      // registered participant could sign an on_confirm naming another seller
+      // in its context and have it taken as that seller's.
+      if (ctx.bpp_id !== sender.subscriberId) {
+        res.status(401).json(nack(BUYER_ERRORS.INVALID_SIGNATURE, "Signer is not the seller app named in the message"));
+        return;
+      }
+      const gatewayHeader = req.get("x-gateway-authorization");
+      if (gatewayHeader) {
+        const gw = await verifyAuthorizationHeader(gatewayHeader, rawBytes, deps.publicKeyFor);
+        if (!gw.ok) {
+          res.status(401).json(nack(signatureError(gw.reason), `Gateway signature not accepted: ${gw.reason}`));
+          return;
+        }
+      }
 
-    // Acknowledge first: the protocol wants a fast ACK, and the message is
-    // already proven genuine. Recording is best effort and must not make a
-    // valid message look refused.
-    res.json(ACK);
-    deps.record({ action, body, raw, senderId: sender.subscriberId }).catch((err: unknown) =>
-      console.error("[ondc] could not record", action, err instanceof Error ? err.message : String(err)),
-    );
+      // Stored before the ACK, so an ACK always means we have it. A copy of a
+      // message already stored is acknowledged too: the seller evidently did
+      // not see our first ACK, and storing it again would record it twice.
+      const dedupeKey = `${sender.subscriberId}|${digestOf(rawBytes)}`;
+      let pending = storing.get(dedupeKey);
+      if (!pending) {
+        pending = deps
+          .record({ action, body, raw: rawBytes.toString("utf8"), senderId: sender.subscriberId, dedupeKey })
+          .finally(() => storing.delete(dedupeKey));
+        storing.set(dedupeKey, pending);
+      }
+      await pending;
+      res.json(ACK);
+    } catch (err) {
+      // A registry key that is not a key, a lookup that throws, a database
+      // that is down: refuse the message so the seller app retries it, rather
+      // than leave the request open until the seller gives up.
+      console.error("[ondc] could not take", action, err instanceof Error ? err.message : String(err));
+      if (!res.headersSent) res.status(500).json(nack(BUYER_ERRORS.INTERNAL_ERROR, "Could not process the message, retry"));
+    }
   });
 
   return router;

@@ -53,9 +53,14 @@ ondcRegistryRouter.post("/ondc/on_subscribe", (req, res) => {
   // One key per subscription. The portal issues a fresh pair for every
   // domain subscribed under ondc.flouna.com, and the challenge is encrypted to
   // whichever one the registry is checking, so each is tried in turn. A wrong
-  // key fails AES padding rather than producing a plausible answer.
+  // key fails padding or decrypts to bytes that are not text, rather than
+  // producing a plausible answer.
+  //
+  // The registry's key is ONDC's published one. Tests stand in their own
+  // registry; nothing outside a test can swap it, since whoever controlled it
+  // could pass our side of the handshake.
   const registryPublic =
-    process.env.ONDC_REGISTRY_ENCRYPTION_PUBLIC_KEY ??
+    (env.NODE_ENV === "test" ? process.env.ONDC_REGISTRY_ENCRYPTION_PUBLIC_KEY : undefined) ??
     REGISTRY_ENCRYPTION_PUBLIC_KEY[env.ONDC_REGISTRY_ENV];
   for (const key of env.ONDC_ENCRYPTION_PRIVATE_KEY.split(",").map((k) => k.trim()).filter(Boolean)) {
     try {

@@ -1,4 +1,4 @@
-import { buildContext } from "./context.js";
+import { buildContext, checkedFeePercent, checkedGps, checkedHttpsUrl } from "./context.js";
 
 // Ride hailing (ONDC:TRV10, Beckn 2.0.1) message builders.
 //
@@ -21,8 +21,8 @@ export type VehicleCategory = "AUTO_RICKSHAW" | "CAB" | "TWO_WHEELER";
 
 function stops(pickup: Stop, drop: Stop) {
   return [
-    { location: { gps: pickup.gps, address: pickup.address }, type: "START" },
-    { location: { gps: drop.gps, address: drop.address }, type: "END" },
+    { location: { gps: checkedGps(pickup.gps), address: pickup.address }, type: "START" },
+    { location: { gps: checkedGps(drop.gps), address: drop.address }, type: "END" },
   ];
 }
 
@@ -42,7 +42,7 @@ function areaTags(pickup: Stop, drop: Stop) {
 const finderFeeTag = (percent: number) => ({
   descriptor: { code: "BUYER_FINDER_FEES" },
   display: false,
-  list: [{ descriptor: { code: "BUYER_FINDER_FEES_PERCENTAGE" }, value: String(percent) }],
+  list: [{ descriptor: { code: "BUYER_FINDER_FEES_PERCENTAGE" }, value: String(checkedFeePercent(percent)) }],
 });
 
 /** Asks ride providers what they can offer between two points. */
@@ -69,8 +69,8 @@ export function buildRideSearch(o: {
               descriptor: { code: "SETTLEMENT_TERMS" },
               display: false,
               list: [
-                { descriptor: { code: "DELAY_INTEREST" }, value: String(o.delayInterestPercent ?? 5) },
-                { descriptor: { code: "STATIC_TERMS" }, value: o.staticTermsUrl },
+                { descriptor: { code: "DELAY_INTEREST" }, value: String(checkedFeePercent(o.delayInterestPercent ?? 5)) },
+                { descriptor: { code: "STATIC_TERMS" }, value: checkedHttpsUrl(o.staticTermsUrl, "Static terms") },
               ],
             },
           ],
@@ -114,7 +114,13 @@ export function buildRideSelect(o: RideBase) {
 }
 
 export type RidePayment = {
-  collectedBy: "BPP" | "BAP";
+  /**
+   * Only the provider collects for now. Flouna collecting a fare needs a
+   * prepaid flow (type PRE-ORDER, paid before confirm, a transaction id) that
+   * is not built, and sending BAP with the on-fulfilment terms below would
+   * tell the provider we had taken a payment we had not.
+   */
+  collectedBy: "BPP";
   /** Flouna's account, where the provider settles the finder fee. */
   params: { bank_account_number?: string; bank_code?: string; virtual_payment_address?: string };
   /** The provider's payment tags from its last response, echoed unchanged. */
@@ -123,6 +129,7 @@ export type RidePayment = {
 
 /** Gives the provider who is riding and how the money settles. */
 export function buildRideInit(o: RideBase & { customer: { name: string; phone: string }; payment: RidePayment }) {
+  if (o.payment.collectedBy !== "BPP") throw new Error("Rides are paid to the provider; Flouna collecting a fare is not built");
   return {
     context: ctx(o, "init"),
     message: {
