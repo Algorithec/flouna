@@ -16,6 +16,11 @@ import {
 import { TripSummary } from "@/components/rides/TripSummary";
 import { useRideBooking, VEHICLES, type Vehicle } from "@/lib/rides/useRideBooking";
 import { FlounaInsights, cheaperVehicleHack } from "@/components/chat/FlounaInsights";
+import { api } from "@/lib/api";
+
+/** Chat asking a booking card to select or book one of its options. */
+export type RideCommand = { card: string; command: "select" | "book"; provider: string; productName: string };
+export const RIDE_COMMAND_EVENT = "flouna:ride-command";
 
 // Booking a ride without leaving the conversation.
 //
@@ -49,6 +54,8 @@ export function InlineRideBooking({
   decisionId,
   fareLimitPaise,
   pickupLimitMinutes,
+  chatSessionId,
+  cardKey,
 }: {
   /** Destination the chat already understood, resolved on open. */
   drop?: string | null;
@@ -69,6 +76,14 @@ export function InlineRideBooking({
    */
   fareLimitPaise?: number;
   pickupLimitMinutes?: number;
+  /**
+   * The conversation this card sits in, and a name for the card within it.
+   * With both, the card tells chat what it is showing, so "choose the second
+   * option" means the second one here, and it carries out chat's select and
+   * book commands with its own buttons' code.
+   */
+  chatSessionId?: string | null;
+  cardKey?: string;
 }) {
   const { t } = useI18n();
   const b = useRideBooking({
@@ -80,6 +95,55 @@ export function InlineRideBooking({
     maxPickupMinutes: pickupLimitMinutes,
   });
   const [confirming, setConfirming] = useState(false);
+
+  // Tell chat the trip and the options in the order shown, and which one is
+  // selected, whenever either changes.
+  const optionsKey = b.quotes.map((q) => `${q.provider}:${q.productName}:${q.effectivePaise}`).join("|");
+  const selectedIndex = b.selected ? b.quotes.findIndex((q) => q.provider === b.selected!.provider && q.productName === b.selected!.productName) : -1;
+  useEffect(() => {
+    if (!chatSessionId || !cardKey || !b.pickup || !b.drop || b.quotes.length === 0) return;
+    void api(`/api/chat/sessions/${chatSessionId}/ride`, {
+      method: "POST",
+      json: {
+        card: cardKey,
+        pickup: { name: b.pickup.name.slice(0, 160), lat: b.pickup.lat, lng: b.pickup.lng },
+        drop: { name: b.drop.name.slice(0, 160), lat: b.drop.lat, lng: b.drop.lng },
+        options: b.quotes.slice(0, 12).map((q) => ({
+          provider: q.provider,
+          productName: q.productName,
+          displayName: q.displayName,
+          vehicle: q.vehicle,
+          effectivePaise: q.effectivePaise,
+          pickupEtaMinutes: q.pickupEtaMinutes,
+        })),
+        ...(selectedIndex >= 0 && selectedIndex < 12 ? { selected: selectedIndex } : {}),
+      },
+    }).catch(() => {
+      // Chat simply will not know this trip; the card works as before.
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatSessionId, cardKey, optionsKey, selectedIndex, b.pickup?.lat, b.pickup?.lng, b.drop?.lat, b.drop?.lng]);
+
+  // Chat's commands for this card.
+  useEffect(() => {
+    if (!cardKey) return;
+    const onCommand = (e: Event) => {
+      const c = (e as CustomEvent<RideCommand>).detail;
+      if (c.card !== cardKey) return;
+      const q = b.quotes.find((x) => x.provider === c.provider && x.productName === c.productName);
+      if (!q) return;
+      b.setSelected(q);
+      if (c.command === "book") {
+        setConfirming(true);
+        void b.confirm(q).then((id) => {
+          setConfirming(false);
+          if (id) onBooked(id);
+        });
+      }
+    };
+    window.addEventListener(RIDE_COMMAND_EVENT, onCommand);
+    return () => window.removeEventListener(RIDE_COMMAND_EVENT, onCommand);
+  }, [cardKey, b, onBooked]);
   // Choosing a fare and paying for it used to be the same tap. The summary is
   // the step between: the distance, the time and the total in one place before
   // any money moves.
