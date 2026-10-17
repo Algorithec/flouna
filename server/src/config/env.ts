@@ -137,6 +137,9 @@ const envSchema = z.object({
   // The id ondc-site-verification.html carries, signed. Any unique value; the
   // same one has to go in the subscribe request when we send it ourselves.
   ONDC_SITE_REQUEST_ID: z.string().optional(),
+  // The unique key id ONDC issued with the signing key above. Together they
+  // identify us on every signed message and registry lookup.
+  ONDC_UNIQUE_KEY_ID: z.string().optional(),
 
   // ₹50/month premium tier. Reuses the Cashfree gateway for the recurring
   // charge; falls back to a simulated activation in dev when unset.
