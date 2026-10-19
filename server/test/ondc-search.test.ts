@@ -3,6 +3,7 @@ import express from "express";
 import request from "supertest";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { env } from "../src/config/env.js";
 import { prisma } from "../src/lib/prisma.js";
 import { createAuthorizationHeader } from "../src/modules/ondc/signing.js";
 import { createCallbacksRouter } from "../src/modules/ondc/callbacks.routes.js";
@@ -129,9 +130,23 @@ describe("searching ONDC sellers", () => {
     const c = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
     const other = await customer(null);
     const started = (await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send: async () => ({ ack: true, status: 200 }) })) as { searchId: string };
-    await other.agent.get(`/api/ondc/search/${started.searchId}`).expect(404);
-    await c.agent.get(`/api/ondc/search/${started.searchId}`).expect(200);
-    await c.agent.get("/api/ondc/search/not-a-uuid").expect(404);
+    env.ONDC_SEARCH_ENABLED = true;
+    try {
+      await other.agent.get(`/api/ondc/search/${started.searchId}`).expect(404);
+      await c.agent.get(`/api/ondc/search/${started.searchId}`).expect(200);
+      await c.agent.get("/api/ondc/search/not-a-uuid").expect(404);
+    } finally {
+      env.ONDC_SEARCH_ENABLED = false;
+    }
+  });
+
+  it("is not there at all while ONDC search is switched off", async () => {
+    const c = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
+    const started = (await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send: async () => ({ ack: true, status: 200 }) })) as { searchId: string };
+    expect(env.ONDC_SEARCH_ENABLED).toBe(false);
+    // Even the customer who searched, so test stores never reach anyone.
+    await c.agent.get(`/api/ondc/search/${started.searchId}`).expect(404);
+    await c.agent.post("/api/ondc/search").send({ query: "pizza" }).expect(404);
   });
 
   it("says why it cannot search instead of failing", async () => {
