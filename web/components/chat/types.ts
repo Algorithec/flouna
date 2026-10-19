@@ -131,6 +131,36 @@ export type Recommendation =
       ride: Omit<RideRec, "type">;
     };
 
+/** Something chat did on the customer's behalf, as the server reports it. */
+export type ChatAction = {
+  kind: string;
+  ok: boolean;
+  card?:
+    | {
+        type: "cart";
+        cart: {
+          lines: { dishId: string; platform: string; name: string; restaurant: string; pricePaise: number; qty: number }[];
+          count: number;
+        };
+      }
+    | {
+        type: "group";
+        joinPath: string;
+        group: { id: string; code: string; expectedMembers: number | null; members: { userId: string; name: string }[] };
+      }
+    | { type: "confirm"; summary: string }
+    | { type: "settings"; changed: Record<string, unknown> }
+    | { type: "choice"; options: { label: string; reply: string }[] };
+  /** What the app should do on this device. Applied once, when the reply arrives. */
+  effects?: (
+    | { type: "language"; value: string }
+    | { type: "theme"; value: "light" | "dark" }
+    | { type: "navigate"; path: string }
+    | { type: "cart_changed" }
+    | { type: "ride_command"; card: string; command: "select" | "book"; provider: string; productName: string }
+  )[];
+};
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
@@ -139,4 +169,5 @@ export type ChatMessage = {
   at?: string;
   domain?: string;
   recommendation?: Recommendation | null;
+  action?: ChatAction | null;
 };

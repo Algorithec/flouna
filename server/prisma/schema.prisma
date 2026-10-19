@@ -104,6 +104,7 @@ model User {
   chatSessions         ChatSession[]
   orders               Order[]
   ondcSearches         OndcSearch[]
+  cart                 Cart?
   payments             Payment[]
   otpCodes             OtpCode[]
   refreshTokens        RefreshToken[]
@@ -546,6 +547,10 @@ model GroupCart {
   // crew can offer what they ordered last time.
   crewId      String?
   crew        GroupCrew? @relation(fields: [crewId], references: [id], onDelete: SetNull)
+  // How many people the host said the order is for, counting the host
+  // ("a group order for four"). Shown as joined of expected; it never stops
+  // anyone joining or limits the order.
+  expectedMembers Int?
   orderId     String? // set once the host places the combined order
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -884,6 +889,11 @@ model ChatSession {
   userId    String
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String?
+  // What chat remembers between messages (JSON, see agent/state.ts): what it
+  // last showed, what was last added, the active group, an action awaiting
+  // confirmation. Kept as explicit state rather than re-read from the
+  // transcript, so "add that too" means exactly one thing.
+  agentState String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   messages  ChatMessage[]
@@ -1431,5 +1441,37 @@ model OndcSearch {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// The customer's cart, held on the server so the app and chat act on the same
+// one. Only what was chosen is stored: dish, listing and quantity. Names and
+// prices are read from the catalogue every time, so a stored copy can never
+// drift from what checkout charges.
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id         String   @id @default(cuid())
+  cartId     String
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  dishId     String
+  platform   String
+  qty        Int
+  // The ranking this line came from, when it came from one, so checkout can
+  // pair the order with the recommendation it followed.
+  decisionId String?
+  // "app" or "chat": which surface put it there.
+  addedVia   String   @default("app")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([cartId, dishId, platform])
+  @@index([cartId])
 }
 

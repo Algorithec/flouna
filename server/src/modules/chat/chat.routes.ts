@@ -34,6 +34,8 @@ import { watchIntent } from "./llm/watcher.js";
 import { readWithConfidence } from "./llm/demo.js";
 import { env } from "../../config/env.js";
 import { startOndcSearch } from "../ondc/search.service.js";
+import { EMPTY_STATE, handleInstruction, handleModelAction, loadState, rememberRecommendation, saveState } from "../agent/index.js";
+import { rideContextSchema, type RideContext } from "../agent/state.js";
 
 // Paise → "₹123" for chat copy.
 const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
@@ -168,6 +170,10 @@ async function buildAssistantPayload(
   // against it. Not awaited: the customer's reply never waits for it, and
   // nothing it returns reaches them.
   void watchIntent(message, intent, served.provider);
+
+  // An instruction the rules did not recognise, read by the model. Carried
+  // out by the caller, which holds the conversation's memory.
+  if (intent.domain === "action") return { reply: intent.reply, intent, served };
 
   // Faculty 3: the situation this decision is made in (time + weather). Built
   // once and layered onto food/ride advice. Never blocks — degrades offline.
@@ -500,12 +506,30 @@ chatRouter.post(
 
       // ---- temporary chat: compute the answer, write nothing to the DB ----
       if (temporary) {
+        // Instructions still work, with no memory: nothing is kept between
+        // temporary messages, so "add that" has nothing to point at.
+        const done = verdict.ok ? await handleInstruction(message.trim(), req.userId!, EMPTY_STATE) : null;
+        if (done) {
+          return res.json({
+            sessionId: null,
+            temporary: true,
+            message: { id: `tmp-${Date.now()}`, role: "assistant", content: done.reply, domain: "action", action: done.action, recommendation: null },
+          });
+        }
         const payload: AssistantPayload = verdict.ok
           ? await buildAssistantPayload(message.trim(), req.userId!)
           : {
               reply: FIREWALL_REPLIES[verdict.reason],
               intent: { domain: "out_of_scope", reply: FIREWALL_REPLIES[verdict.reason] },
             };
+        if (payload.intent.domain === "action") {
+          const acted = await handleModelAction(payload.intent.action, req.userId!, EMPTY_STATE);
+          return res.json({
+            sessionId: null,
+            temporary: true,
+            message: { id: `tmp-${Date.now()}`, role: "assistant", content: acted.reply, domain: "action", action: acted.action, recommendation: null },
+          });
+        }
         return res.json({
           sessionId: null,
           temporary: true,
@@ -538,12 +562,64 @@ chatRouter.post(
         data: { sessionId: session.id, role: "user", content: message.trim().slice(0, 500) },
       });
 
+      // An instruction ("add that too", "create a group order for 4") is
+      // carried out against what this conversation remembers.
+      const memoryReadAt = new Date().toISOString();
+      const memory = await loadState(session.id);
+      const done = verdict.ok ? await handleInstruction(message.trim(), req.userId!, memory) : null;
+      if (done) {
+        await saveState(session.id, done.state, { readAt: memoryReadAt });
+        const saved = await prisma.chatMessage.create({
+          data: {
+            sessionId: session.id,
+            role: "assistant",
+            content: done.reply,
+            intent: JSON.stringify({ domain: "action", action: done.action }),
+            provider: "agent",
+          },
+        });
+        return res.json({
+          sessionId: session.id,
+          message: {
+            id: saved.id,
+            role: "assistant",
+            content: done.reply,
+            at: saved.createdAt.toISOString(),
+            domain: "action",
+            action: done.action,
+            recommendation: null,
+          },
+        });
+      }
+
       const payload: AssistantPayload = verdict.ok
         ? await buildAssistantPayload(message.trim(), req.userId!)
         : {
             reply: FIREWALL_REPLIES[verdict.reason],
             intent: { domain: "out_of_scope", reply: FIREWALL_REPLIES[verdict.reason] },
           };
+
+      if (payload.intent.domain === "action") {
+        const acted = await handleModelAction(payload.intent.action, req.userId!, memory);
+        await saveState(session.id, acted.state, { readAt: memoryReadAt });
+        const saved = await prisma.chatMessage.create({
+          data: {
+            sessionId: session.id,
+            role: "assistant",
+            content: acted.reply,
+            intent: JSON.stringify({ domain: "action", action: acted.action }),
+            provider: payload.served?.provider ?? null,
+            providerDepth: payload.served?.depth ?? null,
+          },
+        });
+        return res.json({
+          sessionId: session.id,
+          message: { id: saved.id, role: "assistant", content: acted.reply, at: saved.createdAt.toISOString(), domain: "action", action: acted.action, recommendation: null },
+        });
+      }
+
+      // What was shown becomes what "that" and "the second one" refer to.
+      await saveState(session.id, rememberRecommendation(memory, payload.recommendation, message.trim()), { readAt: memoryReadAt });
 
       const assistantMessage = await prisma.chatMessage.create({
         data: {
@@ -570,6 +646,29 @@ chatRouter.post(
           recommendation: payload.recommendation ?? null,
         },
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// The booking card in a conversation reports the trip it priced and its
+// options in the order shown, so "choose the second option" means the second
+// one on screen. Only used to tell which option was meant: booking re-prices
+// the trip on the server and refuses a fare that has moved.
+chatRouter.post(
+  "/sessions/:id/ride",
+  validateBody(rideContextSchema.omit({ at: true }).strict()),
+  async (req, res, next) => {
+    try {
+      const session = await prisma.chatSession.findFirst({ where: { id: req.params.id, userId: req.userId! }, select: { id: true } });
+      if (!session) throw new ApiError(404, "Chat not found");
+      const memory = await loadState(session.id);
+      const ride = { ...(req.body as Omit<RideContext, "at">), at: new Date().toISOString() };
+      // A new trip or a re-priced list keeps the customer's tap on an option
+      // only if the card said which.
+      await saveState(session.id, { ...memory, ride });
+      res.status(204).end();
     } catch (err) {
       next(err);
     }

@@ -132,7 +132,7 @@ export function GoogleLiveTrackingMap({
         borderColor: color,
         glyphColor: "#ffffff",
       });
-      return new maps.marker.AdvancedMarkerElement({ map, position: at, content: glyph.element });
+      return new maps.marker.AdvancedMarkerElement({ map, position: at, content: glyph });
     });
 
     fitTwo(maps, map, from, to, 70);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { modelActionSchema } from "../../agent/fromModel.js";
 
 // The ONLY thing the LLM is allowed to produce — a fixed intent schema.
 // This is the strongest layer of the firewall: the model cannot write code,
@@ -6,7 +7,9 @@ import { z } from "zod";
 export const intentSchema = z.object({
   // "combo" = one message asking for food AND a ride; both sub-objects set.
   // "shop" = shopping for a product (electronics, fashion, etc.).
-  domain: z.enum(["food", "ride", "shop", "combo", "greeting", "out_of_scope"]),
+  // "action" = an instruction to do something in the app (add to cart, pick
+  // an option, change a setting), carried in `action`.
+  domain: z.enum(["food", "ride", "shop", "combo", "action", "greeting", "out_of_scope"]),
   reply: z
     .string()
     .max(280)
@@ -82,6 +85,9 @@ export const intentSchema = z.object({
         .default("balanced"),
     })
     .optional(),
+  // Read by agent/fromModel.ts, which checks it against the agent's own
+  // action schema before anything is done.
+  action: modelActionSchema.optional(),
 });
 
 export type Intent = z.infer<typeof intentSchema>;
@@ -98,7 +104,7 @@ export type Intent = z.infer<typeof intentSchema>;
 export function parseIntent(raw: unknown): Intent {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     const obj = { ...(raw as Record<string, unknown>) };
-    for (const part of ["food", "ride", "shop"]) {
+    for (const part of ["food", "ride", "shop", "action"]) {
       if (obj[part] === null) delete obj[part];
     }
     return intentSchema.parse(obj);
