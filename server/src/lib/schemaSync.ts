@@ -51,6 +51,20 @@ export async function syncSchema(): Promise<void> {
   const started = Date.now();
   console.log("[schema] applying schema to the database...");
   try {
+    // Reviewed additive steps push would otherwise refuse (see the file).
+    await run(
+      process.execPath,
+      [
+        "node_modules/prisma/build/index.js",
+        "db",
+        "execute",
+        "--file",
+        "prisma/pre-push.sql",
+        "--schema",
+        "prisma/schema.prisma",
+      ],
+      { timeout: TIMEOUT_MS, env: process.env },
+    );
     const args = [
       "node_modules/prisma/build/index.js",
       "db",
