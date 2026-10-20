@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { env } from "../../config/env.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ondcSearchFor, ondcSearchResults, startOndcSearch } from "./search.service.js";
@@ -8,6 +9,12 @@ import { ondcSearchFor, ondcSearchResults, startOndcSearch } from "./search.serv
 // network; reading it back shows whatever seller apps have answered so far,
 // so the app polls until it says complete.
 export const ondcSearchRouter = Router();
+// Checked before sign-in, so while it is off for everyone a signed-out caller
+// is told 404 too rather than learning the route exists from a 401.
+ondcSearchRouter.use((_req, res, next) => {
+  if (!env.ONDC_SEARCH_ENABLED && env.ONDC_SEARCH_TESTERS.size === 0) return res.status(404).json({ error: "ONDC search is not enabled" });
+  next();
+});
 ondcSearchRouter.use(requireAuth);
 // Off unless switched on for everyone, or for this account as a tester: the
 // same rule chat uses to start a search, so a tester can read back what chat

@@ -9,7 +9,7 @@ import { createAuthorizationHeader } from "../src/modules/ondc/signing.js";
 import { createCallbacksRouter } from "../src/modules/ondc/callbacks.routes.js";
 import { recordInbound } from "../src/modules/ondc/index.js";
 import { ondcSearchResults, startOndcSearch, stdCodeFor } from "../src/modules/ondc/search.service.js";
-import { authedAgent } from "./helpers.js";
+import { app, authedAgent } from "./helpers.js";
 
 // A search of the ONDC network end to end: sent signed to the gateway, then
 // answered by several real seller apps (their catalogues from ONDC's published
@@ -143,12 +143,18 @@ describe("searching ONDC sellers", () => {
   it("lets a listed tester through while it is off for everyone else", async () => {
     const tester = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
     const other = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
-    const started = (await startOndcSearch(tester.userId, "pizza", { identity: ourIdentity, send: async () => ({ ack: true, status: 200 }) })) as { searchId: string };
+    const send = async () => ({ ack: true, status: 200 });
+    const started = (await startOndcSearch(tester.userId, "pizza", { identity: ourIdentity, send })) as { searchId: string };
+    // The other customer's own search, so their 404 comes from the gate and
+    // not from asking for someone else's search.
+    const theirs = (await startOndcSearch(other.userId, "pizza", { identity: ourIdentity, send })) as { searchId: string };
     expect(env.ONDC_SEARCH_ENABLED).toBe(false);
     env.ONDC_SEARCH_TESTERS.add(tester.email.toLowerCase());
     try {
       await tester.agent.get(`/api/ondc/search/${started.searchId}`).expect(200);
-      await other.agent.get(`/api/ondc/search/${started.searchId}`).expect(404);
+      await tester.agent.post("/api/ondc/search").send({ query: "pizza" }).expect(202);
+      await other.agent.get(`/api/ondc/search/${theirs.searchId}`).expect(404);
+      await other.agent.post("/api/ondc/search").send({ query: "pizza" }).expect(404);
     } finally {
       env.ONDC_SEARCH_TESTERS.delete(tester.email.toLowerCase());
     }
@@ -161,6 +167,9 @@ describe("searching ONDC sellers", () => {
     // Even the customer who searched, so test stores never reach anyone.
     await c.agent.get(`/api/ondc/search/${started.searchId}`).expect(404);
     await c.agent.post("/api/ondc/search").send({ query: "pizza" }).expect(404);
+    // Signed out too: a 404, not a 401 that says the route is there.
+    await request(app).get(`/api/ondc/search/${started.searchId}`).expect(404);
+    await request(app).post("/api/ondc/search").send({ query: "pizza" }).expect(404);
   });
 
   it("says why it cannot search instead of failing", async () => {
@@ -240,7 +249,7 @@ describe("who searches ONDC sellers", () => {
     const { ondcSearchFor } = await import("../src/modules/ondc/search.service.js");
     const tester = await customer(null);
     const other = await customer(null);
-    const testers = new Set([tester.email.toUpperCase().toLowerCase()]);
+    const testers = new Set([tester.email.toLowerCase()]);
     expect(await ondcSearchFor(tester.userId, { enabled: false, testers })).toBe(true);
     expect(await ondcSearchFor(other.userId, { enabled: false, testers })).toBe(false);
     expect(await ondcSearchFor(other.userId, { enabled: true, testers: new Set() })).toBe(true);

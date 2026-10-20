@@ -10,8 +10,9 @@ import { digestOf, headerShape, parseAuthorizationHeader, verifyAuthorizationHea
  */
 export function refused(action: string, header: string | undefined, reason: string) {
   const parsed = header ? parseAuthorizationHeader(header) : null;
-  const from = parsed ? `${parsed.subscriberId}|${parsed.uniqueKeyId}` : headerShape(header);
-  console.warn(`[ondc] refused ${action} from ${from}: ${reason}`);
+  // The ids are what the header claims, not a verified sender.
+  const from = parsed ? `claimed ${parsed.subscriberId}|${parsed.uniqueKeyId}` : headerShape(header);
+  console.warn(`[ondc] refused ${action} (${from}): ${reason}`);
 }
 
 /** A message outside its signature's time window is stale; anything else is an invalid signature. */
