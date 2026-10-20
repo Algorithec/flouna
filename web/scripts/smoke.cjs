@@ -230,7 +230,9 @@ let browser = null;
     await page.goto(`${WEB}/home`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
     await ask(page, "book a cab to Hitech City");
-    check("map appears in the thread", (await page.locator(".maplibregl-map").count()) > 0);
+    // Google Maps when its key is set, MapLibre otherwise.
+    await page.waitForSelector(".maplibregl-map, .gm-style", { timeout: 15000 }).catch(() => {});
+    check("map appears in the thread", (await page.locator(".maplibregl-map, .gm-style").count()) > 0);
 
     await page.getByRole("button", { name: /Pickup/ }).first().click();
     await page.waitForTimeout(400);
@@ -300,6 +302,26 @@ let browser = null;
     check("it asks for payment instead of a captain", /Pay to book/.test(text) && !/Finding your captain/.test(text));
     check("it makes no refused requests", refused.length === 0, refused.join(" "));
     check("it offers no message box", (await page.locator('input[placeholder="Type a message…"]').count()) === 0);
+  });
+
+  group("chat actions");
+  await guarded("chat carries out cart instructions", async () => {
+    const cartCount = () =>
+      page.evaluate(() => fetch("/api/cart", { credentials: "include" }).then((r) => r.json()).then((c) => c.count));
+    await page.evaluate(() => fetch("/api/cart", { method: "DELETE", credentials: "include" }));
+    await page.goto(`${WEB}/home`, { waitUntil: "networkidle" });
+    await ask(page, "Find the best chicken biryani under 300");
+    check("a search adds nothing by itself", (await cartCount()) === 0);
+    await ask(page, "add it to my cart", 5000);
+    check("\"add it\" adds the dish shown", (await cartCount()) === 1);
+    check("the cart is shown in the thread", (await page.getByRole("link", { name: "Go to cart" }).count()) > 0);
+    await ask(page, "clear my cart", 5000);
+    check("clearing asks first", (await cartCount()) === 1 && (await page.getByRole("button", { name: "Yes", exact: true }).count()) > 0);
+    await page.getByRole("button", { name: "Yes", exact: true }).last().click();
+    await page.waitForTimeout(5000);
+    check("yes clears it", (await cartCount()) === 0);
+    await ask(page, "create a group order for 4", 6000);
+    check("a group order made from chat shows its QR code", (await page.locator('img[alt*="QR"]').count()) > 0);
   });
 
   group("group order");

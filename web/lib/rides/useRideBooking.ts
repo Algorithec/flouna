@@ -399,7 +399,11 @@ export function useRideBooking(opts: {
    * coordinates are sent, never a fare: the server recomputes the price, so
    * nothing here can move what is charged.
    */
-  async function confirm(): Promise<string | null> {
+  const selectedNow = selected;
+  async function confirm(chosen?: RideQuote): Promise<string | null> {
+    // Chat books the option it just selected, which may not have reached
+    // state yet; the Book button books what is selected on screen.
+    const selected = chosen ?? selectedNow;
     if (!selected || !pickup || !drop || !route) return null;
     setBusy(true);
     setError("");

@@ -31,6 +31,11 @@ import { VoiceButton } from "@/components/chat/VoiceButton";
 import { ThinkingSteps } from "@/components/chat/ThinkingSteps";
 import { PredictionBanner } from "@/components/chat/PredictionBanner";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { useTheme } from "@/components/theme/ThemeContext";
+import { LANGUAGES, type Lang } from "@/lib/i18n/dictionaries";
+import { notifyCartChanged } from "@/lib/cart";
+import { ActionResult } from "@/components/chat/ActionResult";
+import { RIDE_COMMAND_EVENT } from "@/components/chat/inline/InlineRideBooking";
 import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
 import { type TILE_THEMES } from "@/components/ui/CategoryTile";
 import type { ChatMessage, FoodQuote } from "@/components/chat/types";
@@ -86,7 +91,8 @@ export default function ChatHomePage() {
 }
 
 function ChatHome() {
-  const { t } = useI18n();
+  const { t, setLang } = useI18n();
+  const { setTheme } = useTheme();
   const router = useRouter();
   const chatParam = useSearchParams().get("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -247,6 +253,16 @@ function ChatHome() {
         },
       );
       setMessages((m) => [...m, d.message]);
+      // What chat did that this device has to carry out. Only for a reply
+      // that has just arrived: reopening an old chat must not switch the
+      // language back or navigate anywhere.
+      for (const e of d.message.action?.effects ?? []) {
+        if (e.type === "cart_changed") notifyCartChanged();
+        else if (e.type === "language" && LANGUAGES.some((l) => l.code === e.value)) setLang(e.value as Lang);
+        else if (e.type === "theme") setTheme(e.value);
+        else if (e.type === "navigate" && e.path.startsWith("/")) router.push(e.path);
+        else if (e.type === "ride_command") window.dispatchEvent(new CustomEvent(RIDE_COMMAND_EVENT, { detail: e }));
+      }
       // A temporary chat has no server session and must never touch the URL —
       // a ?chat= param would make it restorable, which is the whole point of
       // temporary.
@@ -379,7 +395,7 @@ function ChatHome() {
         </div>
       ) : (
         <div ref={threadRef} className="flex-1 space-y-4 overflow-y-auto py-6">
-          {messages.map((m) => (
+          {messages.map((m, i) => (
             <div
               key={m.id}
               className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}
@@ -416,6 +432,9 @@ function ChatHome() {
                   )}
                 >
                   <p className="text-[14px] leading-relaxed text-ink">{m.content}</p>
+                  {m.action && (
+                    <ActionResult action={m.action} onReply={send} live={i === messages.length - 1 && !thinking} />
+                  )}
                   {m.recommendation?.type === "food" && (
                     <div className="mt-3">
                       <FoodRecommendation rec={m.recommendation} compact />
@@ -425,6 +444,8 @@ function ChatHome() {
                     <div className="mt-3">
                       <RideRecommendation
                         rec={m.recommendation}
+                        chatSessionId={temporary ? null : sessionId}
+                        cardKey={m.id}
                         compact
                         onBook={(orderId) =>
                           setOrdered((o) => ({ ...o, [m.id]: orderId }))
