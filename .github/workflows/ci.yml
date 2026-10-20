@@ -20,6 +20,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  attribution:
+    name: No AI attribution
+    # Repo rule: no commit is authored or co-authored by Claude, and none
+    # carries a session link or "Generated with" line. Checked here because
+    # commits arrive from more than one machine and cloud session, and a rule
+    # held only by local habit already let two such commits onto main.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refuse commits with Claude as author, committer or co-author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          bad=0
+          for c in $(git rev-list "$BASE..$HEAD"); do
+            who=$(git log -1 --format='%an <%ae> / %cn <%ce>' "$c")
+            if echo "$who" | grep -qiE 'claude|anthropic'; then
+              echo "::error::$c is authored or committed as $who"; bad=1
+            fi
+            if git log -1 --format='%B' "$c" | grep -qiE '^(co-authored-by:.*(claude|anthropic)|claude-session:)|generated with \[?claude'; then
+              echo "::error::$c carries a Claude co-author, session link or generated-with line"; bad=1
+            fi
+          done
+          exit $bad
+
   server:
     name: Server (typecheck + tests)
     runs-on: ubuntu-latest
