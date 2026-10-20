@@ -103,6 +103,7 @@ model User {
   addresses            Address[]
   chatSessions         ChatSession[]
   orders               Order[]
+  ondcSearches         OndcSearch[]
   cart                 Cart?
   payments             Payment[]
   otpCodes             OtpCode[]
@@ -1420,6 +1421,26 @@ model IntentWatch {
   error           String?
 
   @@index([createdAt])
+}
+
+// A search sent to the ONDC network on a customer's behalf. Seller apps answer
+// it over the following seconds as on_search callbacks, stored in
+// OndcTransaction under the same transaction id; this row ties those answers
+// to who asked, what for, and from where, so only they can read them back and
+// distances are measured from the right place.
+model OndcSearch {
+  id        String   @id // the Beckn transaction_id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  lat       Float
+  lng       Float
+  city      String // STD code form, e.g. "std:080"
+  // "sending" until the gateway responds, "sent" once acknowledged, "refused" if it did not or the send threw.
+  status    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // The customer's cart, held on the server so the app and chat act on the same

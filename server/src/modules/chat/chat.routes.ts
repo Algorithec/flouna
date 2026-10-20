@@ -33,6 +33,7 @@ import { istStartOfDay, istTimeLabel } from "../../lib/istTime.js";
 import { watchIntent } from "./llm/watcher.js";
 import { readWithConfidence } from "./llm/demo.js";
 import { env } from "../../config/env.js";
+import { startOndcSearch } from "../ondc/search.service.js";
 import { EMPTY_STATE, handleInstruction, handleModelAction, loadState, rememberRecommendation, saveState } from "../agent/index.js";
 import { rideContextSchema, type RideContext } from "../agent/state.js";
 
@@ -310,6 +311,10 @@ async function buildAssistantPayload(
       },
     };
 
+    // ONDC sellers are searched alongside, without waiting: their stores
+    // answer over the next seconds and the app shows them as they arrive.
+    const ondc = env.ONDC_SEARCH_ENABLED ? await startOndcSearch(userId, intent.food.item, { wait: false }).catch(() => null) : null;
+
     const personal = await personalForBalanced(userId, intent.food.priority);
     const rec = recommendFood({
       ...searchOpts,
@@ -342,6 +347,7 @@ async function buildAssistantPayload(
           type: "food",
           ...withoutTrace(rec),
           decisionId,
+          ...(ondc ? { ondc } : {}),
           advice: await adviseFood(rec.best.dishId, ctx.now, ctx),
           ...(budgetNote ? { budgetNote } : {}),
           ...(personalNote ? { personalNote } : {}),

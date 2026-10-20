@@ -64,6 +64,8 @@ export type PickReason = "top_rated" | "best_price" | "fastest" | "best_overall"
 
 type FoodRec = {
   type: "food";
+  /** ONDC sellers searched alongside, when that is switched on. */
+  ondc?: { searchId: string } | { unavailable: string };
   /**
    * The ranking this recommendation came from.
    *

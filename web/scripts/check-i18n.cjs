@@ -32,6 +32,7 @@ const TRANSLATED = [
   "components/security/AppLock.tsx",
   "components/chat/inline/InlinePayment.tsx",
   "components/chat/RecommendationCards.tsx",
+  "components/chat/OndcSellers.tsx",
   "components/chat/ActionResult.tsx",
   "components/chat/inline/InlineRideBooking.tsx",
   "components/rides/TripSummary.tsx",

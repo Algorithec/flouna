@@ -32,6 +32,7 @@ import { superRouter } from "./modules/backoffice/super.routes.js";
 import { requestKey } from "./middleware/rateLimit.js";
 import { ondcRegistryRouter } from "./modules/ondc/registry.routes.js";
 import { ondcCallbacksRouter } from "./modules/ondc/index.js";
+import { ondcSearchRouter } from "./modules/ondc/search.routes.js";
 import { CALLBACK_ACTIONS } from "./modules/ondc/callbacks.routes.js";
 import { parseAuthorizationHeader } from "./modules/ondc/signing.js";
 import { BUYER_ERRORS, nack } from "./modules/ondc/errors.js";
@@ -247,6 +248,7 @@ export function createApp() {
   app.use("/api/chat", chatRouter);
   app.use("/api/food", foodRouter);
   app.use("/api/orders", ordersRouter);
+  app.use("/api/ondc/search", ondcSearchRouter);
   app.use("/api/cart", cartRouter);
   app.use("/api/complaints", complaintsRouter);
   // ONDC network callbacks. Outside /api on purpose: no session, no cookies.

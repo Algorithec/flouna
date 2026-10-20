@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { InlinePayment } from "@/components/chat/inline/InlinePayment";
+import { OndcSellers } from "@/components/chat/OndcSellers";
 import { rupees } from "@/lib/money";
 import {
   ComboRecommendation,
@@ -440,6 +441,7 @@ function ChatHome() {
                       <FoodRecommendation rec={m.recommendation} compact />
                     </div>
                   )}
+                  {m.recommendation?.type === "food" && m.recommendation.ondc && <OndcSellers ondc={m.recommendation.ondc} />}
                   {m.recommendation?.type === "ride" && (
                     <div className="mt-3">
                       <RideRecommendation
