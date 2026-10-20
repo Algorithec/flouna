@@ -33,7 +33,7 @@ import { requestKey } from "./middleware/rateLimit.js";
 import { ondcRegistryRouter } from "./modules/ondc/registry.routes.js";
 import { ondcCallbacksRouter } from "./modules/ondc/index.js";
 import { ondcSearchRouter } from "./modules/ondc/search.routes.js";
-import { CALLBACK_ACTIONS } from "./modules/ondc/callbacks.routes.js";
+import { CALLBACK_ACTIONS, refused } from "./modules/ondc/callbacks.routes.js";
 import { parseAuthorizationHeader } from "./modules/ondc/signing.js";
 import { BUYER_ERRORS, nack } from "./modules/ondc/errors.js";
 
@@ -120,6 +120,7 @@ export function createApp() {
     if (!isOndcCallback(req)) return next();
     ondcLimiter(req, res, () => {
       if (!parseAuthorizationHeader(req.get("authorization") ?? "")) {
+        refused(req.path.split("/").pop() ?? "callback", req.get("authorization"), "malformed signature header");
         res.status(401).json(nack(BUYER_ERRORS.INVALID_SIGNATURE, "Signature not accepted: malformed"));
         return;
       }

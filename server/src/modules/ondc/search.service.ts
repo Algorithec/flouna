@@ -70,6 +70,20 @@ function identity(): SigningIdentity | null {
 export type StartOutcome = { searchId: string } | { unavailable: string };
 
 /**
+ * Whether this customer's food searches also go to ONDC sellers: everyone
+ * when it is switched on, otherwise only the listed testers.
+ */
+export async function ondcSearchFor(
+  userId: string,
+  config: { enabled: boolean; testers: Set<string> } = { enabled: env.ONDC_SEARCH_ENABLED, testers: env.ONDC_SEARCH_TESTERS },
+): Promise<boolean> {
+  if (config.enabled) return true;
+  if (config.testers.size === 0) return false;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  return Boolean(user && config.testers.has(user.email.toLowerCase()));
+}
+
+/**
  * Sends a search for `query` from the customer's default delivery address.
  * Never throws for something the customer can fix or the network refused: it
  * says why instead, so the rest of the answer still shows.
