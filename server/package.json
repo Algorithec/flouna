@@ -14,7 +14,7 @@
     "prisma:studio": "prisma studio",
     "db:provider": "node scripts/set-db-provider.mjs",
     "db:deploy": "node scripts/set-db-provider.mjs postgresql && node scripts/pg-baseline.mjs --apply",
-    "db:sync": "node scripts/set-db-provider.mjs postgresql && prisma db push --skip-generate",
+    "db:sync": "node scripts/set-db-provider.mjs postgresql && prisma db execute --file prisma/pre-push.sql --schema prisma/schema.prisma && prisma db push --skip-generate",
     "db:backup": "node --env-file=.env scripts/backup-db.mjs",
     "set-role": "node --env-file=.env scripts/set-role.mjs",
     "lint": "tsc --noEmit",
