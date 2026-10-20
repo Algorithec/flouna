@@ -1,19 +1,25 @@
 import { Router } from "express";
 import { z } from "zod";
-import { env } from "../../config/env.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
-import { ondcSearchResults, startOndcSearch } from "./search.service.js";
+import { ondcSearchFor, ondcSearchResults, startOndcSearch } from "./search.service.js";
 
 // The customer's searches of ONDC sellers. Starting one sends it to the
 // network; reading it back shows whatever seller apps have answered so far,
 // so the app polls until it says complete.
 export const ondcSearchRouter = Router();
-ondcSearchRouter.use((_req, res, next) => {
-  if (!env.ONDC_SEARCH_ENABLED) return res.status(404).json({ error: "ONDC search is not enabled" });
-  next();
-});
 ondcSearchRouter.use(requireAuth);
+// Off unless switched on for everyone, or for this account as a tester: the
+// same rule chat uses to start a search, so a tester can read back what chat
+// started for them.
+ondcSearchRouter.use(async (req, res, next) => {
+  try {
+    if (!(await ondcSearchFor(req.userId!))) return res.status(404).json({ error: "ONDC search is not enabled" });
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Each POST fans out a signed search to every seller app on the network, so
 // limit one customer to a few per minute rather than the general 600/min.

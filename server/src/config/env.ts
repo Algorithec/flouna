@@ -149,6 +149,13 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  // Accounts that search ONDC sellers even while it is off for everyone else,
+  // comma separated emails. Lets the team test against ONDC's pre-production
+  // network from the live app without customers being shown its test stores.
+  ONDC_SEARCH_TESTERS: z
+    .string()
+    .optional()
+    .transform((v) => new Set((v ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean))),
   // Commercial terms on ONDC, the founder's to set. Read and checked by
   // modules/ondc/commercial.ts, which explains each and its default.
   ONDC_FOOD_PAYMENT_COLLECTOR: z.string().optional(),

@@ -140,6 +140,20 @@ describe("searching ONDC sellers", () => {
     }
   });
 
+  it("lets a listed tester through while it is off for everyone else", async () => {
+    const tester = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
+    const other = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
+    const started = (await startOndcSearch(tester.userId, "pizza", { identity: ourIdentity, send: async () => ({ ack: true, status: 200 }) })) as { searchId: string };
+    expect(env.ONDC_SEARCH_ENABLED).toBe(false);
+    env.ONDC_SEARCH_TESTERS.add(tester.email.toLowerCase());
+    try {
+      await tester.agent.get(`/api/ondc/search/${started.searchId}`).expect(200);
+      await other.agent.get(`/api/ondc/search/${started.searchId}`).expect(404);
+    } finally {
+      env.ONDC_SEARCH_TESTERS.delete(tester.email.toLowerCase());
+    }
+  });
+
   it("is not there at all while ONDC search is switched off", async () => {
     const c = await customer({ city: "New Delhi", lat: 28.53, lng: 77.19 });
     const started = (await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send: async () => ({ ack: true, status: 200 }) })) as { searchId: string };
@@ -218,5 +232,18 @@ describe("reading results while sellers answer", () => {
     const again = await ondcSearchResults(started.searchId, c.userId);
     expect(mod.catalogueParses - before).toBe(2);
     expect(again.offers.length).toBeGreaterThanOrEqual(first.offers.length);
+  });
+});
+
+describe("who searches ONDC sellers", () => {
+  it("is everyone when switched on, otherwise only the listed testers", async () => {
+    const { ondcSearchFor } = await import("../src/modules/ondc/search.service.js");
+    const tester = await customer(null);
+    const other = await customer(null);
+    const testers = new Set([tester.email.toUpperCase().toLowerCase()]);
+    expect(await ondcSearchFor(tester.userId, { enabled: false, testers })).toBe(true);
+    expect(await ondcSearchFor(other.userId, { enabled: false, testers })).toBe(false);
+    expect(await ondcSearchFor(other.userId, { enabled: true, testers: new Set() })).toBe(true);
+    expect(await ondcSearchFor(tester.userId, { enabled: false, testers: new Set() })).toBe(false);
   });
 });
