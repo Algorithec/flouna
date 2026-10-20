@@ -15,6 +15,7 @@ services:
       npm install &&
       node scripts/set-db-provider.mjs postgresql &&
       npx prisma generate &&
+      npx prisma db execute --file prisma/pre-push.sql --schema prisma/schema.prisma &&
       npx prisma db push --skip-generate &&
       npm run build
     startCommand: node dist/index.js
