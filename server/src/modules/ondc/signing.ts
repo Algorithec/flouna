@@ -56,8 +56,12 @@ export type ParsedAuthorization = {
 
 export function parseAuthorizationHeader(header: string): ParsedAuthorization | null {
   const fields: Record<string, string> = {};
-  for (const m of header.replace(/^Signature\s+/i, "").matchAll(/(\w+)="([^"]*)"/g)) {
-    fields[m[1]!] = m[2]!;
+  // ONDC's example quotes every value, but seller apps' signing libraries
+  // often leave the numbers bare (created=1641287875), and real sellers
+  // answering a live search were refused as malformed for it. Either is read;
+  // the signature itself is still checked exactly.
+  for (const m of header.replace(/^Signature\s+/i, "").matchAll(/(\w+)\s*=\s*(?:"([^"]*)"|([^,\s"]+))/g)) {
+    fields[m[1]!] = (m[2] ?? m[3])!;
   }
   const parts = (fields.keyId ?? "").split("|");
   const created = Number(fields.created);
@@ -74,6 +78,16 @@ export function parseAuthorizationHeader(header: string): ParsedAuthorization | 
     expires,
     signature: fields.signature,
   };
+}
+
+/**
+ * The header with its signature elided, for a log line: enough to see how a
+ * sender wrote it when it could not be read, without copying signatures into
+ * logs.
+ */
+export function headerShape(header: string | undefined): string {
+  if (!header) return "(none)";
+  return header.replace(/(signature\s*=\s*)"?[^",\s]*"?/i, "$1…").slice(0, 300);
 }
 
 export type VerifyResult =

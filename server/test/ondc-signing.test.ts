@@ -145,3 +145,33 @@ describe("registry key lookup", () => {
     expect(calls()).toBe(2);
   });
 });
+
+describe("reading the signature header the way sellers write it", () => {
+  it("accepts unquoted numbers, as many signing libraries send them", async () => {
+    const { parseAuthorizationHeader, verifyAuthorizationHeader, createAuthorizationHeader } = await import("../src/modules/ondc/signing.js");
+    const kp = (await import("node:crypto")).generateKeyPairSync("ed25519");
+    const priv = kp.privateKey.export({ type: "pkcs8", format: "der" }).subarray(-32).toString("base64");
+    const pub = kp.publicKey.export({ type: "spki", format: "der" }).subarray(-32).toString("base64");
+    const body = '{"a":1}';
+    const quoted = createAuthorizationHeader(body, { subscriberId: "seller.test", uniqueKeyId: "k1", signingPrivateKey: priv });
+    const bare = quoted.replace(/created="(\d+)"/, "created=$1").replace(/expires="(\d+)"/, "expires=$1").replace(/, /g, ",");
+    expect(bare).not.toContain('created="');
+    expect(parseAuthorizationHeader(bare)).toMatchObject({ subscriberId: "seller.test", uniqueKeyId: "k1" });
+    expect((await verifyAuthorizationHeader(bare, body, async () => pub)).ok).toBe(true);
+    // Spaces around the equals sign too.
+    expect(parseAuthorizationHeader(quoted.replace(/created=/, "created = "))).not.toBeNull();
+  });
+
+  it("still refuses a header with the signature or key id missing", async () => {
+    const { parseAuthorizationHeader } = await import("../src/modules/ondc/signing.js");
+    expect(parseAuthorizationHeader('Signature keyId="a|b|ed25519",created=1,expires=2')).toBeNull();
+    expect(parseAuthorizationHeader('Signature created=1,expires=2,signature="x"')).toBeNull();
+  });
+
+  it("logs a header's shape without its signature", async () => {
+    const { headerShape } = await import("../src/modules/ondc/signing.js");
+    const shape = headerShape('Signature keyId="s|k|ed25519",created=1,expires=2,signature="SECRETLOOKINGVALUE=="');
+    expect(shape).toContain('keyId="s|k|ed25519"');
+    expect(shape).not.toContain("SECRETLOOKINGVALUE");
+  });
+});

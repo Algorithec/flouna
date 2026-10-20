@@ -1,7 +1,18 @@
 import { Router, type Request } from "express";
 import { BAP_ID } from "./context.js";
 import { BUYER_ERRORS, nack } from "./errors.js";
-import { digestOf, verifyAuthorizationHeader, type VerifyResult } from "./signing.js";
+import { digestOf, headerShape, parseAuthorizationHeader, verifyAuthorizationHeader, type VerifyResult } from "./signing.js";
+
+/**
+ * One line per refused message: which action, who it claimed to be from, and
+ * why. Without it a seller whose answers were all refused looked, from our
+ * side, like a seller who never answered.
+ */
+export function refused(action: string, header: string | undefined, reason: string) {
+  const parsed = header ? parseAuthorizationHeader(header) : null;
+  const from = parsed ? `${parsed.subscriberId}|${parsed.uniqueKeyId}` : headerShape(header);
+  console.warn(`[ondc] refused ${action} from ${from}: ${reason}`);
+}
 
 /** A message outside its signature's time window is stale; anything else is an invalid signature. */
 function signatureError(reason: Extract<VerifyResult, { ok: false }>["reason"]) {
@@ -100,6 +111,7 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
     try {
       const sender = await verifyAuthorizationHeader(req.get("authorization"), rawBytes, deps.publicKeyFor);
       if (!sender.ok) {
+        refused(action, req.get("authorization"), sender.reason);
         res.status(401).json(nack(signatureError(sender.reason), `Signature not accepted: ${sender.reason}`));
         return;
       }
@@ -107,6 +119,7 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
       // registered participant could sign an on_confirm naming another seller
       // in its context and have it taken as that seller's.
       if (ctx.bpp_id !== sender.subscriberId) {
+        refused(action, req.get("authorization"), `signer ${sender.subscriberId} is not bpp_id ${String(ctx.bpp_id)}`);
         res.status(401).json(nack(BUYER_ERRORS.INVALID_SIGNATURE, "Signer is not the seller app named in the message"));
         return;
       }
@@ -114,6 +127,7 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
       if (gatewayHeader) {
         const gw = await verifyAuthorizationHeader(gatewayHeader, rawBytes, deps.publicKeyFor);
         if (!gw.ok) {
+          refused(action, gatewayHeader, `gateway ${gw.reason}`);
           res.status(401).json(nack(signatureError(gw.reason), `Gateway signature not accepted: ${gw.reason}`));
           return;
         }
