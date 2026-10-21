@@ -70,9 +70,14 @@ export async function settleOndcPayment(gatewayId: string, paidPaise: number, re
       // Lost a race with a second delivery of the same payment.
       return { handled: true as const, outcome: "already_paid" as const };
     }
-    await confirmOndcOrder(order.userId, order.id, deps).catch((err: unknown) => {
-      // Paid and recorded; placing it can be retried from the app.
+    await confirmOndcOrder(order.userId, order.id, deps).catch(async (err: unknown) => {
+      // Paid and recorded; placing it can be retried from the app, which
+      // offers that only when the order says why it is stuck.
       console.error("[ondc] could not place paid order", order.id, err instanceof Error ? err.message : String(err));
+      await prisma.ondcOrder.updateMany({
+        where: { id: order.id, status: "paid", problem: null },
+        data: { problem: "Paid, but the store could not be reached yet. Place the order again." },
+      });
     });
     return { handled: true as const, outcome: "placed" as const };
   }
