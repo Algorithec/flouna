@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { createCallbacksRouter, type CallbackDeps } from "./callbacks.routes.js";
 import { createRegistryClient, REGISTRY_URL } from "./registryClient.js";
 import { applyOnIssue } from "../complaints/igm.network.js";
+import { applyRetailReply } from "./orders.service.js";
 
 /**
  * The live ONDC wiring, or null when this deployment has no ONDC identity.
@@ -55,6 +56,8 @@ export const recordInbound: CallbackDeps["record"] = async ({ action, body, raw,
   // stored, the seller's retry is what gets the complaint updated. A failure
   // throws, so the seller is told to retry.
   if (action === "on_issue") await applyOnIssue({ body, raw, senderId });
+  // A food seller's answer about an order, applied on the same terms.
+  await applyRetailReply({ action, body, senderId });
   return { duplicate };
 };
 

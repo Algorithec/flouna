@@ -297,3 +297,33 @@ export function buildStatus(o: { transactionId: string; city: string; bpp: Bpp; 
     message: { order_id: o.orderId },
   };
 }
+
+/**
+ * The reasons a buyer app may give for cancelling, from ONDC's retail
+ * cancellation codes. A seller is entitled to refuse any other code from us.
+ */
+export const BUYER_CANCEL_REASONS = {
+  "001": "Price of one or more items changed and more payment was asked for",
+  "003": "Product available at a lower price",
+  "006": "Order not shipped within the promised time",
+  "009": "Wrong delivery address",
+  "010": "Buyer wants to change the address or other order details",
+} as const;
+export type BuyerCancelReason = keyof typeof BUYER_CANCEL_REASONS;
+
+/** Asks the seller to cancel a placed order, for one of the buyer reasons above. */
+export function buildCancel(o: { transactionId: string; city: string; bpp: Bpp; orderId: string; reasonId: BuyerCancelReason }) {
+  if (!(o.reasonId in BUYER_CANCEL_REASONS)) throw new Error(`Not a buyer cancellation reason: ${o.reasonId}`);
+  return {
+    context: buildContext({ domain: DOMAIN, action: "cancel", city: o.city, transactionId: o.transactionId, bppId: o.bpp.id, bppUri: o.bpp.uri }),
+    message: { order_id: o.orderId, cancellation_reason_id: o.reasonId },
+  };
+}
+
+/** Asks the seller for a live tracking link. The answer arrives as on_track. */
+export function buildTrack(o: { transactionId: string; city: string; bpp: Bpp; orderId: string }) {
+  return {
+    context: buildContext({ domain: DOMAIN, action: "track", city: o.city, transactionId: o.transactionId, bppId: o.bpp.id, bppUri: o.bpp.uri }),
+    message: { order_id: o.orderId },
+  };
+}

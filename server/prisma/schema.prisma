@@ -104,6 +104,7 @@ model User {
   chatSessions         ChatSession[]
   orders               Order[]
   ondcSearches         OndcSearch[]
+  ondcOrders           OndcOrder[]
   cart                 Cart?
   payments             Payment[]
   otpCodes             OtpCode[]
@@ -1475,3 +1476,46 @@ model CartItem {
   @@index([cartId])
 }
 
+// One food order placed with an ONDC seller, from the price check (select) to
+// delivery. Kept apart from Order because its truth lives with the seller: the
+// quote, the order id and every state change come from the seller's signed
+// replies, and each is stored as it arrived (see ondc/orders.service.ts).
+model OndcOrder {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  txnId            String    @unique // Beckn transaction_id, shared by every message of this order
+  // The step we are waiting on, and the message_id we sent for it. A reply
+  // with any other message_id is not the answer to our request.
+  status           String // selecting | quoted | unavailable | initialising | ready_to_pay | paid | confirming | placed | failed | cancelling | cancelled
+  awaitingMsgId    String?
+  bppId            String
+  bppUri           String
+  providerId       String
+  locationId       String
+  storeName        String
+  city             String // STD code form, "std:080"
+  lines            String // JSON: CartLine[] as ordered
+  addressId        String?
+  gps              String?
+  areaCode         String?
+  fulfillmentId    String?
+  tat              String? // ISO 8601 duration the seller committed to, "PT45M"
+  quote            String? // JSON: the seller's latest quote, exactly as sent
+  totalPaise       Int?
+  payment          String? // JSON: the seller's payment terms from on_init (collector, settlement details)
+  paidAt           DateTime?
+  paymentRef       String? // the payment's transaction id, sent in confirm
+  sellerOrderId    String?
+  sellerState      String? // Created | Accepted | In-progress | Completed | Cancelled
+  fulfillmentState String? // Pending | Packed | Agent-assigned | Order-picked-up | Out-for-delivery | Order-delivered | Cancelled
+  // Seller's context.timestamp of the last state we applied. A slower,
+  // older message must not overwrite a newer state.
+  sellerUpdatedAt  DateTime?
+  problem          String? // why the seller refused, in plain words
+  cancelReasonId   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+}
