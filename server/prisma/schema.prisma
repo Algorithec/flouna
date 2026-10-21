@@ -1015,6 +1015,28 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// Append-only record of every action the chat agent carries out for a customer.
+// Written fire-and-forget after the action runs, so auditing never slows the
+// reply. Gives the team a tamper-evident trail of what the agent did, when,
+// and what changed — the back-office AuditLog does the same for admin actions.
+model AgentActionLog {
+  id         String   @id @default(cuid())
+  userId     String
+  sessionId  String
+  messageId  String?
+  actionKind String // "cart.add" | "group.create" | "ride.book" | ...
+  success    Boolean
+  request    String // JSON: the parsed AgentAction that was executed
+  changes    String? // JSON: before/after state, created entity ids, etc.
+  error      String?
+  decisionId String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([sessionId])
+  @@index([actionKind, createdAt])
+}
+
 // Captured server errors, surfaced on the developer console. Every unhandled
 // error flows here via the error handler so engineers see failures without SSH.
 // fingerprint groups identical errors; count rises instead of spamming rows.
