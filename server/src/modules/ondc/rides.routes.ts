@@ -24,6 +24,16 @@ import {
 // once and the provider replies over the next seconds, so the app polls.
 // Behind the same switch and tester list as ONDC food search.
 export const ondcRidesRouter = Router();
+// Whether this rider can use ONDC rides, so the app offers it only to them.
+// Before the switch below, which would otherwise answer 404 to the question.
+ondcRidesRouter.get("/available", requireAuth, async (req, res, next) => {
+  try {
+    const on = env.ONDC_SEARCH_ENABLED || env.ONDC_SEARCH_TESTERS.size > 0;
+    res.json({ available: on && (await ondcSearchFor(req.userId!)) });
+  } catch (err) {
+    next(err);
+  }
+});
 ondcRidesRouter.use((_req, res, next) => {
   if (!env.ONDC_SEARCH_ENABLED && env.ONDC_SEARCH_TESTERS.size === 0) return res.status(404).json({ error: "ONDC rides are not enabled" });
   next();
@@ -44,7 +54,7 @@ const place = z
   .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), address: z.string().trim().min(3).max(200), area: z.string().trim().min(1).max(80) })
   .strict();
 
-ondcRidesRouter.post("/", validateBody(z.object({ pickup: place, drop: place, city: z.string().trim().min(2).max(60) }).strict()), async (req, res, next) => {
+ondcRidesRouter.post("/", validateBody(z.object({ pickup: place, drop: place, city: z.string().trim().min(2).max(60).optional() }).strict()), async (req, res, next) => {
   const now = Date.now();
   const stamps = (searchStamps.get(req.userId!) ?? []).filter((t) => now - t < 60_000);
   if (stamps.length >= 5) return res.status(429).json({ error: "Too many ride searches, try again in a minute" });

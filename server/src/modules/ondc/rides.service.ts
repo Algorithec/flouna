@@ -98,15 +98,62 @@ const stopOf = (s: string) => JSON.parse(s) as Stop;
 
 export type PlaceInput = { lat: number; lng: number; address: string; area: string };
 
+/**
+ * City centres for the cities ONDC rides can be searched in, by STD code.
+ * The rides screen knows where the rider is, not which city's code ONDC
+ * files that under, so the nearest centre within 40 km decides.
+ */
+const CITY_CENTRES: [string, number, number][] = [
+  ["std:080", 12.9716, 77.5946], // Bengaluru
+  ["std:040", 17.385, 78.4867], // Hyderabad
+  ["std:011", 28.6139, 77.209], // Delhi
+  ["std:0120", 28.5355, 77.391], // Noida
+  ["std:0124", 28.4595, 77.0266], // Gurugram
+  ["std:022", 19.076, 72.8777], // Mumbai
+  ["std:044", 13.0827, 80.2707], // Chennai
+  ["std:033", 22.5726, 88.3639], // Kolkata
+  ["std:020", 18.5204, 73.8567], // Pune
+  ["std:079", 23.0225, 72.5714], // Ahmedabad
+  ["std:0141", 26.9124, 75.7873], // Jaipur
+  ["std:0522", 26.8467, 80.9462], // Lucknow
+  ["std:0172", 30.7333, 76.7794], // Chandigarh
+  ["std:0484", 9.9312, 76.2673], // Kochi
+  ["std:0422", 11.0168, 76.9558], // Coimbatore
+  ["std:0891", 17.6868, 83.2185], // Visakhapatnam
+  ["std:0866", 16.5062, 80.648], // Vijayawada
+  ["std:0731", 22.7196, 75.8577], // Indore
+  ["std:0755", 23.2599, 77.4126], // Bhopal
+  ["std:0712", 21.1458, 79.0882], // Nagpur
+  ["std:0261", 21.1702, 72.8311], // Surat
+  ["std:0821", 12.2958, 76.6394], // Mysuru
+  ["std:0471", 8.5241, 76.9366], // Thiruvananthapuram
+];
+
+export function cityForGps(lat: number, lng: number): string | null {
+  const km = (aLat: number, aLng: number) => {
+    const rad = Math.PI / 180;
+    const dLat = (aLat - lat) * rad;
+    const dLng = (aLng - lng) * rad;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat * rad) * Math.cos(aLat * rad) * Math.sin(dLng / 2) ** 2;
+    return 2 * 6371 * Math.asin(Math.sqrt(h));
+  };
+  let best: { code: string; d: number } | null = null;
+  for (const [code, cLat, cLng] of CITY_CENTRES) {
+    const d = km(cLat, cLng);
+    if (d <= 40 && (!best || d < best.d)) best = { code, d };
+  }
+  return best?.code ?? null;
+}
+
 function toStop(p: PlaceInput): Stop {
   return { gps: `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`, address: p.address, area: p.area };
 }
 
 /** Asks every ride provider on the network for rides between two points. */
-export async function startRideSearch(userId: string, input: { pickup: PlaceInput; drop: PlaceInput; city: string }, deps: RideDeps = {}) {
+export async function startRideSearch(userId: string, input: { pickup: PlaceInput; drop: PlaceInput; city?: string }, deps: RideDeps = {}) {
   if (!(deps.identity ?? defaultIdentity)()) throw new ApiError(503, "ONDC is not configured on this deployment");
-  const city = stdCodeFor(input.city);
-  if (!city) throw new ApiError(400, `ONDC rides are not available in ${input.city} yet`);
+  const city = input.city ? stdCodeFor(input.city) : cityForGps(input.pickup.lat, input.pickup.lng);
+  if (!city) throw new ApiError(400, "ONDC rides are not available in this city yet");
   const terms = commercialTerms();
   const pickup = toStop(input.pickup);
   const drop = toStop(input.drop);

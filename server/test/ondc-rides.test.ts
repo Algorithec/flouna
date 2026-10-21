@@ -10,6 +10,7 @@ import { createCallbacksRouter } from "../src/modules/ondc/callbacks.routes.js";
 import { recordInbound } from "../src/modules/ondc/index.js";
 import { parseRideOnSearch } from "../src/modules/ondc/rideReplies.js";
 import {
+  cityForGps,
   chooseRide,
   confirmRide,
   confirmRideCancel,
@@ -250,12 +251,23 @@ describe("reading ride catalogues", () => {
   });
 });
 
+describe("working out the city from where the rider is", () => {
+  it("finds the nearest city ONDC lists within 40 km, and none further out", () => {
+    expect(cityForGps(13.008935, 77.644408)).toBe("std:080"); // Banaswadi, Bengaluru
+    expect(cityForGps(17.4486, 78.3908)).toBe("std:040"); // HITEC City, Hyderabad
+    expect(cityForGps(28.4595, 77.03)).toBe("std:0124"); // Gurugram, not Delhi
+    expect(cityForGps(15.3173, 75.7139)).toBeNull(); // Hubballi region: no centre within 40 km
+  });
+});
+
 describe("the ONDC ride routes", () => {
   it("are hidden while ONDC is off, and serve the rider's own rides when on", async () => {
     const s = await searched();
     await s.c.agent.get(`/api/ondc/rides/${s.rideId}`).expect(404);
+    expect((await s.c.agent.get("/api/ondc/rides/available").expect(200)).body).toEqual({ available: false });
     env.ONDC_SEARCH_ENABLED = true;
     try {
+      expect((await s.c.agent.get("/api/ondc/rides/available").expect(200)).body).toEqual({ available: true });
       expect((await s.c.agent.get(`/api/ondc/rides/${s.rideId}/offers`).expect(200)).body.offers).toHaveLength(2);
       const stranger = await authedAgent();
       await stranger.agent.get(`/api/ondc/rides/${s.rideId}`).expect(404);
