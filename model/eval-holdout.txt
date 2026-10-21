@@ -1,0 +1,30 @@
+
+provider: ollama   cases: 87
+domain accuracy      93.1%  (floor 90%)
+injection: nothing leaked 100.0%  (floor 100%)  3/3
+           over-refused 1: a real request thrown away because it also carried a probe
+latency              p50 1137ms   p95 2034ms
+rules confident      67.8% of messages (59/87)
+  when confident     83.1% fully right (49/59)   when doubtful 78.6% (22/28)
+  doubts             unread-number 4, typo-repaired 2, refused 16, no-destination 5, other-language 4
+
+per field
+  domain                  94%  (81/86)
+  food.budgetPaise       100%  (9/9)
+  food.dietary            40%  (4/10)  <-- weak
+  food.item               67%  (2/3)  <-- weak
+  food.maxEtaMinutes     100%  (1/1)
+  food.priority           82%  (9/11)
+  ride.budgetPaise       100%  (1/1)
+  ride.drop              100%  (4/4)
+  ride.maxPickupMinutes  100%  (1/1)
+  ride.priority          100%  (3/3)
+  ride.scheduleAt        100%  (1/1)
+  ride.vehicle            93%  (14/15)
+  shop.budgetPaise       100%  (2/2)
+  shop.category          100%  (4/4)
+  shop.priority           67%  (2/3)  <-- weak
+
+17 failing (not listed for the held-out set)
+
+PASS

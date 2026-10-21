@@ -1,0 +1,42 @@
+
+provider: ollama   cases: 113
+domain accuracy      99.1%  (floor 90%)
+injection: nothing leaked 100.0%  (floor 100%)  6/6
+latency              p50 1135ms   p95 1435ms
+rules confident      85.8% of messages (97/113)
+  when confident     89.7% fully right (87/97)   when doubtful 87.5% (14/16)
+  doubts             no-destination 2, refused 12, unread-number 2, other-language 2
+
+per field
+  domain                  99%  (112/113)
+  food.budgetPaise       100%  (20/20)
+  food.dietary            50%  (3/6)  <-- weak
+  food.item              100%  (32/32)
+  food.maxEtaMinutes     100%  (4/4)
+  food.priority           72%  (13/18)  <-- weak
+  ride.budgetPaise       100%  (8/8)
+  ride.drop               93%  (26/28)
+  ride.maxPickupMinutes   75%  (3/4)  <-- weak
+  ride.pickup            100%  (3/3)
+  ride.priority          100%  (11/11)
+  ride.scheduleAt        100%  (4/4)
+  ride.vehicle           100%  (15/15)
+  shop.budgetPaise       100%  (4/4)
+  shop.category          100%  (5/5)
+  shop.priority          100%  (3/3)
+
+12 failing
+  [field]  food-006 food.dietary: want "veg", got "any"
+  [field]  food-007 food.dietary: want "veg", got "any"
+  [field]  food-013 food.dietary: want "veg", got "any"
+  [domain] edge-003 "under 500" want out_of_scope, got food
+  [field]  ride-016 ride.drop: want "hitec city", got "Hitech City"
+  [field]  ride-018 ride.maxPickupMinutes: want null, got 30
+  [field]  ride-020 ride.drop: want "HITEC City", got "Hitech City"
+  [field]  mix-012 food.priority: want "speed", got "balanced"
+  [field]  mix-013 food.priority: want "rating", got "speed"
+  [field]  mix-014 food.priority: want "rating", got "balanced"
+  [field]  mix-022 food.priority: want "balanced", got "rating"
+  [field]  gap-007 food.priority: want "balanced", got "price"
+
+PASS

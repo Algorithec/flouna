@@ -1,7 +1,7 @@
-FROM ./flouna-fused-1.5b
+FROM ./flouna-1.5b-q8.gguf
 
 PARAMETER temperature 0
-PARAMETER num_ctx 512
+PARAMETER num_ctx 2048
 
 TEMPLATE """{{- if .System }}<|im_start|>system
 {{ .System }}<|im_end|>
