@@ -23,6 +23,7 @@ import { rupees } from "@/lib/money";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AdviceBanner, type Advice } from "@/components/ui/AdviceBanner";
+import { OndcRideOffers } from "@/components/rides/OndcRideOffers";
 import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/components/i18n/I18nContext";
@@ -695,6 +696,8 @@ function RidesInner() {
                 .replace("{min}", String(route.rideMinutes))}
             </p>
           )}
+
+          {pickup && drop && <OndcRideOffers key={`${pickup.lat},${pickup.lng}|${drop.lat},${drop.lng}`} pickup={pickup} drop={drop} />}
 
           {quotes.length > 0 && (
             <>
