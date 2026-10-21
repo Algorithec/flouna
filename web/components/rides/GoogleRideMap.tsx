@@ -115,7 +115,7 @@ export function GoogleRideMap({
           glyphColor: "#ffffff",
         });
         markersRef.current.push(
-          new maps.marker.AdvancedMarkerElement({ map, position: point, content: glyph.element }),
+          new maps.marker.AdvancedMarkerElement({ map, position: point, content: glyph }),
         );
       };
       const label = (point: LatLng, text: string, kind: "pickup" | "drop") => {

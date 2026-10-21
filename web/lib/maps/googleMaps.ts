@@ -70,7 +70,9 @@ export interface GMaps {
       borderColor?: string;
       glyphColor?: string;
       scale?: number;
-    }) => { element: HTMLElement };
+      // The pin is itself the element to show. Its old .element property is
+      // deprecated and logs a warning on every marker.
+    }) => HTMLElement;
   };
 }
 

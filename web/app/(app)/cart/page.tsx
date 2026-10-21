@@ -67,7 +67,7 @@ type AddressLine = {
 
 export default function CartPage() {
   const router = useRouter();
-  const { lines, setQty, remove, clear } = useCart();
+  const { lines, setQty, remove, clear, removed, dismissRemoved } = useCart();
   const { t } = useI18n();
   const back = useBackTo("/food");
   const { toast } = useToast();
@@ -244,6 +244,15 @@ export default function CartPage() {
         <h1 className="text-[18px] font-bold text-ink">{t("cart.title")}</h1>
         <span className="w-12" />
       </div>
+
+      {removed > 0 && (
+        <div role="status" className="mt-4 flex items-start gap-3 rounded-card border border-line bg-beige/60 px-3.5 py-2.5 text-[12.5px] text-ink">
+          <p className="flex-1">{(removed === 1 ? t("ct.removedOne") : t("ct.removedMany")).replace("{n}", String(removed))}</p>
+          <button type="button" onClick={dismissRemoved} className="tap-target shrink-0 text-[12px] font-semibold text-accent-ink">
+            {t("ct.removedOk")}
+          </button>
+        </div>
+      )}
 
       {lines.length === 0 ? (
         // Figma "No items yet" — same layout as every other empty state, so
