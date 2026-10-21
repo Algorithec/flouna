@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { OndcOptionsSheet, type OptionTree } from "./OndcOptionsSheet";
 
 type Offer = {
   itemId: string;
@@ -46,12 +47,37 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
   const [showAll, setShowAll] = useState(false);
   const [starting, setStarting] = useState<string | null>(null);
   const [startFailed, setStartFailed] = useState<string | null>(null);
+  // The server's reason when it gave one (no map location on the address, a
+  // choice the seller does not allow): something the customer can act on,
+  // where "try again" would only fail again.
+  const [failReason, setFailReason] = useState<string | null>(null);
+  // The dish whose options are being chosen, and dishes whose seller listed
+  // no options this app can read.
+  const [choosing, setChoosing] = useState<{ offer: Offer; key: string; tree: OptionTree } | null>(null);
+  const [loadingOptions, setLoadingOptions] = useState<string | null>(null);
+  const [noOptions, setNoOptions] = useState<Set<string>>(() => new Set());
   const router = useRouter();
   const searchId = "searchId" in ondc ? ondc.searchId : null;
 
   // One dish from one store: the seller prices it for this address, and the
   // order screen follows it from there.
-  async function order(o: Offer, key: string) {
+  async function chooseOptions(o: Offer, key: string) {
+    if (!searchId || loadingOptions) return;
+    setLoadingOptions(key);
+    setStartFailed(null);
+    try {
+      const q = new URLSearchParams({ searchId, bppId: o.seller.bppId, providerId: o.seller.providerId, itemId: o.itemId });
+      const r = await api<{ options: OptionTree | null }>(`/api/ondc/orders/options?${q}`);
+      if (r.options) setChoosing({ offer: o, key, tree: r.options });
+      else setNoOptions((s) => new Set(s).add(key));
+    } catch {
+      setStartFailed(key);
+    } finally {
+      setLoadingOptions(null);
+    }
+  }
+
+  async function order(o: Offer, key: string, optionIds: string[] = []) {
     if (!searchId || starting) return;
     setStarting(key);
     setStartFailed(null);
@@ -63,11 +89,12 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
           bppId: o.seller.bppId,
           providerId: o.seller.providerId,
           locationId: o.seller.locationId,
-          lines: [{ itemId: o.itemId, count: 1 }],
+          lines: [{ itemId: o.itemId, count: 1, ...(optionIds.length ? { customizations: optionIds.map((itemId) => ({ itemId })) } : {}) }],
         },
       });
       router.push(`/food/ondc/${r.orderId}`);
-    } catch {
+    } catch (err) {
+      setFailReason(err instanceof Error && err.message ? err.message : null);
       setStartFailed(key);
       setStarting(null);
     }
@@ -143,11 +170,24 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
                 {o.distanceKm !== null && ` · ${t("on.away").replace("{km}", String(o.distanceKm))}`}
               </p>
               {o.seller.fssaiLicence && <p className="truncate text-[10px] text-cocoa/80">{t("on.fssai").replace("{no}", o.seller.fssaiLicence)}</p>}
-              {/* Choices such as size or crust come from the seller's
-                  customisation groups, which are not read yet, so those
-                  dishes say so instead of ordering without them. */}
-              {o.customizable ? (
+              {/* A dish with options is ordered through the options sheet.
+                  A seller can also mark a dish as priced in a range without
+                  listing the choices; those say they cannot be ordered yet
+                  rather than order without them. */}
+              {o.customizable && noOptions.has(key) ? (
                 <p className="mt-1 text-[11px] text-cocoa">{t("on.optionsSoon")}</p>
+              ) : o.customizable ? (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => chooseOptions(o, key)}
+                    disabled={loadingOptions !== null || starting !== null}
+                    className="tap-target rounded-pill border border-btn px-3.5 py-1.5 text-[12px] font-semibold text-ink transition-colors hover:bg-beige/60 disabled:opacity-50"
+                  >
+                    {loadingOptions === key ? t("on.starting") : t("on.chooseOptions")}
+                  </button>
+                  {startFailed === key && !choosing && <span className="text-[11px] text-danger">{t("on.startFailed")}</span>}
+                </div>
               ) : (
                 <div className="mt-1.5 flex items-center gap-2">
                   <button
@@ -158,7 +198,7 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
                   >
                     {starting === key ? t("on.starting") : t("on.order")}
                   </button>
-                  {startFailed === key && <span className="text-[11px] text-danger">{t("on.startFailed")}</span>}
+                  {startFailed === key && <span className="text-[11px] text-danger">{failReason ?? t("on.startFailed")}</span>}
                 </div>
               )}
             </div>
@@ -170,6 +210,17 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
         <button type="button" onClick={() => setShowAll(true)} className="tap-target mt-2 w-full rounded-pill border border-line py-2 text-[12px] font-semibold text-ink">
           {t("on.more").replace("{n}", String(offers.length - 4))}
         </button>
+      )}
+      {choosing && (
+        <OndcOptionsSheet
+          name={choosing.offer.name}
+          basePaise={choosing.offer.pricePaise}
+          tree={choosing.tree}
+          busy={starting !== null}
+          failed={startFailed === choosing.key ? (failReason ?? t("on.startFailed")) : null}
+          onOrder={(ids) => void order(choosing.offer, choosing.key, ids)}
+          onClose={() => setChoosing(null)}
+        />
       )}
     </section>
   );

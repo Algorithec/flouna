@@ -16,6 +16,7 @@ import {
   refreshOndcOrder,
   startOndcOrder,
   trackOndcOrder,
+  dishOptions,
 } from "./orders.service.js";
 
 // The customer's food orders with ONDC sellers. Each step answers at once and
@@ -47,7 +48,7 @@ const lines = z
         itemId: z.string().min(1).max(120),
         count: z.number().int().min(1).max(20),
         parentItemId: z.string().min(1).max(120).optional(),
-        customizations: z.array(z.object({ itemId: z.string().min(1).max(120), groupId: z.string().min(1).max(120) }).strict()).max(20).optional(),
+        customizations: z.array(z.object({ itemId: z.string().min(1).max(120), groupId: z.string().min(1).max(120).optional() }).strict()).max(20).optional(),
       })
       .strict(),
   )
@@ -68,6 +69,23 @@ const startBody = z
 ondcOrdersRouter.post("/", validateBody(startBody), async (req, res, next) => {
   try {
     res.status(202).json(await startOndcOrder(req.userId!, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// A dish's options, from the catalogue its seller sent for this search.
+const optionsQuery = z.object({
+  searchId: z.string().uuid(),
+  bppId: z.string().min(1).max(255),
+  providerId: z.string().min(1).max(255),
+  itemId: z.string().min(1).max(120),
+});
+ondcOrdersRouter.get("/options", async (req, res, next) => {
+  try {
+    const q = optionsQuery.safeParse(req.query);
+    if (!q.success) return res.status(400).json({ error: "searchId, bppId, providerId and itemId are needed" });
+    res.json({ options: await dishOptions(req.userId!, q.data.searchId, q.data.bppId, q.data.providerId, q.data.itemId) });
   } catch (err) {
     next(err);
   }

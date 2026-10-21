@@ -16,6 +16,7 @@ import {
   type CartLine,
 } from "./retail.js";
 import { ondcSearchResults } from "./search.service.js";
+import { checkChoices, optionsFor, type OptionTree } from "./catalog.js";
 import { owe, recordPayout, refundAfterCancel } from "./ondcMoney.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
@@ -123,7 +124,8 @@ export type StartInput = {
   bppId: string;
   providerId: string;
   locationId: string;
-  lines: CartLine[];
+  /** Dishes and the option ids chosen for each; groups and line ids are filled in from the catalogue. */
+  lines: { itemId: string; count: number; customizations?: { itemId: string; groupId?: string }[] }[];
   addressId?: string;
 };
 
@@ -133,6 +135,9 @@ export type StartInput = {
  */
 export async function startOndcOrder(userId: string, input: StartInput, deps: OrderDeps = {}) {
   if (input.lines.length === 0 || input.lines.length > 30) throw new ApiError(400, "An order needs between 1 and 30 items");
+  // Checked before anything is stored, so a deployment without an ONDC
+  // identity does not leave an order waiting on a price that never comes.
+  if (!(deps.identity ?? defaultIdentity)()) throw new ApiError(503, "ONDC is not configured on this deployment");
   const results = await ondcSearchResults(input.searchId, userId);
   const fromSeller = results.offers.filter(
     (o) => o.seller.bppId === input.bppId && o.seller.providerId === input.providerId && o.seller.locationId === input.locationId,
@@ -144,6 +149,23 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   // on_select.
   for (const l of input.lines) {
     if (!listed.has(l.itemId)) throw new ApiError(400, `Item ${l.itemId} is not on that store's menu`);
+  }
+  // Options are checked against the seller's own rules (one crust, up to two
+  // toppings) before anything is sent, and the group each one belongs to is
+  // taken from the catalogue, not from the request. Each dish with options
+  // gets its own line id, which ties the options to it on the wire.
+  const lines: CartLine[] = [];
+  for (const l of input.lines) {
+    const tree = await dishOptions(userId, input.searchId, input.bppId, input.providerId, l.itemId);
+    const chosen = (l.customizations ?? []).map((c) => c.itemId);
+    if (!tree) {
+      if (chosen.length) throw new ApiError(400, `${l.itemId} has no options to choose`);
+      lines.push({ itemId: l.itemId, count: l.count });
+      continue;
+    }
+    const checked = checkChoices(tree, chosen);
+    if ("problem" in checked) throw new ApiError(400, checked.problem);
+    lines.push({ itemId: l.itemId, count: l.count, parentItemId: crypto.randomBytes(5).toString("hex"), customizations: checked.picks });
   }
   const address = await prisma.address.findFirst({
     where: input.addressId ? { id: input.addressId, userId } : { userId, isDefault: true },
@@ -165,7 +187,7 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
       locationId: seller.locationId,
       storeName: seller.name,
       city: search!.city,
-      lines: JSON.stringify(input.lines),
+      lines: JSON.stringify(lines),
       addressId: address.id,
       gps,
       areaCode: address.pincode,
@@ -177,7 +199,7 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
     bpp: { id: order.bppId, uri: order.bppUri },
     providerId: order.providerId,
     locationId: order.locationId,
-    lines: input.lines,
+    lines,
     gps,
     areaCode: address.pincode,
   });
@@ -502,4 +524,29 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
     refund: o.refundStatus ? { status: o.refundStatus, paise: o.refundPaise } : null,
     createdAt: o.createdAt.toISOString(),
   };
+}
+
+/**
+ * The options a dish has, read from the catalogue its seller sent in answer
+ * to this customer's search (the latest one, if the seller refreshed it).
+ * Null when the dish has none.
+ */
+export async function dishOptions(userId: string, searchId: string, bppId: string, providerId: string, itemId: string): Promise<OptionTree | null> {
+  const search = await prisma.ondcSearch.findUnique({ where: { id: searchId }, select: { userId: true } });
+  if (!search || search.userId !== userId) throw new ApiError(404, "Search not found");
+  const rows = await prisma.ondcTransaction.findMany({
+    where: { txnId: searchId, action: "on_search", bppId },
+    orderBy: { createdAt: "desc" },
+    select: { response: true },
+    take: 5,
+  });
+  for (const row of rows) {
+    try {
+      const tree = optionsFor(JSON.parse(row.response ?? "null"), providerId, itemId);
+      if (tree) return tree;
+    } catch {
+      // A catalogue that does not parse has no options to offer.
+    }
+  }
+  return null;
 }
