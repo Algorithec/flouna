@@ -1,3 +1,4 @@
+import { settleOndcPayment } from "../ondc/ondcPay.service.js";
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
@@ -296,6 +297,14 @@ paymentsRouter.post(
           event.data.payment.payment_amount ?? event.data.order?.order_amount;
         const paidPaise =
           paidRupees !== undefined ? Math.round(paidRupees * 100) : undefined;
+        // An ONDC order, paid for the seller's total: placed with the seller.
+        if (orderId.startsWith("ondc_")) {
+          if (paidPaise !== undefined) {
+            const ref = (event.data.payment as { cf_payment_id?: string | number }).cf_payment_id;
+            await settleOndcPayment(orderId, paidPaise, String(ref ?? orderId));
+          }
+          return res.json({ ok: true });
+        }
         await markPaid(orderId, event.data.payment.payment_group ?? "upi", {
           paidPaise,
           gatewayResponse: rawBody,
