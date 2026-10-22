@@ -120,7 +120,7 @@ export default function ContactUsPage() {
             <p className="mt-3 text-left text-[15px] font-bold text-acct-ink">{t("pp.hc.emailUs")}</p>
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className="block text-left text-[13px] font-semibold text-igm-accent hover:underline"
+              className="tap-target block text-left text-[13px] font-semibold text-igm-accent hover:underline"
             >
               {SUPPORT_EMAIL}
             </a>

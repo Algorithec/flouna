@@ -149,6 +149,9 @@ export default function OrderDetailPage({
   // polling a route that could never succeed, once every few seconds, for as
   // long as the page stayed open.
   const trackable = hasTrackingCoords && order.status !== "pending_payment";
+  // Money taken: the same test the invoice uses. Until then the total is
+  // what is to be paid, and any saving is only a saving once it is paid.
+  const paid = ["confirmed", "in_progress", "completed"].includes(order.status) || order.payment?.status === "success";
 
   const discount =
     order.details.offers?.reduce((s, o) => s + o.discountPaise, 0) ?? 0;
@@ -215,7 +218,7 @@ export default function OrderDetailPage({
           <DecisionReceipt
             comparedOptions={order.details.comparedOptions}
             comparedPlatforms={order.details.comparedPlatforms ?? 1}
-            savedPaise={order.savedPaise}
+            savedPaise={paid ? order.savedPaise : 0}
             domain={order.domain}
             title={order.title}
           />
@@ -230,7 +233,7 @@ export default function OrderDetailPage({
           </h2>
           <Link
             href={`/orders/${order.id}/invoice`}
-            className="text-[12px] font-semibold text-accent hover:underline"
+            className="tap-target text-[12px] font-semibold text-accent hover:underline"
           >
             {t("order.viewDownload")}
           </Link>
@@ -270,8 +273,8 @@ export default function OrderDetailPage({
           )}
           {discount > 0 && <Row label={t("bill.offers")} value={`− ${rupees(discount)}`} accent />}
           <div className="my-1.5 h-px bg-line" />
-          <Row label={t("bill.totalPaid")} value={rupees(order.amount)} bold />
-          {order.savedPaise > 0 && (
+          <Row label={paid ? t("bill.totalPaid") : t("bill.totalDue")} value={rupees(order.amount)} bold />
+          {paid && order.savedPaise > 0 && (
             <Row
               label={t("bill.savedVsNext")}
               value={rupees(order.savedPaise)}

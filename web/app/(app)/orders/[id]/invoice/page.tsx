@@ -37,11 +37,12 @@ type OrderDetail = {
 // A stable display reference derived from the order id + date. NOT a legal
 // sequential tax-invoice serial — it's a human-readable receipt reference only.
 // Format: RCP-YYYYMM-XXXXXX.
-function receiptRef(order: OrderDetail): string {
+function receiptRef(order: OrderDetail, paid: boolean): string {
   const d = new Date(order.createdAt);
   const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
   const tail = order.id.replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase();
-  return `RCP-${ym}-${tail}`;
+  // A bill until it is paid; the same number then reads as a receipt.
+  return `${paid ? "RCP" : "BIL"}-${ym}-${tail}`;
 }
 
 // Orders whose money has actually settled — drives the "Paid" stamp. An explicit
@@ -178,9 +179,9 @@ export default function InvoicePage({
           </div>
           <div className="text-right">
             <p className="text-[15px] font-bold uppercase tracking-wide text-accent">
-              {t("inv.title")}
+              {paid ? t("inv.title") : t("inv.titleUnpaid")}
             </p>
-            <p className="mt-1 font-mono text-[12px] text-ink">{receiptRef(order)}</p>
+            <p className="mt-1 font-mono text-[12px] text-ink">{receiptRef(order, paid)}</p>
             <p className="text-[11px] text-cocoa">
               {dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
             </p>
@@ -240,7 +241,7 @@ export default function InvoicePage({
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-line">
-              <td className="py-3 text-[15px] font-bold text-ink">{t("inv.totalPaid")}</td>
+              <td className="py-3 text-[15px] font-bold text-ink">{paid ? t("inv.totalPaid") : t("inv.totalDue")}</td>
               <td className="py-3 text-right text-[15px] font-bold text-ink">
                 {rupees(order.amount)}
               </td>
@@ -250,12 +251,12 @@ export default function InvoicePage({
 
         {/* Footer note */}
         <p className="mt-6 border-t border-line pt-4 text-[10px] leading-relaxed text-muted">
-          {t("inv.footer")}
+          {paid ? t("inv.footer") : t("inv.footerUnpaid")}
         </p>
       </div>
 
       {/* Marketing line — screen only, kept OUT of the printed receipt. */}
-      {order.savedPaise > 0 && (
+      {paid && order.savedPaise > 0 && (
         <div className="mt-3 rounded-card bg-accent-soft/60 px-4 py-2.5 text-[12px] font-medium text-accent-ink print:hidden">
           {t("inv.saved").replace("{amount}", rupees(order.savedPaise))}
         </div>

@@ -130,7 +130,7 @@ export default function PayPage({
               <p className="text-[13px] font-bold text-ink">{t("pay.summary")}</p>
               <Link
                 href={`/orders/${orderId}?invoice=1`}
-                className="text-[12px] font-semibold text-accent hover:underline"
+                className="tap-target text-[12px] font-semibold text-accent hover:underline"
               >
                 {t("pay.viewDetails")}
               </Link>

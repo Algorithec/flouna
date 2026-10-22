@@ -79,6 +79,12 @@ function statusChip(status: string, t: (k: TranslationKey) => string) {
   }
 }
 
+// The orders money was actually spent on: not one waiting for payment, one
+// cancelled, or an ONDC order paid and refunded because it was never placed.
+// Spend and savings both count only these, so a saving is never shown on
+// money that was not spent.
+const paidFor = (o: { status: string }) => !["pending_payment", "cancelled", "failed"].includes(o.status);
+
 // "₹5.4k" in the snapshot tiles — paise in, compact rupees out.
 function compactRupees(paise: number) {
   const r = paise / 100;
@@ -174,16 +180,12 @@ export default function HistoryPage() {
             />
             <StatTile
               icon={ReceiptText}
-              value={compactRupees(
-                orders
-                  .filter((o) => !["pending_payment", "cancelled"].includes(o.status))
-                  .reduce((s, o) => s + o.amount, 0),
-              )}
+              value={compactRupees(orders.filter(paidFor).reduce((s, o) => s + o.amount, 0))}
               label={t("history.totalSpend")}
             />
             <StatTile
               icon={Star}
-              value={compactRupees(orders.reduce((s, o) => s + (o.savedPaise ?? 0), 0))}
+              value={compactRupees(orders.filter(paidFor).reduce((s, o) => s + (o.savedPaise ?? 0), 0))}
               label={t("history.totalSavings")}
               plainLabel
             />
