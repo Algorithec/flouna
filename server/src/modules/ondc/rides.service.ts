@@ -207,8 +207,8 @@ export async function chooseRide(userId: string, id: string, pick: { bppId: stri
   const { offers } = await rideOffers(userId, id);
   const offer = offers.find((o) => o.bppId === pick.bppId && o.providerId === pick.providerId && o.itemId === pick.itemId);
   if (!offer) throw new ApiError(400, "That ride was not offered for this search");
-  const chosen = await prisma.ondcRide.update({
-    where: { id: ride.id },
+  const claimed = await prisma.ondcRide.updateMany({
+    where: { id: ride.id, userId, status: { in: ["searching", "quoted"] } },
     data: {
       bppId: offer.bppId,
       bppUri: offer.bppUri,
@@ -217,10 +217,14 @@ export async function chooseRide(userId: string, id: string, pick: { bppId: stri
       fulfillmentId: offer.fulfillmentId,
       vehicle: offer.vehicle,
       farePaise: offer.farePaise,
-      // The catalogue's payment tags are what init echoes until on_init gives the final ones.
+      quote: null,
+      cancellationTerms: null,
+      sellerOrderId: null,
       payment: JSON.stringify({ collectedBy: offer.collectedBy ?? "BPP", tags: offer.paymentTags } satisfies RidePaymentTerms),
     },
   });
+  if (claimed.count === 0) throw new ApiError(409, "This ride moved on while you were choosing");
+  const chosen = await prisma.ondcRide.findUniqueOrThrow({ where: { id: ride.id } });
   const envelope = buildRideSelect(rideBase(chosen));
   await sendStep(chosen, "select", envelope, "selecting", deps, at(offer.bppUri, "select"));
   return { rideId: ride.id };
@@ -273,6 +277,8 @@ export async function initRide(userId: string, id: string, deps: RideDeps = {}) 
 export async function confirmRide(userId: string, id: string, deps: RideDeps = {}) {
   const ride = await ownRide(userId, id);
   if (ride.status !== "ready") throw new ApiError(409, `This ride is ${ride.status}, not ready to book`);
+  const active = await prisma.ondcRide.count({ where: { userId, status: { in: ["booked", "confirming"] }, id: { not: id } } });
+  if (active > 0) throw new ApiError(409, "You already have an active ride — cancel it before booking another");
   const terms = JSON.parse(ride.payment ?? "{}") as RidePaymentTerms;
   if (!terms.id) throw new ApiError(409, "The provider gave no payment reference to book against");
   const envelope = buildRideConfirm({ ...rideBase(ride), customer: await riderOf(ride), payment: { collectedBy: "BPP", params: settlementParams(), tags: terms.tags, id: terms.id } });
@@ -343,20 +349,23 @@ export async function applyRideReply(cb: { action: string; body: Record<string, 
   if (cb.action === "on_init") {
     if (!answers("initialising")) return "ignored";
     const r = readRideOnInit(cb.body);
-    await prisma.ondcRide.update({
-      where: { id: ride.id },
-      data:
-        "problem" in r
-          ? { status: "quoted", problem: r.problem, awaitingMsgId: null }
-          : {
-              status: "ready",
-              quote: JSON.stringify(quoteOf(cb.body)),
-              farePaise: r.quote.totalPaise,
-              payment: JSON.stringify(r.payment),
-              cancellationTerms: r.cancellationTerms ? JSON.stringify(r.cancellationTerms) : null,
-              awaitingMsgId: null,
-            },
-    });
+    if ("problem" in r) {
+      await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "quoted", problem: r.problem, awaitingMsgId: null } });
+    } else {
+      const fareChanged = ride.farePaise != null && r.quote.totalPaise !== ride.farePaise;
+      await prisma.ondcRide.update({
+        where: { id: ride.id },
+        data: {
+          status: "ready",
+          quote: JSON.stringify(quoteOf(cb.body)),
+          farePaise: r.quote.totalPaise,
+          payment: JSON.stringify(r.payment),
+          cancellationTerms: r.cancellationTerms ? JSON.stringify(r.cancellationTerms) : null,
+          problem: fareChanged ? `Fare updated from ₹${ride.farePaise! / 100} to ₹${r.quote.totalPaise / 100}` : null,
+          awaitingMsgId: null,
+        },
+      });
+    }
     return "applied";
   }
 
@@ -386,10 +395,9 @@ export async function applyRideReply(cb: { action: string; body: Record<string, 
   // A fee quote, unless the provider took the first step as final and
   // cancelled outright: then the ride is cancelled, not waiting on the rider.
   if (cb.action === "on_cancel" && answers("cancel_quoting") && !providerCancelled) {
-    // The fee is the quote's total: charges, less the fare refunded.
     await prisma.ondcRide.update({
       where: { id: ride.id },
-      data: { status: "cancel_quoted", cancelFeePaise: r.quote?.totalPaise ?? 0, awaitingMsgId: null, sellerUpdatedAt: r.at ?? ride.sellerUpdatedAt },
+      data: { status: "cancel_quoted", cancelFeePaise: r.quote?.totalPaise ?? null, awaitingMsgId: null, sellerUpdatedAt: r.at ?? ride.sellerUpdatedAt },
     });
     return "applied";
   }

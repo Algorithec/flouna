@@ -49,6 +49,9 @@ ondcRidesRouter.use(async (req, res, next) => {
 });
 
 // Each search fans out to every ride provider on the network.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 5;
+const RATE_MAP_CAP = 10_000;
 const searchStamps = new Map<string, number[]>();
 const place = z
   .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), address: z.string().trim().min(3).max(200), area: z.string().trim().min(1).max(80) })
@@ -56,8 +59,9 @@ const place = z
 
 ondcRidesRouter.post("/", validateBody(z.object({ pickup: place, drop: place, city: z.string().trim().min(2).max(60).optional() }).strict()), async (req, res, next) => {
   const now = Date.now();
-  const stamps = (searchStamps.get(req.userId!) ?? []).filter((t) => now - t < 60_000);
-  if (stamps.length >= 5) return res.status(429).json({ error: "Too many ride searches, try again in a minute" });
+  const stamps = (searchStamps.get(req.userId!) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (stamps.length >= RATE_MAX) return res.status(429).json({ error: "Too many ride searches, try again in a minute" });
+  if (searchStamps.size > RATE_MAP_CAP) searchStamps.clear();
   searchStamps.set(req.userId!, [...stamps, now]);
   try {
     res.status(202).json(await startRideSearch(req.userId!, req.body));
