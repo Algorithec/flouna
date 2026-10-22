@@ -268,7 +268,7 @@ export async function initRide(userId: string, id: string, deps: RideDeps = {}) 
   const params = settlementParams();
   const customer = await riderOf(ride);
   const terms = JSON.parse(ride.payment ?? "{}") as RidePaymentTerms;
-  const envelope = buildRideInit({ ...rideBase(ride), customer, payment: { collectedBy: terms.collectedBy ?? "BPP", params, tags: terms.tags ?? [] } });
+  const envelope = buildRideInit({ ...rideBase(ride), customer, payment: { collectedBy: "BPP", params, tags: terms.tags ?? [] } });
   await sendStep(ride, "init", envelope, "initialising", deps, at(ride.bppUri!, "init"));
   return { rideId: ride.id };
 }
