@@ -266,7 +266,7 @@ describe("ordering food from an ONDC seller", () => {
     await reply("on_select", short, { txnId: order.txnId, messageId: r.last().envelope.context.message_id }).expect(200);
     const view = await ondcOrderView(c.userId, orderId);
     expect(view.status).toBe("unavailable");
-    expect(view.problem).toBe("Out of stock: id_ancc5_0_0");
+    expect(view.problem).toBe("Out of stock: Farmhouse Pizza");
   });
 
   it("cancels with the seller, and keeps the order when the seller refuses", async () => {
