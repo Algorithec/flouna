@@ -412,8 +412,10 @@ export default function PayPage({
               </p>
               <p className="text-[15px] font-bold">
                 {isFood
-                  ? `${d.etaMinutes ?? 30} to ${(d.etaMinutes ?? 30) + 15} minutes`
-                  : `${d.etaMinutes ?? 6} min away`}
+                  ? t("py.etaRange")
+                      .replace("{from}", String(d.etaMinutes ?? 30))
+                      .replace("{to}", String((d.etaMinutes ?? 30) + 15))
+                  : t("rd.minAway").replace("{n}", String(d.etaMinutes ?? 6))}
               </p>
             </div>
             <span className="flex items-center gap-1 rounded-pill bg-white/15 px-2 py-0.5 text-[10px] font-bold">
@@ -421,21 +423,17 @@ export default function PayPage({
             </span>
           </div>
 
-          {/* Delivery address (food) / trip (ride) */}
+          {/* Delivery address (food) / trip (ride). No Change link: the order
+              is placed, and the address book it led to only changes future
+              orders, so editing there never moved this delivery. */}
           {isFood && address && (
             <Card className="mt-3 w-full py-3">
               <div className="flex items-center gap-2.5">
                 <MapPin size={15} className="shrink-0 text-accent" />
-                <p className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                <p className="line-clamp-2 min-w-0 flex-1 text-[13px] text-ink">
                   <span className="font-semibold">{address.label}</span>, {address.line1},{" "}
                   {address.city}
                 </p>
-                <Link
-                  href="/profile/addresses"
-                  className="shrink-0 text-[12px] font-semibold text-accent hover:underline"
-                >
-                  {t("foodOrder.change")}
-                </Link>
               </div>
             </Card>
           )}
