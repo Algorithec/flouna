@@ -101,8 +101,14 @@ function PlaceSearch({
   const [open, setOpen] = useState(false);
   // One search session per use of this box; replaced once a place is chosen.
   const session = useRef(newSearchSession());
+  const input = useRef<HTMLInputElement>(null);
+  // The list opens only while the field has focus. A search that came back
+  // after the rider had moved on used to open it over the next field, where
+  // it stayed: nothing but choosing a place closed it.
+  const focused = useRef(false);
 
   useEffect(() => {
+    let current = true;
     const short = text.length < 2;
     const t = setTimeout(
       () => {
@@ -112,14 +118,18 @@ function PlaceSearch({
         }
         searchPlaces(text, { near, session: session.current })
           .then((found) => {
+            if (!current) return; // a later search has replaced this one
             setPlaces(found);
-            setOpen(true);
+            if (focused.current) setOpen(true);
           })
-          .catch(() => setPlaces([]));
+          .catch(() => current && setPlaces([]));
       },
       short ? 0 : 250,
     );
-    return () => clearTimeout(t);
+    return () => {
+      current = false;
+      clearTimeout(t);
+    };
   }, [text, near]);
 
   return (
@@ -134,7 +144,16 @@ function PlaceSearch({
             onSelect(null);
             setText(e.target.value);
           }}
-          onFocus={() => places.length > 0 && setOpen(true)}
+          ref={input}
+          onFocus={() => {
+            focused.current = true;
+            if (places.length > 0) setOpen(true);
+          }}
+          onBlur={() => {
+            focused.current = false;
+            setOpen(false);
+          }}
+          onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
           placeholder={label}
           className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-cocoa/50"
         />
@@ -145,9 +164,13 @@ function PlaceSearch({
           {places.map((p) => (
             <button
               key={suggestionKey(p)}
+              // Keeps the focus in the field, so its blur cannot close the
+              // list before this choice lands.
+              onPointerDown={(e) => e.preventDefault()}
               onClick={async () => {
                 setOpen(false);
                 setText("");
+                input.current?.blur();
                 // A Google suggestion has no coordinates until it is chosen.
                 const place = await resolvePlace(p, session.current);
                 session.current = newSearchSession();
