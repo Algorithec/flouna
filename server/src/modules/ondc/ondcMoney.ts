@@ -22,8 +22,9 @@ export const ondcOrderIdFrom = (gatewayId: string) => (gatewayId.startsWith("ond
 type Refund = { paise: number } | { review: string };
 
 /**
- * Records money owed back, once. A later call for the same order changes
- * nothing, so a seller repeating its cancellation cannot refund twice.
+ * Records money owed back. Idempotent against duplicate seller callbacks,
+ * but a concrete refund (cancellation) supersedes a pending review (bill
+ * reduction) so that a cancel-after-reduction doesn't silently drop money.
  */
 export async function owe(ondcOrderId: string, refund: Refund) {
   const data =
@@ -32,7 +33,13 @@ export async function owe(ondcOrderId: string, refund: Refund) {
         ? { refundPaise: refund.paise, refundStatus: "owed" }
         : { refundPaise: 0, refundStatus: "done" }
       : { refundStatus: "review", problem: refund.review };
-  await prisma.ondcOrder.updateMany({ where: { id: ondcOrderId, refundStatus: null, paidAt: { not: null } }, data });
+  const fresh = await prisma.ondcOrder.updateMany({ where: { id: ondcOrderId, refundStatus: null, paidAt: { not: null } }, data });
+  if (fresh.count === 0 && "paise" in refund && refund.paise > 0) {
+    await prisma.ondcOrder.updateMany({
+      where: { id: ondcOrderId, refundStatus: "review", paidAt: { not: null } },
+      data,
+    });
+  }
   await sendRefund(ondcOrderId);
 }
 
@@ -53,6 +60,10 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
   const claimed = await prisma.ondcOrder.updateMany({ where: { id: ondcOrderId, refundStatus: "owed" }, data: { refundStatus: "requested" } });
   if (claimed.count === 0) return;
   const order = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: ondcOrderId } });
+  if (order.refundPaise == null || order.refundPaise <= 0) {
+    await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done", refundRef: "zero_refund" } });
+    return;
+  }
   // Demo payments took no money, so there is nothing to send back.
   if (order.paymentRef?.startsWith("demo_") || (!cashfreeConfigured && !deps.refund)) {
     await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done", refundRef: "no_gateway" } });
@@ -61,8 +72,8 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
   try {
     const r = await (deps.refund ?? createCashfreeRefund)({
       orderId: gatewayOrderId(order.id),
-      refundId: `${gatewayOrderId(order.id)}_refund`,
-      amountRupees: order.refundPaise! / 100,
+      refundId: `${gatewayOrderId(order.id)}_refund_${order.refundPaise}`,
+      amountRupees: order.refundPaise / 100,
       note: "Refund for an ONDC order",
     });
     await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done", refundRef: String(r.cf_refund_id) } });
@@ -89,7 +100,8 @@ export async function recordPayout(ondcOrderId: string, completedAt: Date) {
   const terms = JSON.parse(order.payment) as PaymentTerms & { settlementWindow?: string; settlementBasis?: string };
   if (terms.collectedBy !== "BAP") return;
   const percent = Number(terms.finderFee ?? commercialTerms().finderFeePercent);
-  const fee = Math.round((order.totalPaise * (Number.isFinite(percent) ? percent : 0)) / 100);
+  const clampedPercent = Number.isFinite(percent) ? Math.min(Math.max(percent, 0), 100) : 0;
+  const fee = Math.round((order.totalPaise * clampedPercent) / 100);
   // The window is counted from delivery. A basis of return_window_expiry means
   // the seller expects it after its return window too, which the order does
   // not carry, so those are held for an operator to date.
