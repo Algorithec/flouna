@@ -104,6 +104,36 @@ describe("searching ONDC sellers", () => {
     expect((await ondcSearchResults(searchId, c.userId, new Date(Date.now() + 60_000))).status).toBe("complete");
   });
 
+  it("states our static terms on the search once they are published, and none before", async () => {
+    const c = await customer({ city: "New Delhi", lat: 28.5355, lng: 77.191 });
+    const sent: any[] = [];
+    const send = async (_url: string, _action: string, envelope: unknown) => {
+      sent.push(envelope);
+      return { ack: true, status: 200 };
+    };
+    await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send });
+    expect(sent[0].message.intent.tags).toBeUndefined();
+
+    process.env.ONDC_STATIC_TERMS_URL = "https://flouna.com/ondc/static_terms.pdf";
+    process.env.ONDC_STATIC_TERMS_EFFECTIVE_DATE = "2026-11-01";
+    try {
+      await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send });
+    } finally {
+      delete process.env.ONDC_STATIC_TERMS_URL;
+      delete process.env.ONDC_STATIC_TERMS_EFFECTIVE_DATE;
+    }
+    expect(sent[1].message.intent.tags).toEqual([
+      {
+        code: "bap_terms",
+        list: [
+          { code: "static_terms", value: "" },
+          { code: "static_terms_new", value: "https://flouna.com/ondc/static_terms.pdf" },
+          { code: "effective_date", value: "2026-11-01T00:00:00.000Z" },
+        ],
+      },
+    ]);
+  });
+
   it("lists the nearer store first", async () => {
     const c = await customer({ city: "New Delhi", lat: 28.5273, lng: 77.1821 });
     const started = (await startOndcSearch(c.userId, "pizza", { identity: ourIdentity, send: async () => ({ ack: true, status: 200 }) })) as { searchId: string };
