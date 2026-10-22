@@ -2,7 +2,9 @@
 node_modules/
 
 # builds
+.next/
 web/.next/
+web/web/
 server/dist/
 
 # env & secrets — never commit
