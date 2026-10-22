@@ -224,6 +224,13 @@ describe("cancelling a booked ride", () => {
     expect(await rideView(s.c.userId, s.rideId)).toMatchObject({ status: "cancelled", rideState: "RIDE_CANCELLED" });
   });
 
+  it("records the ride as cancelled when the provider cancels outright instead of quoting a fee", async () => {
+    const s = await booked();
+    await quoteRideCancel(s.c.userId, s.rideId, "002", s.r.deps);
+    await reply("on_cancel", fx("on_cancel_3"), { txnId: s.txnId, messageId: s.r.last().envelope.context.message_id, at: new Date("2026-10-22T08:02:00Z") }).expect(200);
+    expect(await rideView(s.c.userId, s.rideId)).toMatchObject({ status: "cancelled", cancelFeePaise: null });
+  });
+
   it("records a ride the provider cancels on its own", async () => {
     const s = await booked();
     await reply("on_update", fx("on_cancel_3"), { txnId: s.txnId, messageId: crypto.randomUUID(), at: new Date("2026-10-22T08:05:00Z") }).expect(200);
