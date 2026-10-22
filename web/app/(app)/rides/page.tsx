@@ -594,7 +594,7 @@ function RidesInner() {
       <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-0 lg:px-8 lg:pb-6">
         {/* Booking panel — mobile: floating bottom sheet; desktop: LEFT panel
             (Figma desktop places the location panel left of the map) */}
-        <div className="absolute inset-x-0 bottom-0 z-10 order-2 flex max-h-[58dvh] min-h-0 flex-col gap-3 overflow-y-auto rounded-t-[25px] bg-card px-4 py-5 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.18)] lg:static lg:order-1 lg:max-h-none lg:w-[420px] lg:flex-none lg:rounded-l-[18px] lg:rounded-tr-none lg:border lg:border-line lg:px-5 lg:shadow-card">
+        <div className="absolute inset-x-0 bottom-0 z-10 order-2 flex max-h-[58dvh] min-h-0 flex-col gap-3 overflow-y-auto rounded-t-[25px] bg-card px-4 pb-0 pt-5 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.18)] lg:static lg:order-1 lg:max-h-none lg:w-[420px] lg:flex-none lg:rounded-l-[18px] lg:rounded-tr-none lg:border lg:border-line lg:px-5 lg:shadow-card">
           <FadeIn y={8}>
             <div className="flex items-center justify-between">
               <h1 className="text-[17px] font-bold text-ink">
@@ -764,14 +764,14 @@ function RidesInner() {
                               <p className="text-[14px] font-bold text-ink">
                                 {q.displayName}
                               </p>
-                              <p className="mt-0.5 flex items-center gap-2 text-[12px] text-cocoa">
+                              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-cocoa">
                                 {seats && (
-                                  <span className="flex items-center gap-0.5">
+                                  <span className="flex items-center gap-0.5 whitespace-nowrap">
                                     <Users size={12} />{" "}
                                     {seats > 1 ? t("rd.seats").replace("{n}", String(seats)) : t("rd.seat")}
                                   </span>
                                 )}
-                                <span className="flex items-center gap-0.5">
+                                <span className="flex items-center gap-0.5 whitespace-nowrap">
                                   <Clock size={12} /> {q.pickupEtaMinutes} {t("track.minAway")}
                                 </span>
                                 <span className="flex items-center gap-0.5">
@@ -807,7 +807,10 @@ function RidesInner() {
 
           {error && <p className="text-[13px] text-danger">{error}</p>}
 
-          <div className="sticky bottom-0 mt-auto bg-card pb-1 pt-2">
+          {/* Pinned to the sheet's very bottom and edges, with the sheet's
+              padding inside it: a sticky footer stops above its scroller's
+              padding, and the fares scrolling by showed in that gap. */}
+          <div className="sticky bottom-0 -mx-4 mt-auto bg-card px-4 pb-5 pt-2 lg:-mx-5 lg:px-5">
             {/* Ride now vs schedule for later */}
             {pickup && drop && (
               <div className="mb-2 flex items-center gap-2">
@@ -841,7 +844,7 @@ function RidesInner() {
                     setScheduledAt(v ? new Date(v).toISOString() : null);
                   }}
                   className={cn(
-                    "flex-1 rounded-pill border px-3 py-1.5 text-[12px] font-medium outline-none transition-colors",
+                    "min-w-0 flex-1 rounded-pill border px-3 py-1.5 text-[12px] font-medium outline-none transition-colors",
                     scheduledAt
                       ? "border-accent bg-accent-soft/50 text-accent-ink"
                       : "border-line bg-card text-cocoa",
