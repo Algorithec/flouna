@@ -551,6 +551,10 @@ chatRouter.post(
           where: { id: sessionId, userId: req.userId! },
         }));
       if (sessionId && !session) throw new ApiError(404, "Chat not found");
+      // Writing in an archived chat makes it current again.
+      if (session && session.archivedAt) {
+        session = await prisma.chatSession.update({ where: { id: session.id }, data: { archivedAt: null } });
+      }
       if (!session) {
         session = await prisma.chatSession.create({
           data: {
@@ -677,15 +681,95 @@ chatRouter.post(
   },
 );
 
+const SESSION_SUMMARY = { id: true, title: true, updatedAt: true, pinnedAt: true, archivedAt: true } as const;
+
+// Recent chats: pinned ones first (most recently pinned on top), then the
+// latest twenty. ?archived=1 lists the archived ones instead.
 chatRouter.get("/sessions", async (req, res, next) => {
   try {
-    const sessions = await prisma.chatSession.findMany({
-      where: { userId: req.userId! },
-      orderBy: { updatedAt: "desc" },
-      take: 20,
-      select: { id: true, title: true, updatedAt: true },
+    const userId = req.userId!;
+    const toSummary = (s: { id: string; title: string | null; updatedAt: Date; pinnedAt: Date | null; archivedAt: Date | null }) => ({
+      id: s.id,
+      title: s.title,
+      updatedAt: s.updatedAt,
+      pinned: s.pinnedAt !== null,
+      archived: s.archivedAt !== null,
     });
-    res.json({ sessions });
+    if (req.query.archived === "1") {
+      const archived = await prisma.chatSession.findMany({
+        where: { userId, archivedAt: { not: null } },
+        orderBy: { archivedAt: "desc" },
+        take: 50,
+        select: SESSION_SUMMARY,
+      });
+      return res.json({ sessions: archived.map(toSummary) });
+    }
+    const [pinned, rest, archivedCount] = await Promise.all([
+      prisma.chatSession.findMany({
+        where: { userId, archivedAt: null, pinnedAt: { not: null } },
+        orderBy: { pinnedAt: "desc" },
+        take: 50,
+        select: SESSION_SUMMARY,
+      }),
+      prisma.chatSession.findMany({
+        where: { userId, archivedAt: null, pinnedAt: null },
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+        select: SESSION_SUMMARY,
+      }),
+      prisma.chatSession.count({ where: { userId, archivedAt: { not: null } } }),
+    ]);
+    res.json({ sessions: [...pinned, ...rest].map(toSummary), archivedCount });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Rename, pin or archive one of your own chats. Archiving also unpins, so an
+// unarchived chat comes back in its place among the recent ones.
+chatRouter.patch(
+  "/sessions/:id",
+  validateBody(
+    z
+      .object({
+        title: z.string().trim().min(1).max(80).optional(),
+        pinned: z.boolean().optional(),
+        archived: z.boolean().optional(),
+      })
+      .strict()
+      .refine((b) => Object.keys(b).length > 0, "Nothing to change"),
+  ),
+  async (req, res, next) => {
+    try {
+      const body = req.body as { title?: string; pinned?: boolean; archived?: boolean };
+      const now = new Date();
+      const data: { title?: string; pinnedAt?: Date | null; archivedAt?: Date | null } = {};
+      if (body.title !== undefined) data.title = body.title;
+      if (body.pinned !== undefined) data.pinnedAt = body.pinned ? now : null;
+      if (body.archived !== undefined) {
+        data.archivedAt = body.archived ? now : null;
+        if (body.archived) data.pinnedAt = null;
+      }
+      // updateMany with the owner in the filter: someone else's chat id
+      // behaves exactly like one that does not exist.
+      const done = await prisma.chatSession.updateMany({ where: { id: req.params.id!, userId: req.userId! }, data });
+      if (done.count === 0) throw new ApiError(404, "Chat not found");
+      const session = await prisma.chatSession.findUniqueOrThrow({ where: { id: req.params.id! }, select: SESSION_SUMMARY });
+      res.json({
+        session: { id: session.id, title: session.title, pinned: session.pinnedAt !== null, archived: session.archivedAt !== null },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Deletes one of your own chats and every message in it, for good.
+chatRouter.delete("/sessions/:id", async (req, res, next) => {
+  try {
+    const done = await prisma.chatSession.deleteMany({ where: { id: req.params.id!, userId: req.userId! } });
+    if (done.count === 0) throw new ApiError(404, "Chat not found");
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

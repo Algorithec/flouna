@@ -30,6 +30,8 @@ const TRANSLATED = [
   "app/(app)/profile/help/chat/[id]/page.tsx",
   "app/(app)/profile/help/topics/[slug]/page.tsx",
   "components/security/AppLock.tsx",
+  "components/layout/RecentChats.tsx",
+  "components/support/ReportProblem.tsx",
   "components/chat/inline/InlinePayment.tsx",
   "components/chat/RecommendationCards.tsx",
   "components/chat/OndcSellers.tsx",

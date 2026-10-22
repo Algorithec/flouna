@@ -10,6 +10,9 @@ export const TICKET_CATEGORIES = [
   "payment",
   "refund",
   "account",
+  // A report of something in the app not working, raised from "Report a
+  // technical problem" (shake the phone, or Help). Not for abuse or orders.
+  "technical",
   "other",
 ] as const;
 /**
@@ -26,6 +29,7 @@ const SLA_ROW: Record<string, string> = {
   payment: "payment",
   refund: "refund",
   account: "account",
+  technical: "general",
   other: "general",
 };
 

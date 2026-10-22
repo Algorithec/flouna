@@ -894,6 +894,10 @@ model ChatSession {
   // confirmation. Kept as explicit state rather than re-read from the
   // transcript, so "add that too" means exactly one thing.
   agentState String?
+  // Set from the chat's menu in the sidebar. A pinned chat is listed first; an
+  // archived one leaves the recent list until it is unarchived or written in.
+  pinnedAt   DateTime?
+  archivedAt DateTime?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   messages  ChatMessage[]
