@@ -6,10 +6,11 @@ import type { Server } from "node:http";
  *
  * The web app reaches the API through its own proxy (the /api rewrites in
  * next.config.ts), and that proxy uses Node's shared connection pool, which
- * keeps idle connections for 5 seconds. Node's server also closes idle ones
- * after 5 seconds by default. With both at 5 seconds, a request can go out on
- * a connection at the instant the API closes it: the proxy gets ECONNRESET
- * and the customer gets a 500 for a request the API never saw.
+ * keeps idle connections for 5 seconds. Node's server closes idle ones after
+ * 5 seconds by default (Node 24 adds a second's grace, so about 6). That
+ * margin is too thin: when the web server is busy its 5 second cleanup runs
+ * late, a request goes out on a connection the API has just closed, the proxy
+ * gets ECONNRESET and the customer gets a 500 for a request the API never saw.
  *
  * Keeping idle connections well past the pool's 5 seconds means the proxy is
  * always the one to close first. Headers wait a little longer still, as Node
