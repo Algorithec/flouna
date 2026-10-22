@@ -481,6 +481,14 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
   });
   if (r.sellerState === "Cancelled" && order.paidPaise) {
     await owe(order.id, refundAfterCancel({ paidPaise: order.paidPaise, cancelledBySeller: r.cancelledBy === order.bppId, finalTotalPaise: r.quote?.totalPaise }));
+  } else if (order.paidPaise && r.quote && r.quote.totalPaise < order.paidPaise) {
+    // The seller cut the bill on an order it is still fulfilling (it could
+    // not supply an item, say). The customer is owed the difference. Several
+    // such cuts can come on one order, each needing its own refund, so for
+    // now this goes to a person with both amounts rather than move money.
+    await owe(order.id, {
+      review: `The seller reduced the bill from ${order.paidPaise / 100} to ${r.quote.totalPaise / 100} rupees; refund the difference`,
+    });
   }
   if (r.sellerState === "Completed") await recordPayout(order.id, order.completedAt ?? r.at ?? new Date());
   return "applied";
