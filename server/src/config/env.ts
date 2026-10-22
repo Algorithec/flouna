@@ -142,6 +142,10 @@ const envSchema = z.object({
   // The unique key id ONDC issued with the signing key above. Together they
   // identify us on every signed message and registry lookup.
   ONDC_UNIQUE_KEY_ID: z.string().optional(),
+  // Network Observability tokens from the ONDC portal, one per business
+  // profile. Unset, nothing is logged to ONDC for that profile.
+  ONDC_NO_TOKEN_RETAIL: z.string().optional(),
+  ONDC_NO_TOKEN_RIDE: z.string().optional(),
   // Whether chat searches ONDC sellers alongside its own picks. Off by
   // default: while registered on pre-production the sellers that answer are
   // test stores, which real customers must not be offered.
