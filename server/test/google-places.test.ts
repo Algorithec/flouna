@@ -94,6 +94,19 @@ describe("searching for a place", () => {
 });
 
 describe("looking up the place that was picked", () => {
+  it("keeps an address that does not repeat the name", async () => {
+    fakeGoogle(() =>
+      json({
+        displayName: { text: "Inorbit Mall" },
+        formattedAddress: "Mindspace, Hitec City, Hyderabad",
+        location: { latitude: 17.4344, longitude: 78.3866 },
+      }),
+    );
+    const { agent } = await authedAgent();
+    const res = await agent.get(`/api/rides/place?id=${PLACE_ID}&session=${SESSION}`).expect(200);
+    expect(res.body.place.area).toBe("Mindspace, Hitec City, Hyderabad");
+  });
+
   it("returns its coordinates, asking only for the fields used", async () => {
     const seen = fakeGoogle(() =>
       json({
@@ -107,7 +120,8 @@ describe("looking up the place that was picked", () => {
 
     expect(res.body.place).toEqual({
       name: "Hitech City",
-      area: "Hitech City, Hyderabad, Telangana",
+      // Not "Hitech City, Hyderabad, Telangana": the name is shown beside it.
+      area: "Hyderabad, Telangana",
       lat: 17.4435,
       lng: 78.3772,
     });

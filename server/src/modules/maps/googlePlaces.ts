@@ -108,9 +108,18 @@ export async function googlePlaceDetails(
     const lat = d.location?.latitude;
     const lng = d.location?.longitude;
     if (typeof lat !== "number" || typeof lng !== "number") return null;
+    const name = d.displayName?.text ?? d.formattedAddress ?? "Selected place";
+    const address = d.formattedAddress ?? "";
     return {
-      name: d.displayName?.text ?? d.formattedAddress ?? "Selected place",
-      area: d.formattedAddress ?? "",
+      name,
+      // Google's address usually opens with the place's own name, which the
+      // rider then read twice: "Gachibowli, Gachibowli, Hyderabad".
+      area:
+        address === name
+          ? ""
+          : address.startsWith(`${name}, `)
+            ? address.slice(name.length + 2)
+            : address,
       lat,
       lng,
     };
