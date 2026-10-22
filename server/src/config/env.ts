@@ -142,6 +142,10 @@ const envSchema = z.object({
   // The unique key id ONDC issued with the signing key above. Together they
   // identify us on every signed message and registry lookup.
   ONDC_UNIQUE_KEY_ID: z.string().optional(),
+  // Network Observability tokens from the ONDC portal, one per business
+  // profile. Unset, nothing is logged to ONDC for that profile.
+  ONDC_NO_TOKEN_RETAIL: z.string().optional(),
+  ONDC_NO_TOKEN_RIDE: z.string().optional(),
   // Whether chat searches ONDC sellers alongside its own picks. Off by
   // default: while registered on pre-production the sellers that answer are
   // test stores, which real customers must not be offered.
@@ -165,6 +169,8 @@ const envSchema = z.object({
   ONDC_SETTLEMENT_UPI: z.string().optional(),
   ONDC_SETTLEMENT_BENEFICIARY: z.string().optional(),
   ONDC_STATIC_TERMS_URL: z.string().optional(),
+  ONDC_STATIC_TERMS_EFFECTIVE_DATE: z.string().optional(), // YYYY-MM-DD, set with ONDC_STATIC_TERMS_URL
+  ONDC_BAP_GSTIN: z.string().optional(), // Algorithec's GSTIN, carried on every food confirm
 
   // ₹50/month premium tier. Reuses the Cashfree gateway for the recurring
   // charge; falls back to a simulated activation in dev when unset.
