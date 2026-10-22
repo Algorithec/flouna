@@ -30,6 +30,7 @@ import {
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
 import { auditFromReq } from "./audit.service.js";
+import { markPayoutPaid, payoutsDue, refundsNeedingAttention, resolveRefund } from "../ondc/ondcMoney.js";
 import {
   searchUsers,
   getUserDetail,
@@ -222,6 +223,58 @@ adminRouter.post("/orders/:id/flag-refund", async (req, res, next) => {
     next(err);
   }
 });
+
+// --- ONDC money: payouts to seller apps, refunds needing a person ---------
+// Recording a payout moves no money: the operator has already sent the
+// transfer from the bank and records its reference here, once.
+adminRouter.get("/ondc/payouts", async (_req, res, next) => {
+  try {
+    res.json({ payouts: await payoutsDue() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post(
+  "/ondc/payouts/:id/paid",
+  validateBody(z.object({ utr: z.string().trim().min(6).max(40).regex(/^[A-Za-z0-9]+$/) }).strict()),
+  async (req, res, next) => {
+    try {
+      if (!(await markPayoutPaid(req.params.id!, req.userId!, req.body.utr))) return res.status(409).json({ error: "This payout is not waiting to be paid" });
+      await auditFromReq(req, { action: "ondc.payout_paid", targetType: "ondc_payout", targetId: req.params.id!, summary: `Recorded ONDC payout as paid (UTR ${req.body.utr})` });
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+adminRouter.get("/ondc/refunds", async (_req, res, next) => {
+  try {
+    res.json({ refunds: await refundsNeedingAttention() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post(
+  "/ondc/orders/:id/refund",
+  validateBody(z.union([z.object({ paise: z.number().int().min(0) }).strict(), z.object({ retry: z.literal(true) }).strict()])),
+  async (req, res, next) => {
+    try {
+      if (!(await resolveRefund(req.params.id!, req.body))) return res.status(409).json({ error: "This refund cannot be changed that way" });
+      await auditFromReq(req, {
+        action: "ondc.refund_resolved",
+        targetType: "ondc_order",
+        targetId: req.params.id!,
+        summary: "retry" in req.body ? "Retried a failed ONDC refund" : `Set ONDC refund to ${req.body.paise} paise`,
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // --- Support tickets -----------------------------------------------------
 // --- ONDC: which version of our static terms each seller app accepted ------

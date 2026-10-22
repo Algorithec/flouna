@@ -6,15 +6,17 @@ import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { BUYER_CANCEL_REASONS, type BuyerCancelReason } from "./retail.js";
 import { ondcSearchFor } from "./search.service.js";
+import { settleOndcPayment, startOndcPayment, verifyOndcPayment } from "./ondcPay.service.js";
+import { gatewayOrderId } from "./ondcMoney.js";
 import {
   cancelOndcOrder,
   confirmOndcOrder,
   initOndcOrder,
-  markOndcOrderPaid,
   ondcOrderView,
   refreshOndcOrder,
   startOndcOrder,
   trackOndcOrder,
+  dishOptions,
 } from "./orders.service.js";
 
 // The customer's food orders with ONDC sellers. Each step answers at once and
@@ -46,7 +48,7 @@ const lines = z
         itemId: z.string().min(1).max(120),
         count: z.number().int().min(1).max(20),
         parentItemId: z.string().min(1).max(120).optional(),
-        customizations: z.array(z.object({ itemId: z.string().min(1).max(120), groupId: z.string().min(1).max(120) }).strict()).max(20).optional(),
+        customizations: z.array(z.object({ itemId: z.string().min(1).max(120), groupId: z.string().min(1).max(120).optional() }).strict()).max(20).optional(),
       })
       .strict(),
   )
@@ -72,6 +74,23 @@ ondcOrdersRouter.post("/", validateBody(startBody), async (req, res, next) => {
   }
 });
 
+// A dish's options, from the catalogue its seller sent for this search.
+const optionsQuery = z.object({
+  searchId: z.string().uuid(),
+  bppId: z.string().min(1).max(255),
+  providerId: z.string().min(1).max(255),
+  itemId: z.string().min(1).max(120),
+});
+ondcOrdersRouter.get("/options", async (req, res, next) => {
+  try {
+    const q = optionsQuery.safeParse(req.query);
+    if (!q.success) return res.status(400).json({ error: "searchId, bppId, providerId and itemId are needed" });
+    res.json({ options: await dishOptions(req.userId!, q.data.searchId, q.data.bppId, q.data.providerId, q.data.itemId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 ondcOrdersRouter.get("/:id", async (req, res, next) => {
   try {
     if (!id.safeParse(req.params.id).success) return res.status(404).json({ error: "Order not found" });
@@ -90,17 +109,34 @@ ondcOrdersRouter.post("/:id/init", async (req, res, next) => {
   }
 });
 
-// Paying. Real collection goes through the payment gateway, whose webhook
-// calls markOndcOrderPaid; that is not connected for ONDC orders yet, so
-// outside development this refuses rather than pretend money was taken.
+// Paying. Flouna collects through Cashfree: this hands back a payment
+// session for the seller's final total, and the order is placed with the
+// seller when the gateway confirms the money (webhook or /verify). Demo mode
+// outside production settles at once without a gateway, as the rest of the
+// app's demo payments do.
 ondcOrdersRouter.post("/:id/pay", async (req, res, next) => {
   try {
     if (!id.safeParse(req.params.id).success) return res.status(404).json({ error: "Order not found" });
-    if (isProd || !env.DEMO_PAYMENTS) return res.status(501).json({ error: "Online payment for ONDC orders is not connected yet" });
-    const view = await ondcOrderView(req.userId!, req.params.id!);
-    if (view.totalPaise == null) return res.status(409).json({ error: "This order has no total to pay yet" });
-    await markOndcOrderPaid(view.id, { amountPaise: view.totalPaise, reference: `demo_${crypto.randomUUID()}` });
-    res.json(await ondcOrderView(req.userId!, view.id));
+    if (env.DEMO_PAYMENTS && !isProd) {
+      const view = await ondcOrderView(req.userId!, req.params.id!);
+      if (view.totalPaise == null) return res.status(409).json({ error: "This order has no total to pay yet" });
+      // Settled the way a gateway payment is, so the order is placed with
+      // the seller straight after, exactly as it would be live.
+      await settleOndcPayment(gatewayOrderId(view.id), view.totalPaise, `demo_${crypto.randomUUID()}`);
+      return res.json({ mode: "demo", order: await ondcOrderView(req.userId!, view.id) });
+    }
+    res.json({ mode: "cashfree", ...(await startOndcPayment(req.userId!, req.params.id!)) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// The customer is back from the gateway: whether they paid is asked of the
+// gateway, never taken from the browser.
+ondcOrdersRouter.post("/:id/verify", async (req, res, next) => {
+  try {
+    if (!id.safeParse(req.params.id).success) return res.status(404).json({ error: "Order not found" });
+    res.json(await verifyOndcPayment(req.userId!, req.params.id!));
   } catch (err) {
     next(err);
   }
