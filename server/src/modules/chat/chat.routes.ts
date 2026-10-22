@@ -35,6 +35,7 @@ import { readWithConfidence } from "./llm/demo.js";
 import { env } from "../../config/env.js";
 import { ondcSearchFor, startOndcSearch } from "../ondc/search.service.js";
 import { EMPTY_STATE, handleInstruction, handleModelAction, loadState, rememberRecommendation, saveState } from "../agent/index.js";
+import { logAgentAction } from "../agent/audit.js";
 import { rideContextSchema, type RideContext } from "../agent/state.js";
 
 // Paise → "₹123" for chat copy.
@@ -580,6 +581,7 @@ chatRouter.post(
             provider: "agent",
           },
         });
+        logAgentAction({ userId: req.userId!, sessionId: session.id, messageId: saved.id, outcome: done, request: done.action });
         return res.json({
           sessionId: session.id,
           message: {
@@ -614,6 +616,7 @@ chatRouter.post(
             providerDepth: payload.served?.depth ?? null,
           },
         });
+        logAgentAction({ userId: req.userId!, sessionId: session.id, messageId: saved.id, outcome: acted, request: payload.intent.action });
         return res.json({
           sessionId: session.id,
           message: { id: saved.id, role: "assistant", content: acted.reply, at: saved.createdAt.toISOString(), domain: "action", action: acted.action, recommendation: null },
