@@ -193,6 +193,26 @@ describe("refunding a paid ONDC order", () => {
   });
 });
 
+describe("a seller cutting the bill on a paid order", () => {
+  it("puts the difference in front of a person, and moves no money on its own", async () => {
+    const o = await paidAndPlaced();
+    const cut = fx("on_status_pending");
+    // The seller could not supply the chicken topping (Rs 95): the bill drops to Rs 380.
+    const q = cut.message.order.quote;
+    const chicken = q.breakup.find((l: { title: string }) => l.title === "Pepper Barbeque Chicken");
+    chicken.price.value = "0.00";
+    q.price.value = "380.00";
+    await reply("on_update", cut, { txnId: o.txnId, messageId: crypto.randomUUID(), at: new Date("2026-10-21T10:05:00Z") }).expect(200);
+    const view = await ondcOrderView(o.c.userId, o.orderId);
+    expect(view.refund).toMatchObject({ status: "review" });
+    expect(view.problem).toMatch(/from 475 to 380 rupees/);
+    expect(gateway.createCashfreeRefund).not.toHaveBeenCalled();
+    // The operator refunds exactly the difference.
+    expect(await resolveRefund(o.orderId, { paise: 9500 })).toBe(true);
+    expect(gateway.createCashfreeRefund).toHaveBeenCalledWith(expect.objectContaining({ amountRupees: 95 }));
+  });
+});
+
 describe("paying the seller app", () => {
   it("records what is owed once the order is delivered: the total less the finder fee, after the window", async () => {
     const confirmed = fx("on_confirm");
