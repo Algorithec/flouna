@@ -5,7 +5,7 @@ import { env } from "../src/config/env.js";
 import { prisma } from "../src/lib/prisma.js";
 import { cancelOndcOrder, initOndcOrder, ondcOrderView } from "../src/modules/ondc/orders.service.js";
 import { settleOndcPayment, startOndcPayment, verifyOndcPayment } from "../src/modules/ondc/ondcPay.service.js";
-import { durationMs, markPayoutPaid, refundAfterCancel, resolveRefund } from "../src/modules/ondc/ondcMoney.js";
+import { durationMs, markPayoutPaid, refundAfterCancel, refundsNeedingAttention, resolveRefund } from "../src/modules/ondc/ondcMoney.js";
 import { app } from "./helpers.js";
 import { customerWithSearch, fx, recorder, reply, SELLER, startPizza } from "./ondc-order-helpers.js";
 
@@ -175,6 +175,15 @@ describe("refunding a paid ONDC order", () => {
     expect(refundAfterCancel({ paidPaise: 47500, cancelledBySeller: true, finalTotalPaise: 8000 })).toEqual({ paise: 47500 });
     expect(refundAfterCancel({ paidPaise: 47500, cancelledBySeller: false })).toEqual({ review: expect.stringMatching(/without a final bill/) });
     expect(refundAfterCancel({ paidPaise: 47500, cancelledBySeller: false, finalTotalPaise: 50000 })).toEqual({ review: expect.stringMatching(/more than was paid/) });
+  });
+
+  it("puts a refund that never heard back from the gateway in front of a person", async () => {
+    const o = await paidAndPlaced();
+    // As if the server stopped after claiming the refund and before the gateway answered.
+    await prisma.ondcOrder.update({ where: { id: o.orderId }, data: { refundStatus: "requested", refundPaise: 47500 } });
+    const ids = async (at: Date) => (await refundsNeedingAttention(at)).map((r) => r.id);
+    expect(await ids(new Date())).not.toContain(o.orderId);
+    expect(await ids(new Date(Date.now() + 16 * 60_000))).toContain(o.orderId);
   });
 
   it("lets an operator settle a held refund only up to what was paid", async () => {
