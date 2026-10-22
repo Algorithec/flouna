@@ -133,6 +133,9 @@ export type StartInput = {
  */
 export async function startOndcOrder(userId: string, input: StartInput, deps: OrderDeps = {}) {
   if (input.lines.length === 0 || input.lines.length > 30) throw new ApiError(400, "An order needs between 1 and 30 items");
+  // Every confirm carries Algorithec's GSTIN. Without it an order could be
+  // priced and paid for and then never placed, so none is started.
+  if (!commercialTerms().gstin) throw new ApiError(503, "Food ordering on ONDC is not set up on this deployment yet");
   const results = await ondcSearchResults(input.searchId, userId);
   const fromSeller = results.offers.filter(
     (o) => o.seller.bppId === input.bppId && o.seller.providerId === input.providerId && o.seller.locationId === input.locationId,
@@ -248,6 +251,8 @@ export async function confirmOndcOrder(userId: string, id: string, deps: OrderDe
   const b = await billingFor(order);
   const quote = JSON.parse(order.quote!) as unknown;
   const terms = JSON.parse(order.payment!) as PaymentTerms;
+  const commercial = commercialTerms();
+  if (!commercial.gstin) throw new ApiError(503, "Food ordering on ONDC is not set up on this deployment yet");
   const envelope = buildConfirm({
     transactionId: order.txnId,
     city: order.city,
@@ -265,9 +270,10 @@ export async function confirmOndcOrder(userId: string, id: string, deps: OrderDe
       amountPaise: order.totalPaise!,
       gatewayTransactionId: order.paymentRef ?? undefined,
       paid: Boolean(order.paidAt),
-      finderFeePercent: commercialTerms().finderFeePercent,
+      finderFeePercent: commercial.finderFeePercent,
       settlementDetails: terms.settlementDetails,
     },
+    terms: { seller: terms.sellerTerms ?? [], buyerGstin: commercial.gstin },
   });
   await sendStep(order, "confirm", envelope, "confirming", deps);
   return { orderId: order.id };

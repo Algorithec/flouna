@@ -47,7 +47,17 @@ const finderFee = (percent: number) => ({
     : percent.toFixed(2),
 });
 
-/** Asks the network what is available, optionally for a named dish, delivered to a point. */
+/** Our published static terms: where they are and from when they apply. */
+export type StaticTerms = { url: string; effectiveDate: string };
+
+/**
+ * Asks the network what is available, optionally for a named dish, delivered to a point.
+ *
+ * With our static terms, the search states them (bap_terms), so every seller
+ * that answers has been shown the terms it transacts under. static_terms is
+ * the version being replaced and stays empty until a second version replaces
+ * the first; static_terms_new is the version in force from effective_date.
+ */
 export function buildSearch(o: {
   transactionId: string;
   city: string;
@@ -55,6 +65,7 @@ export function buildSearch(o: {
   query?: string;
   gps?: string;
   areaCode?: string;
+  staticTerms?: StaticTerms | null;
 }) {
   return {
     context: buildContext({ domain: DOMAIN, action: "search", city: o.city, transactionId: o.transactionId }),
@@ -68,6 +79,20 @@ export function buildSearch(o: {
             : {}),
         },
         payment: finderFee(o.finderFeePercent),
+        ...(o.staticTerms
+          ? {
+              tags: [
+                {
+                  code: "bap_terms",
+                  list: [
+                    { code: "static_terms", value: "" },
+                    { code: "static_terms_new", value: o.staticTerms.url },
+                    { code: "effective_date", value: o.staticTerms.effectiveDate },
+                  ],
+                },
+              ],
+            }
+          : {}),
       },
     },
   };
@@ -82,8 +107,15 @@ export type CartLine = {
   customizations?: { itemId: string; groupId: string }[];
 };
 
-function wireItems(lines: CartLine[], locationId: string) {
+/**
+ * The cart as items on the wire. From init on, each item names the fulfillment
+ * it goes out with (the one the seller offered in on_select): ONDC's retail
+ * schema requires it there, and the certified flows send it on every item,
+ * add-ons included.
+ */
+function wireItems(lines: CartLine[], locationId: string, fulfillmentId?: string) {
   if (lines.length === 0) throw new Error("An ONDC order needs at least one item");
+  const fulfillment = fulfillmentId ? { fulfillment_id: fulfillmentId } : {};
   for (const l of lines) {
     if (!Number.isSafeInteger(l.count) || l.count < 1) throw new Error(`Item ${l.itemId} has a count of ${l.count}`);
     // A seller ties an add-on to its dish through parent_item_id. Without it
@@ -97,6 +129,7 @@ function wireItems(lines: CartLine[], locationId: string) {
       id: l.itemId,
       quantity: { count: l.count },
       location_id: locationId,
+      ...fulfillment,
       ...(l.parentItemId ? { parent_item_id: l.parentItemId } : {}),
       tags: [{ code: "type", list: [{ code: "type", value: "item" }] }],
     },
@@ -104,6 +137,7 @@ function wireItems(lines: CartLine[], locationId: string) {
       id: c.itemId,
       quantity: { count: l.count },
       location_id: locationId,
+      ...fulfillment,
       ...(l.parentItemId ? { parent_item_id: l.parentItemId } : {}),
       tags: [
         { code: "type", list: [{ code: "type", value: "customization" }] },
@@ -152,7 +186,7 @@ export function buildInit(o: OrderBase & { billing: { name: string; phone: strin
     message: {
       order: {
         provider: { id: o.providerId, locations: [{ id: o.locationId }] },
-        items: wireItems(o.lines, o.locationId),
+        items: wireItems(o.lines, o.locationId, o.delivery.fulfillmentId),
         billing: {
           name: o.billing.name,
           phone: o.billing.phone,
@@ -178,12 +212,20 @@ export function buildInit(o: OrderBase & { billing: { name: string; phone: strin
 
 export type SettlementDetail = Record<string, string>;
 
+/** A tag's list as ONDC sends it, e.g. the seller's bpp_terms from on_init. */
+export type TermsList = { code: string; value: string }[];
+
+/** The shape of a GSTIN, as ONDC's retail log validator checks it. */
+export const GSTIN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
 /**
  * Places the order on the terms the seller returned in on_init.
  *
- * `quote` and the seller's settlement details are echoed back exactly as the
- * seller sent them: confirming is agreeing to those terms, and altering either
- * on the way back would be agreeing to something the seller never offered.
+ * `quote`, the seller's settlement details and the seller's terms (bpp_terms)
+ * are echoed back exactly as the seller sent them: confirming is agreeing to
+ * those terms, and altering any of them on the way back would be agreeing to
+ * something the seller never offered. Our own terms (bap_terms) carry
+ * Algorithec's GSTIN, which the seller needs to invoice the finder fee.
  *
  * Who collects the money is a business decision, not a protocol one. "BAP"
  * means Flouna takes the payment and owes the seller its share (the settlement
@@ -204,18 +246,25 @@ export function buildConfirm(
       finderFeePercent: number;
       settlementDetails: SettlementDetail[];
     };
+    terms: { seller: TermsList; buyerGstin: string };
+    now?: Date;
   },
 ) {
   checkConfirmPayment(o.quote, o.payment);
+  checkConfirmTerms(o.terms);
+  // Billing keeps the time it was given in init, which confirm must repeat.
+  // The order itself is created now: ONDC checks its created_at and
+  // updated_at against this message's own timestamp, as certified flows send.
   const at = o.billing.at.toISOString();
+  const now = o.now ?? new Date();
   return {
-    context: buildContext({ domain: DOMAIN, action: "confirm", city: o.city, transactionId: o.transactionId, bppId: o.bpp.id, bppUri: o.bpp.uri }),
+    context: buildContext({ domain: DOMAIN, action: "confirm", city: o.city, transactionId: o.transactionId, bppId: o.bpp.id, bppUri: o.bpp.uri, now }),
     message: {
       order: {
         id: o.orderId,
         state: "Created",
         provider: { id: o.providerId, locations: [{ id: o.locationId }] },
-        items: wireItems(o.lines, o.locationId),
+        items: wireItems(o.lines, o.locationId, o.delivery.fulfillmentId),
         billing: {
           name: o.billing.name,
           phone: o.billing.phone,
@@ -250,11 +299,32 @@ export function buildConfirm(
           ...finderFee(o.payment.finderFeePercent),
           "@ondc/org/settlement_details": o.payment.settlementDetails,
         },
-        created_at: at,
-        updated_at: at,
+        tags: [
+          // A seller that stated no terms gets none echoed: we cannot agree to
+          // terms on its behalf.
+          ...(o.terms.seller.length ? [{ code: "bpp_terms", list: o.terms.seller }] : []),
+          { code: "bap_terms", list: [{ code: "tax_number", value: o.terms.buyerGstin }] },
+        ],
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
       },
     },
   };
+}
+
+/**
+ * Our GSTIN must be one, and must not be the seller's: ONDC's validator
+ * refuses a confirm whose two tax numbers are the same, and a seller invoicing
+ * itself for our fee would be a mix-up worth stopping before it is sent.
+ */
+function checkConfirmTerms(t: { seller: TermsList; buyerGstin: string }) {
+  if (!GSTIN.test(t.buyerGstin)) throw new Error(`Our GSTIN is not a GSTIN: ${t.buyerGstin}`);
+  for (const e of t.seller) {
+    if (typeof e?.code !== "string" || typeof e?.value !== "string") throw new Error("The seller's terms have an entry that is not a code and value");
+  }
+  if (t.seller.some((e) => e.code === "tax_number" && e.value === t.buyerGstin)) {
+    throw new Error("The seller's GSTIN is the same as ours");
+  }
 }
 
 /**
