@@ -105,7 +105,12 @@ export function readOnSelect(body: unknown): SelectReply {
   const quote = readQuote(order.quote);
   if ("problem" in quote) return { problem: refused ?? quote.problem };
   const fulfillments = readFulfillments(order);
-  const fulfillment = fulfillments.find((f) => f.serviceable);
+  // Every item is sent from init on with the fulfillment the seller gave it
+  // here, and ONDC checks the two match. One delivery per order is what we
+  // send, so a seller splitting the cart across fulfillments is said plainly.
+  const assigned = new Set(arr(order.items).map((i) => str(obj(i).fulfillment_id)).filter((s): s is string => Boolean(s)));
+  if (assigned.size > 1) return { problem: refused ?? "The store would deliver this order in parts, which is not supported yet" };
+  const fulfillment = fulfillments.find((f) => f.serviceable && (assigned.size === 0 || assigned.has(f.id)));
   if (!fulfillment) return { problem: refused ?? "The store cannot deliver to this address" };
   // An item the seller cannot supply is marked in the breakup with an
   // available count of 0 (and error 40002 on the reply). The rest of the
@@ -124,6 +129,11 @@ export type PaymentTerms = {
   collectedBy: "BAP" | "BPP";
   finderFee?: string;
   settlementDetails: Record<string, string>[];
+  /**
+   * The seller's terms (bpp_terms) as it stated them, echoed in confirm.
+   * Absent on orders priced before they were kept.
+   */
+  sellerTerms?: { code: string; value: string }[];
 };
 
 export type InitReply = { quote: Quote; payment: PaymentTerms; raw: { quote: unknown } } | { problem: string };
@@ -144,9 +154,15 @@ export function readOnInit(body: unknown): InitReply {
   if (collectedBy === "BAP" && settlementDetails.length === 0) {
     return { problem: "The seller did not say where to send its share of the payment" };
   }
+  // Kept exactly, entry for entry, so confirm agrees to what was stated.
+  const bppTerms = arr(order.tags).map(obj).find((t) => str(t.code) === "bpp_terms");
+  const sellerTerms = arr(bppTerms?.list)
+    .map(obj)
+    .filter((e) => typeof e.code === "string" && typeof e.value === "string")
+    .map((e) => ({ code: e.code as string, value: e.value as string }));
   return {
     quote,
-    payment: { collectedBy, finderFee: str(p["@ondc/org/buyer_app_finder_fee_amount"]), settlementDetails },
+    payment: { collectedBy, finderFee: str(p["@ondc/org/buyer_app_finder_fee_amount"]), settlementDetails, sellerTerms },
     raw: { quote: order.quote },
   };
 }
