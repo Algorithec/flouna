@@ -59,7 +59,7 @@ declare global {
 
 const SDK_URL = "https://sdk.cashfree.com/js/v3/cashfree.js";
 
-function loadCashfreeSdk(): Promise<void> {
+export function loadCashfreeSdk(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (window.Cashfree) return resolve();
     const s = document.createElement("script");

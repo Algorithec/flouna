@@ -110,6 +110,8 @@ describe("paying for an ONDC order", () => {
     // Placing it with the seller needs this deployment's ONDC identity, which
     // tests do not have: it stays paid, to be placed on retry.
     expect(order.status).toBe("paid");
+    // And says so, which is what offers the customer "Place order again".
+    expect(order.problem).toMatch(/could not be reached/);
     await webhook(o.gid, 475).expect(200);
     expect(gateway.createCashfreeRefund).not.toHaveBeenCalled();
     // A forged webhook changes nothing.

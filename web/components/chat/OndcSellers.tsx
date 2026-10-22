@@ -8,6 +8,7 @@
 // appear as they reply, each with who they are and where.
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, MapPin, Store } from "lucide-react";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
@@ -43,7 +44,34 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
   const { t } = useI18n();
   const [results, setResults] = useState<Results | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [starting, setStarting] = useState<string | null>(null);
+  const [startFailed, setStartFailed] = useState<string | null>(null);
+  const router = useRouter();
   const searchId = "searchId" in ondc ? ondc.searchId : null;
+
+  // One dish from one store: the seller prices it for this address, and the
+  // order screen follows it from there.
+  async function order(o: Offer, key: string) {
+    if (!searchId || starting) return;
+    setStarting(key);
+    setStartFailed(null);
+    try {
+      const r = await api<{ orderId: string }>("/api/ondc/orders", {
+        method: "POST",
+        json: {
+          searchId,
+          bppId: o.seller.bppId,
+          providerId: o.seller.providerId,
+          locationId: o.seller.locationId,
+          lines: [{ itemId: o.itemId, count: 1 }],
+        },
+      });
+      router.push(`/food/ondc/${r.orderId}`);
+    } catch {
+      setStartFailed(key);
+      setStarting(null);
+    }
+  }
 
   useEffect(() => {
     if (!searchId) return;
@@ -88,8 +116,10 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
         </span>
       </div>
       <ul className="mt-2 space-y-2">
-        {shown.map((o) => (
-          <li key={`${o.seller.bppId}|${o.seller.providerId}|${o.seller.locationId}|${o.itemId}`} className="flex gap-3 rounded-card border border-line bg-card p-2.5">
+        {shown.map((o) => {
+          const key = `${o.seller.bppId}|${o.seller.providerId}|${o.seller.locationId}|${o.itemId}`;
+          return (
+          <li key={key} className="flex gap-3 rounded-card border border-line bg-card p-2.5">
             <SellerImage src={o.image ?? o.seller.logo} />
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-1.5">
@@ -113,16 +143,34 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
                 {o.distanceKm !== null && ` · ${t("on.away").replace("{km}", String(o.distanceKm))}`}
               </p>
               {o.seller.fssaiLicence && <p className="truncate text-[10px] text-cocoa/80">{t("on.fssai").replace("{no}", o.seller.fssaiLicence)}</p>}
+              {/* Choices such as size or crust come from the seller's
+                  customisation groups, which are not read yet, so those
+                  dishes say so instead of ordering without them. */}
+              {o.customizable ? (
+                <p className="mt-1 text-[11px] text-cocoa">{t("on.optionsSoon")}</p>
+              ) : (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => order(o, key)}
+                    disabled={starting !== null}
+                    className="tap-target rounded-pill bg-btn px-3.5 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-btn-hover disabled:bg-btn/50"
+                  >
+                    {starting === key ? t("on.starting") : t("on.order")}
+                  </button>
+                  {startFailed === key && <span className="text-[11px] text-danger">{t("on.startFailed")}</span>}
+                </div>
+              )}
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
       {offers.length > 4 && !showAll && (
         <button type="button" onClick={() => setShowAll(true)} className="tap-target mt-2 w-full rounded-pill border border-line py-2 text-[12px] font-semibold text-ink">
           {t("on.more").replace("{n}", String(offers.length - 4))}
         </button>
       )}
-      <p className="mt-2 text-[11px] text-cocoa">{t("on.orderSoon")}</p>
     </section>
   );
 }
