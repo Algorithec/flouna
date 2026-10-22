@@ -14,3 +14,6 @@ process.env.LLM_PROVIDER = "demo";
 // Secret only (no APP_ID): webhook signature verification is active while
 // checkout stays in simulated mode.
 process.env.CASHFREE_SECRET_KEY = "test-cashfree-secret";
+// Every ONDC food confirm carries our GSTIN. State code 00 does not exist, so
+// this can never be a real company's number.
+process.env.ONDC_BAP_GSTIN = "00ALGTH0000A1Z0";
