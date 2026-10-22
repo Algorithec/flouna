@@ -114,10 +114,12 @@ export async function startOndcSearch(
   if (!city) return { unavailable: `ONDC search is not available for ${address.city} yet` };
 
   const searchId = crypto.randomUUID();
+  const terms = commercialTerms();
   const envelope = buildSearch({
     transactionId: searchId,
     city,
-    finderFeePercent: commercialTerms().finderFeePercent,
+    finderFeePercent: terms.finderFeePercent,
+    staticTerms: terms.staticTerms,
     query: query.slice(0, 80),
     gps: `${address.lat.toFixed(6)},${address.lng.toFixed(6)}`,
     areaCode: address.pincode,
