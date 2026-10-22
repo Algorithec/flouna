@@ -102,10 +102,10 @@ export default function FaqsPage() {
                         className="flex items-center gap-3 border-t border-line px-4 py-3 transition-colors hover:bg-acct-bg"
                       >
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[14px] font-semibold text-acct-ink">
+                          <span className="line-clamp-2 text-[14px] font-semibold text-acct-ink">
                             {t.title}
                           </span>
-                          <span className="block truncate text-[12px] text-acct-muted">
+                          <span className="line-clamp-2 text-[12px] text-acct-muted">
                             {t.summary}
                           </span>
                         </span>

@@ -237,11 +237,11 @@ function HelpCenter() {
                     <Icon size={17} className="text-acct-accent" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold text-acct-ink">
+                    <span className="line-clamp-2 text-[15px] font-semibold text-acct-ink">
                       {t.title}
                     </span>
                     {query && (
-                      <span className="block truncate text-[12px] text-acct-muted">
+                      <span className="line-clamp-2 text-[12px] text-acct-muted">
                         {t.summary}
                       </span>
                     )}

@@ -167,7 +167,10 @@ export default function SettingsPage() {
         <p className="mt-1 text-[12px] text-cocoa">
           {t("st.budgetNote")}
         </p>
-        <div className="mt-3 flex items-end gap-2">
+        {/* On a phone the field gets the full width and the buttons go
+            below it: in one row the two buttons squeezed the field until its
+            label broke across two lines. */}
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
           <Input
             label={t("st.budgetLabel")}
             inputMode="numeric"
@@ -175,12 +178,25 @@ export default function SettingsPage() {
             value={budgetInput}
             onChange={(e) => setBudgetInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
           />
-          <Button size="md" disabled={busy || !budgetInput} onClick={() => saveBudget(false)}>
-            {t("st.save")}
-          </Button>
-          <Button size="md" variant="secondary" disabled={busy} onClick={() => saveBudget(true)}>
-            {t("st.clear")}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="md"
+              className="flex-1 sm:flex-none"
+              disabled={busy || !budgetInput}
+              onClick={() => saveBudget(false)}
+            >
+              {t("st.save")}
+            </Button>
+            <Button
+              size="md"
+              variant="secondary"
+              className="flex-1 sm:flex-none"
+              disabled={busy}
+              onClick={() => saveBudget(true)}
+            >
+              {t("st.clear")}
+            </Button>
+          </div>
         </div>
         {budgetSaved && (
           <p className="mt-2 text-[12px] font-medium text-success">{budgetSaved}</p>

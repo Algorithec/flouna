@@ -484,7 +484,7 @@ function DishRow({ q }: { q: FoodQuote }) {
           <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-ink">
             {q.tag}
           </span>
-          <p className="mt-1 truncate text-[15px] font-bold text-ink">{q.name}</p>
+          <p className="mt-1 line-clamp-2 text-[15px] font-bold text-ink">{q.name}</p>
           <p className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-[12px] text-cocoa">
             <Clock size={11} className="shrink-0" /> {q.etaMinutes} {t("u.min")}
             <span className="flex items-center gap-0.5">
@@ -550,7 +550,7 @@ function SuggestionRow({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-bold text-ink">{title}</p>
-          <p className="truncate text-[12px] text-cocoa">{subtitle}</p>
+          <p className="line-clamp-2 text-[12px] text-cocoa">{subtitle}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium text-cocoa">
           {value} <ChevronRight size={14} />

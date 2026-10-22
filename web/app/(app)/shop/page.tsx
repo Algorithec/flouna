@@ -122,7 +122,7 @@ function ProductCard({ q }: { q: ProductQuote }) {
           <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-ink">
             {q.tag}
           </span>
-          <p className="mt-1 truncate text-[15px] font-bold text-ink">{q.name}</p>
+          <p className="mt-1 line-clamp-2 text-[15px] font-bold text-ink">{q.name}</p>
           <p className="truncate text-[12px] text-cocoa">{q.brand}</p>
           <p className="flex items-center gap-2 text-[12px] text-cocoa">
             <span className="flex items-center gap-0.5">
