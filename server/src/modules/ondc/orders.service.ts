@@ -389,7 +389,10 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       where: { id: order.id },
       data: {
         status: r.outOfStock.length ? "unavailable" : "quoted",
-        problem: r.outOfStock.length ? `Out of stock: ${r.outOfStock.join(", ")}` : null,
+        // Named as the store names them in its quote, not by its item ids.
+        problem: r.outOfStock.length
+          ? `Out of stock: ${r.outOfStock.map((id) => r.quote.lines.find((l) => l.itemId === id && l.title)?.title ?? id).join(", ")}`
+          : null,
         quote: JSON.stringify((cb.body.message as { order: { quote: unknown } }).order.quote),
         totalPaise: r.quote.totalPaise,
         fulfillmentId: r.fulfillment.id,
