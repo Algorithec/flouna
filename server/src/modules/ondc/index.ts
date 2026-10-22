@@ -4,6 +4,7 @@ import { createCallbacksRouter, type CallbackDeps } from "./callbacks.routes.js"
 import { createRegistryClient, REGISTRY_URL } from "./registryClient.js";
 import { applyOnIssue } from "../complaints/igm.network.js";
 import { applyRetailReply } from "./orders.service.js";
+import { applySettlementMessage } from "./settlement.service.js";
 
 /**
  * The live ONDC wiring, or null when this deployment has no ONDC identity.
@@ -58,6 +59,8 @@ export const recordInbound: CallbackDeps["record"] = async ({ action, body, raw,
   if (action === "on_issue") await applyOnIssue({ body, raw, senderId });
   // A food seller's answer about an order, applied on the same terms.
   await applyRetailReply({ action, body, senderId });
+  // Settlement: the agency's answers, and seller apps reconciling with us.
+  await applySettlementMessage({ action, body, senderId });
   return { duplicate };
 };
 

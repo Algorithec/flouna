@@ -1595,7 +1595,9 @@ model OndcPayout {
   settlementWindow String? // "P3D"
   settlementBasis  String? // "return_window_expiry" | "delivery" | ...
   dueAt            DateTime
-  status           String    @default("due") // due | paid | held
+  // due | paid | held | via_rsf (paid through ONDC settlement instead: see
+  // OndcSettlement; never also paid by hand)
+  status           String    @default("due")
   paidAt           DateTime?
   utr              String? // the bank's reference for the transfer
   paidBy           String? // operator user id
@@ -1603,6 +1605,56 @@ model OndcPayout {
   createdAt        DateTime  @default(now())
 
   @@index([status, dueAt])
+}
+
+// ONDC settlement (RSF 2.0.0, domain ONDC:NTS10) for one completed order.
+//
+// Whoever collected the customer's money is the "collector"; the other app is
+// the "receiver". Both send the settlement agency (NBBL's NOCS) matching
+// instructions for the order, and it moves the money between their settlement
+// accounts. Amounts are integer paise, worked out once when the order
+// completes, from the seller's own terms in on_init.
+model OndcSettlement {
+  id                    String    @id @default(cuid())
+  ondcOrderId           String    @unique
+  bppId                 String
+  networkOrderId        String // the order id on the network: the seller's, from on_confirm
+  role                  String // "receiver" (the seller collected) | "collector" (Flouna collected)
+  orderTotalPaise       Int
+  feePaise              Int // the Buyer Finder Fee: our commission
+  withholdingPaise      Int       @default(0)
+  tcsPaise              Int       @default(0)
+  tdsPaise              Int       @default(0)
+  interParticipantPaise Int // what moves from the collector to the receiver
+  collectorPaise        Int // what the collector keeps
+  selfPaise             Int // what lands in our own operating account
+  settlementBasis       String?
+  settlementWindow      String?
+  dueAt                 DateTime
+  // held (a person must release it) | due | instructed (sent, the agency
+  // acknowledged) | settled | not_settled
+  status                String
+  note                  String?
+  settlementId          String? // settlement.id of the instruction carrying it
+  settleTxnId           String?
+  settleMsgId           String?
+  instructedAt          DateTime?
+  settledPaise          Int?
+  referenceNo           String? // the agency's reference for the transfer
+  errorCode             String?
+  errorMessage          String?
+  settledAt             DateTime?
+  // Reconciliation with the seller app: null | sent | accord | dispute
+  reconStatus           String?
+  reconTxnId            String?
+  reconAt               DateTime?
+  counterpartyView      String? // JSON: the seller app's figures from its recon / on_recon
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([status, dueAt])
+  @@index([settlementId])
+  @@index([bppId, networkOrderId])
 }
 
 // ONDC Network Observability outbox: one row per log, already anonymised,
