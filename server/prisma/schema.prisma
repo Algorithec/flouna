@@ -1461,9 +1461,36 @@ model OndcSearch {
   city      String // STD code form, e.g. "std:080"
   // "sending" until the gateway responds, "sent" once acknowledged, "refused" if it did not or the send threw.
   status    String
+  // The static terms this search stated (bap_terms), if any: every seller that
+  // answered it was shown them.
+  termsUrl       String?
+  termsEffective String?
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// Evidence that a seller app accepted our static terms (static terms 17.6.1):
+// the version (address and effective date), who (the seller app's
+// subscriber id), when, and how (an order placed through a search that stated
+// those terms, confirmed by the seller's signed on_confirm). One row per seller
+// app and version; later orders under the same version only add to the count.
+model OndcTermsAcceptance {
+  id              String   @id @default(cuid())
+  bppId           String
+  termsUrl        String
+  termsEffective  String
+  firstOrderId    String // our OndcOrder id
+  firstMessageId  String // message_id of the seller's signed on_confirm (see OndcTransaction)
+  firstAcceptedAt DateTime
+  lastAcceptedAt  DateTime
+  ordersAccepted  Int      @default(1)
+  // The seller also said so outright (bpp_terms accept_bap_terms "Y"). ONDC's
+  // validator does not ask for this yet, so most sellers will not send it.
+  statedAccept    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@unique([bppId, termsUrl, termsEffective])
 }
 
 // The customer's cart, held on the server so the app and chat act on the same
@@ -1522,6 +1549,9 @@ model OndcOrder {
   gps              String?
   areaCode         String?
   fulfillmentId    String?
+  // The static terms stated on the search this order came from, if any.
+  termsUrl         String?
+  termsEffective   String?
   tat              String? // ISO 8601 duration the seller committed to, "PT45M"
   quote            String? // JSON: the seller's latest quote, exactly as sent
   totalPaise       Int?

@@ -16,6 +16,7 @@ import {
   type CartLine,
 } from "./retail.js";
 import { ondcSearchResults } from "./search.service.js";
+import { recordTermsAcceptance, statesAcceptance } from "./termsAcceptance.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
 
@@ -153,7 +154,7 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   if (!address) throw new ApiError(400, "Add a delivery address first");
   if (address.lat == null || address.lng == null) throw new ApiError(400, "Your delivery address has no map location");
 
-  const search = await prisma.ondcSearch.findUnique({ where: { id: input.searchId }, select: { city: true } });
+  const search = await prisma.ondcSearch.findUnique({ where: { id: input.searchId }, select: { city: true, termsUrl: true, termsEffective: true } });
   const seller = fromSeller[0]!.seller;
   const gps = `${address.lat.toFixed(6)},${address.lng.toFixed(6)}`;
   const order = await prisma.ondcOrder.create({
@@ -171,6 +172,8 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
       addressId: address.id,
       gps,
       areaCode: address.pincode,
+      termsUrl: search!.termsUrl,
+      termsEffective: search!.termsEffective,
     },
   });
   const envelope = buildSelect({
@@ -424,6 +427,19 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
         awaitingMsgId: null,
       },
     });
+    // The seller took an order placed under our stated terms: that is its
+    // acceptance of them (static terms 17.6.1).
+    if (r.sellerState !== "Cancelled" && order.termsUrl && order.termsEffective) {
+      await recordTermsAcceptance({
+        bppId: order.bppId,
+        termsUrl: order.termsUrl,
+        termsEffective: order.termsEffective,
+        orderId: order.id,
+        messageId: String(ctx.message_id),
+        at: r.at ?? new Date(),
+        statedAccept: statesAcceptance(cb.body),
+      });
+    }
     return "applied";
   }
 
