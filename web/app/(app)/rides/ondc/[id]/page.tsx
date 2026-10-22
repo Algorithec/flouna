@@ -1,7 +1,8 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Loader2, MapPin, Navigation, Phone } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Headset, Loader2, MapPin, Navigation, Phone } from "lucide-react";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
 import { useBackTo } from "@/lib/navHistory";
@@ -218,6 +219,12 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
                 {t("or.cancel")}
               </button>
             </div>
+          )}
+          {/* A booked, finished or cancelled ride is one the rider can complain about. */}
+          {["booked", "completed", "cancelled"].includes(ride.status) && (
+            <Link href={`/orders/${ride.id}/help`} className={`${PILL} w-full text-ink hover:bg-beige/60`}>
+              <Headset size={15} /> {t("history.needHelp")}
+            </Link>
           )}
           {actionFailed && <p className="text-center text-[13px] text-danger">{actionFailed}</p>}
         </div>
