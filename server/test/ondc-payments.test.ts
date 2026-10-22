@@ -129,7 +129,7 @@ describe("paying for an ONDC order", () => {
     const o = await readyToPay();
     expect(await settleOndcPayment(o.gid, 47000, "cf_pay_2", o.r.deps)).toMatchObject({ outcome: "refunded" });
     expect(o.r.sent.some((s) => s.action === "confirm")).toBe(false);
-    expect(gateway.createCashfreeRefund).toHaveBeenCalledWith(expect.objectContaining({ orderId: o.gid, refundId: `${o.gid}_refund`, amountRupees: 470 }));
+    expect(gateway.createCashfreeRefund).toHaveBeenCalledWith(expect.objectContaining({ orderId: o.gid, refundId: `${o.gid}_refund_47000`, amountRupees: 470 }));
     const view = await ondcOrderView(o.c.userId, o.orderId);
     expect(view).toMatchObject({ status: "failed", refund: { status: "done", paise: 47000 } });
   });
