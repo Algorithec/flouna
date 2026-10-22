@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import express from "express";
 import request from "supertest";
 import { readFileSync } from "node:fs";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { env } from "../src/config/env.js";
 import { prisma } from "../src/lib/prisma.js";
 import { createAuthorizationHeader } from "../src/modules/ondc/signing.js";
@@ -124,6 +124,23 @@ async function booked() {
 }
 
 describe("booking a ride with an ONDC ride provider", () => {
+  it("posts the choice to the provider's own select address, once", async () => {
+    // The real sender, with only the network stubbed: what is checked is the
+    // address actually posted to, not what a test double was handed.
+    const s = await searched();
+    const urls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      urls.push(String(url));
+      return new Response(JSON.stringify({ message: { ack: { status: "ACK" } } }), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    try {
+      await chooseRide(s.c.userId, s.rideId, { bppId: PROVIDER, providerId: "P1", itemId: "I1" }, { identity });
+    } finally {
+      vi.restoreAllMocks();
+    }
+    expect(urls).toEqual(["https://example-bpp.com/prod/seller/select"]);
+  });
+
   it("searches, prices, books and follows a ride to its end on the provider's signed replies", async () => {
     const s = await searched();
     expect(s.r.sent[0]).toMatchObject({ url: "https://preprod.gateway.ondc.org", action: "search" });
@@ -133,7 +150,8 @@ describe("booking a ride with an ONDC ride provider", () => {
     expect(offers.map((o) => [o.vehicle, o.farePaise])).toEqual([["AUTO_RICKSHAW", 14600], ["CAB", 20600]]);
 
     await chooseRide(s.c.userId, s.rideId, { bppId: PROVIDER, providerId: "P1", itemId: "I1" }, s.r.deps);
-    expect(s.r.last()).toMatchObject({ url: "https://example-bpp.com/prod/seller/select", action: "select" });
+    // The provider's base address: the sender adds the action itself.
+    expect(s.r.last()).toMatchObject({ url: "https://example-bpp.com/prod/seller", action: "select" });
     expect(s.r.last().envelope.context.transaction_id).toBe(s.txnId);
     await reply("on_select", fx("on_select_0"), { txnId: s.txnId, messageId: s.r.last().envelope.context.message_id }).expect(200);
     expect(await rideView(s.c.userId, s.rideId)).toMatchObject({ status: "quoted", farePaise: 14600 });
