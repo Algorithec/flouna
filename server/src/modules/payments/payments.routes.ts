@@ -302,6 +302,9 @@ paymentsRouter.post(
           if (paidPaise !== undefined) {
             const ref = (event.data.payment as { cf_payment_id?: string | number }).cf_payment_id;
             await settleOndcPayment(orderId, paidPaise, String(ref ?? orderId));
+          } else {
+            console.error("[payments] ONDC webhook for", orderId, "has no amount — cannot settle");
+            return res.status(400).json({ error: "Missing payment amount" });
           }
           return res.json({ ok: true });
         }
