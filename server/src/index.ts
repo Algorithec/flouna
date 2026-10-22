@@ -15,6 +15,7 @@ import { initMonitoring, captureError } from "./lib/monitoring.js";
 import { seedDemoCoupons } from "./data/coupons.js";
 import { shouldSync, syncSchema } from "./lib/schemaSync.js";
 import { pruneOndcSearches } from "./modules/ondc/search.service.js";
+import { pruneNoLogs, pushPending } from "./modules/ondc/observability.js";
 
 initMonitoring();
 
@@ -109,6 +110,14 @@ const lifecycleSweep = setInterval(runLifecycle, 24 * 60 * 60_000);
 /** How long a ranking decision stays queryable before housekeeping drops it. */
 const DECISION_LOG_RETENTION_DAYS = 90;
 
+// ONDC Network Observability: push queued logs to ONDC every half minute.
+// Only runs when a profile's token is set; each push is bounded, so a slow
+// logging service never piles work up here.
+const noLoop = setInterval(() => {
+  if (!env.ONDC_NO_TOKEN_RETAIL && !env.ONDC_NO_TOKEN_RIDE) return;
+  void pushPending().catch((err: unknown) => console.error("[ondc-no] push failed:", err instanceof Error ? err.message : String(err)));
+}, 30_000);
+
 // Hourly housekeeping: expired OTP codes and dead refresh tokens never pile up.
 const cleanup = setInterval(
   async () => {
@@ -131,6 +140,7 @@ const cleanup = setInterval(
       // ONDC searches carry the customer's location and every seller's whole
       // catalogue; neither is needed once the results have been read.
       await pruneOndcSearches();
+      await pruneNoLogs();
       // Erasures whose grace period has run out. A deletion that only happens
       // while somebody is watching a screen is not a deletion, and the promise
       // in the privacy policy is measured in days, not in attention.
@@ -147,6 +157,7 @@ const cleanup = setInterval(
 async function shutdown(signal: string) {
   console.log(`[shutdown] ${signal} received`);
   clearInterval(cleanup);
+  clearInterval(noLoop);
   clearInterval(alertLoop);
   clearInterval(plusSweep);
   clearInterval(lifecycleSweep);
