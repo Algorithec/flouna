@@ -23,6 +23,11 @@ import { GATEWAY_URL, sendSigned, type SendResult } from "./transport.js";
 // params. As with food, a reply only moves a ride when it comes from the
 // provider chosen and answers the request we are waiting on.
 
+/**
+ * Sends a signed message. `url` is the provider's (or the gateway's) base
+ * URI: sendSigned adds the action itself, so ".../select" here would be
+ * posted to ".../select/select".
+ */
 type Send = (url: string, action: string, envelope: { context: Record<string, unknown>; message: unknown }, id: SigningIdentity) => Promise<SendResult>;
 export type RideDeps = { send?: Send; identity?: () => SigningIdentity | null };
 
@@ -93,7 +98,6 @@ async function sendStep(ride: RideRow, action: string, envelope: { context: Reco
   return result.ack;
 }
 
-const at = (uri: string, action: string) => `${uri.replace(/\/+$/, "")}/${action}`;
 const stopOf = (s: string) => JSON.parse(s) as Stop;
 
 export type PlaceInput = { lat: number; lng: number; address: string; area: string };
@@ -226,7 +230,7 @@ export async function chooseRide(userId: string, id: string, pick: { bppId: stri
   if (claimed.count === 0) throw new ApiError(409, "This ride moved on while you were choosing");
   const chosen = await prisma.ondcRide.findUniqueOrThrow({ where: { id: ride.id } });
   const envelope = buildRideSelect(rideBase(chosen));
-  await sendStep(chosen, "select", envelope, "selecting", deps, at(offer.bppUri, "select"));
+  await sendStep(chosen, "select", envelope, "selecting", deps, offer.bppUri);
   return { rideId: ride.id };
 }
 
@@ -269,7 +273,7 @@ export async function initRide(userId: string, id: string, deps: RideDeps = {}) 
   const customer = await riderOf(ride);
   const terms = JSON.parse(ride.payment ?? "{}") as RidePaymentTerms;
   const envelope = buildRideInit({ ...rideBase(ride), customer, payment: { collectedBy: "BPP", params, tags: terms.tags ?? [] } });
-  await sendStep(ride, "init", envelope, "initialising", deps, at(ride.bppUri!, "init"));
+  await sendStep(ride, "init", envelope, "initialising", deps, ride.bppUri!);
   return { rideId: ride.id };
 }
 
@@ -282,7 +286,7 @@ export async function confirmRide(userId: string, id: string, deps: RideDeps = {
   const terms = JSON.parse(ride.payment ?? "{}") as RidePaymentTerms;
   if (!terms.id) throw new ApiError(409, "The provider gave no payment reference to book against");
   const envelope = buildRideConfirm({ ...rideBase(ride), customer: await riderOf(ride), payment: { collectedBy: "BPP", params: settlementParams(), tags: terms.tags, id: terms.id } });
-  await sendStep(ride, "confirm", envelope, "confirming", deps, at(ride.bppUri!, "confirm"));
+  await sendStep(ride, "confirm", envelope, "confirming", deps, ride.bppUri!);
   return { rideId: ride.id };
 }
 
@@ -291,7 +295,7 @@ async function askAboutRide(userId: string, id: string, action: "status" | "trac
   if (!ride.sellerOrderId) throw new ApiError(409, "This ride has not been booked yet");
   const args = { transactionId: ride.txnId, city: ride.city, bpp: { id: ride.bppId!, uri: ride.bppUri! }, orderId: ride.sellerOrderId };
   const envelope = action === "status" ? buildRideStatus(args) : buildRideTrack(args);
-  return { asked: await sendStep(ride, action, envelope, null, deps, at(ride.bppUri!, action)) };
+  return { asked: await sendStep(ride, action, envelope, null, deps, ride.bppUri!) };
 }
 
 export const refreshRide = (userId: string, id: string, deps: RideDeps = {}) => askAboutRide(userId, id, "status", deps);
@@ -304,7 +308,7 @@ export async function quoteRideCancel(userId: string, id: string, reasonId: Ride
   if (!(reasonId in RIDER_CANCEL_REASONS)) throw new ApiError(400, "Not a reason a rider can give");
   await prisma.ondcRide.update({ where: { id }, data: { cancelReasonId: reasonId, cancelFeePaise: null } });
   const envelope = buildRideCancel({ transactionId: ride.txnId, city: ride.city, bpp: { id: ride.bppId!, uri: ride.bppUri! }, orderId: ride.sellerOrderId, reasonId, step: "SOFT_CANCEL" });
-  await sendStep(ride, "cancel", envelope, "cancel_quoting", deps, at(ride.bppUri!, "cancel"));
+  await sendStep(ride, "cancel", envelope, "cancel_quoting", deps, ride.bppUri!);
   return { rideId: id };
 }
 
@@ -313,7 +317,7 @@ export async function confirmRideCancel(userId: string, id: string, deps: RideDe
   const ride = await ownRide(userId, id);
   if (ride.status !== "cancel_quoted" || !ride.sellerOrderId || !ride.cancelReasonId) throw new ApiError(409, "Ask what cancelling costs first");
   const envelope = buildRideCancel({ transactionId: ride.txnId, city: ride.city, bpp: { id: ride.bppId!, uri: ride.bppUri! }, orderId: ride.sellerOrderId, reasonId: ride.cancelReasonId, step: "CONFIRM_CANCEL" });
-  await sendStep(ride, "cancel", envelope, "cancelling", deps, at(ride.bppUri!, "cancel"));
+  await sendStep(ride, "cancel", envelope, "cancelling", deps, ride.bppUri!);
   return { rideId: id };
 }
 
