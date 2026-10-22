@@ -75,6 +75,7 @@ const confirmInput = (over: Record<string, unknown> = {}, pay: Record<string, un
     settlementDetails: [{ settlement_counterparty: "seller-app" }],
     ...pay,
   },
+  terms: { seller: [{ code: "tax_number", value: "29AAECN5025F1ZK" }], buyerGstin: "00ALGTH0000A1Z0" },
   ...over,
 });
 const stop = (gps: string) => ({ gps, address: "x", area: "560001" });
