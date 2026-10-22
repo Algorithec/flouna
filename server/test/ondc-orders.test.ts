@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import express from "express";
 import request from "supertest";
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { env } from "../src/config/env.js";
 import { prisma } from "../src/lib/prisma.js";
 import { createAuthorizationHeader } from "../src/modules/ondc/signing.js";
@@ -142,7 +142,7 @@ describe("ordering food from an ONDC seller", () => {
     const order = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: orderId } });
 
     // select goes to the seller app itself, on a transaction of its own.
-    expect(r.last().url).toBe(`${SELLER_URI}/select`);
+    expect(r.last()).toMatchObject({ url: SELLER_URI, action: "select" });
     expect(r.last().envelope.context).toMatchObject({ action: "select", bpp_id: SELLER, transaction_id: order.txnId, city: "std:011" });
     expect(order.txnId).not.toBe(c.searchId);
     expect(r.last().envelope.message.order.items).toHaveLength(5);
@@ -200,6 +200,23 @@ describe("ordering food from an ONDC seller", () => {
       await reply("on_status", fx(name), { txnId: order.txnId, messageId: crypto.randomUUID(), at: new Date(t) }).expect(200);
       expect(await ondcOrderView(c.userId, orderId)).toMatchObject({ sellerState: state, fulfillmentState: fulfilment });
     }
+  });
+
+  it("posts each request to the seller's own address for that action, once", async () => {
+    // The real sender, with only the network stubbed: what is checked is the
+    // address actually posted to, not what a test double was handed.
+    const c = await customerWithSearch();
+    const urls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      urls.push(String(url));
+      return new Response(JSON.stringify({ message: { ack: { status: "ACK" } } }), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    try {
+      await startPizza(c, { identity });
+    } finally {
+      vi.restoreAllMocks();
+    }
+    expect(urls).toEqual([`${SELLER_URI}/select`]);
   });
 
   it("ignores a reply signed by any seller other than the one the order is with", async () => {
@@ -351,7 +368,7 @@ describe("ordering food from an ONDC seller", () => {
     const { c, r, orderId, txnId } = await placedOrder();
     expect((await ondcOrderView(c.userId, orderId)).tracking).toBeNull();
     await trackOndcOrder(c.userId, orderId, r.deps);
-    expect(r.last()).toMatchObject({ url: `${SELLER_URI}/track`, envelope: { message: { order_id: "18452cfae6794f3bb2206e609c413709" } } });
+    expect(r.last()).toMatchObject({ url: SELLER_URI, action: "track", envelope: { message: { order_id: "18452cfae6794f3bb2206e609c413709" } } });
     // Another seller app, validly signed, offering a link for our order.
     const forged = { message: { tracking: { url: "https://phish.example/track", status: "active" } } };
     await reply("on_track", forged, { txnId, messageId: r.last().envelope.context.message_id, from: "other.seller.example" }).expect(200);
