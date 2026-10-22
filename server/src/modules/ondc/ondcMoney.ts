@@ -132,10 +132,21 @@ export async function markPayoutPaid(id: string, by: string, utr: string) {
   return done.count === 1;
 }
 
-/** Refunds a person has to look at: amounts the seller's reply did not settle, and gateway failures. */
-export function refundsNeedingAttention() {
+/**
+ * Refunds a person has to look at: amounts the seller's reply did not
+ * settle, gateway failures, and any sent to the gateway that never came back
+ * (the server stopped between claiming one and hearing the answer). Those
+ * are checked in Cashfree before anything is done: the refund may well have
+ * gone through.
+ */
+export function refundsNeedingAttention(now = new Date()) {
   return prisma.ondcOrder.findMany({
-    where: { refundStatus: { in: ["review", "failed"] } },
+    where: {
+      OR: [
+        { refundStatus: { in: ["review", "failed"] } },
+        { refundStatus: "requested", updatedAt: { lt: new Date(now.getTime() - 15 * 60_000) } },
+      ],
+    },
     orderBy: { updatedAt: "asc" },
     select: { id: true, storeName: true, paidPaise: true, totalPaise: true, refundPaise: true, refundStatus: true, problem: true, sellerState: true, updatedAt: true },
   });
