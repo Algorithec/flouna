@@ -38,6 +38,11 @@ import { sendSigned, type SendResult } from "./transport.js";
 // this transaction, answering that message. Anything else is still stored by
 // the callbacks router, but changes nothing here.
 
+/**
+ * Sends a signed message. `url` is the seller app's registered base URI:
+ * sendSigned adds the action itself, so ".../select" here would be posted
+ * to ".../select/select".
+ */
 type Send = (url: string, action: string, envelope: { context: Record<string, unknown>; message: unknown }, id: SigningIdentity) => Promise<SendResult>;
 
 export type OrderDeps = {
@@ -50,11 +55,6 @@ function defaultIdentity(): SigningIdentity | null {
   return env.ONDC_SUBSCRIBER_ID && env.ONDC_UNIQUE_KEY_ID && env.ONDC_SIGNING_PRIVATE_KEY
     ? { subscriberId: env.ONDC_SUBSCRIBER_ID, uniqueKeyId: env.ONDC_UNIQUE_KEY_ID, signingPrivateKey: env.ONDC_SIGNING_PRIVATE_KEY }
     : null;
-}
-
-/** Where a seller app takes an action: its registered URI plus the action. */
-function actionUrl(bppUri: string, action: string) {
-  return `${bppUri.replace(/\/+$/, "")}/${action}`;
 }
 
 export type OrderRow = NonNullable<Awaited<ReturnType<typeof prisma.ondcOrder.findUnique>>>;
@@ -78,7 +78,7 @@ async function sendStep(
   await prisma.ondcOrder.update({ where: { id: order.id }, data: { status: waiting, awaitingMsgId: messageId, problem: null, ...extra } });
   let result: SendResult;
   try {
-    result = await (deps.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(actionUrl(order.bppUri, action), action, envelope, id);
+    result = await (deps.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(order.bppUri, action, envelope, id);
   } catch (err) {
     result = { ack: false, status: 0, error: err instanceof Error ? err.message : String(err) };
   }
@@ -312,7 +312,7 @@ async function askAboutOrder(userId: string, id: string, action: "status" | "tra
   if (!ident) throw new ApiError(503, "ONDC is not configured on this deployment");
   const args = { transactionId: order.txnId, city: order.city, bpp: { id: order.bppId, uri: order.bppUri }, orderId: order.sellerOrderId };
   const envelope = action === "status" ? buildStatus(args) : buildTrack(args);
-  const result = await (deps.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(actionUrl(order.bppUri, action), action, envelope, ident).catch(
+  const result = await (deps.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(order.bppUri, action, envelope, ident).catch(
     (err: unknown) => ({ ack: false as const, status: 0, error: String(err) }),
   );
   await prisma.ondcTransaction.create({
