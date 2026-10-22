@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { BAP_ID } from "./context.js";
 import { BUYER_ERRORS, nack } from "./errors.js";
+import { recordNo, responseLog } from "./observability.js";
 import { digestOf, headerShape, parseAuthorizationHeader, verifyAuthorizationHeader, type VerifyResult } from "./signing.js";
 
 /**
@@ -100,12 +101,21 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
     const rawBytes = (req as Request & { rawBody?: Buffer }).rawBody;
     const body = (req.body ?? {}) as Record<string, unknown>;
     const ctx = (body.context ?? {}) as Record<string, unknown>;
+    // Every answer goes through here so ONDC's observability log gets the
+    // message and what we answered it with, refusals included.
+    const reply = (status: number, payload: { message?: { ack?: { status?: string } }; error?: { type?: unknown; code?: unknown; message?: unknown } }) => {
+      if (ctx.domain) {
+        recordNo(action, body as { context?: Record<string, unknown> });
+        recordNo(`${action}_response`, responseLog(ctx, payload.message?.ack?.status === "ACK" ? "ACK" : "NACK", payload.error ?? null));
+      }
+      res.status(status).json(payload);
+    };
     if (!rawBytes?.length || ctx.action !== action) {
-      res.status(400).json(nack(BUYER_ERRORS.INVALID_RESPONSE, "Context action does not match the endpoint"));
+      reply(400, nack(BUYER_ERRORS.INVALID_RESPONSE, "Context action does not match the endpoint"));
       return;
     }
     if (ctx.bap_id !== bapId) {
-      res.status(400).json(nack(BUYER_ERRORS.INVALID_RESPONSE, "Message is not addressed to this buyer app"));
+      reply(400, nack(BUYER_ERRORS.INVALID_RESPONSE, "Message is not addressed to this buyer app"));
       return;
     }
 
@@ -113,7 +123,7 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
       const sender = await verifyAuthorizationHeader(req.get("authorization"), rawBytes, deps.publicKeyFor);
       if (!sender.ok) {
         refused(action, req.get("authorization"), sender.reason);
-        res.status(401).json(nack(signatureError(sender.reason), `Signature not accepted: ${sender.reason}`));
+        reply(401, nack(signatureError(sender.reason), `Signature not accepted: ${sender.reason}`));
         return;
       }
       // A valid signature only proves who sent the message. Without this, any
@@ -121,7 +131,7 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
       // in its context and have it taken as that seller's.
       if (ctx.bpp_id !== sender.subscriberId) {
         refused(action, req.get("authorization"), `signer ${sender.subscriberId} is not bpp_id ${String(ctx.bpp_id)}`);
-        res.status(401).json(nack(BUYER_ERRORS.INVALID_SIGNATURE, "Signer is not the seller app named in the message"));
+        reply(401, nack(BUYER_ERRORS.INVALID_SIGNATURE, "Signer is not the seller app named in the message"));
         return;
       }
       const gatewayHeader = req.get("x-gateway-authorization");
@@ -129,7 +139,7 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
         const gw = await verifyAuthorizationHeader(gatewayHeader, rawBytes, deps.publicKeyFor);
         if (!gw.ok) {
           refused(action, gatewayHeader, `gateway ${gw.reason}`);
-          res.status(401).json(nack(signatureError(gw.reason), `Gateway signature not accepted: ${gw.reason}`));
+          reply(401, nack(signatureError(gw.reason), `Gateway signature not accepted: ${gw.reason}`));
           return;
         }
       }
@@ -146,13 +156,13 @@ export function createCallbacksRouter(deps: CallbackDeps | null, opts: { bapId?:
         storing.set(dedupeKey, pending);
       }
       await pending;
-      res.json(ACK);
+      reply(200, ACK);
     } catch (err) {
       // A registry key that is not a key, a lookup that throws, a database
       // that is down: refuse the message so the seller app retries it, rather
       // than leave the request open until the seller gives up.
       console.error("[ondc] could not take", action, err instanceof Error ? err.message : String(err));
-      if (!res.headersSent) res.status(500).json(nack(BUYER_ERRORS.INTERNAL_ERROR, "Could not process the message, retry"));
+      if (!res.headersSent) reply(500, nack(BUYER_ERRORS.INTERNAL_ERROR, "Could not process the message, retry"));
     }
   });
 
