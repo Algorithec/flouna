@@ -1563,3 +1563,19 @@ model OndcRide {
 
   @@index([userId, createdAt])
 }
+
+// ONDC Network Observability outbox: one row per log, already anonymised,
+// waiting to be pushed to ONDC's logging service (see ondc/observability.ts).
+model OndcNoLog {
+  id        String    @id @default(cuid())
+  domain    String
+  type      String // "on_search", "select_response", ...
+  payload   String // the { type, data } body exactly as it is pushed
+  attempts  Int       @default(0)
+  lastError String?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([sentAt, createdAt])
+}
+

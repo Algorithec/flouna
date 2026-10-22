@@ -299,15 +299,18 @@ export function buildStatus(o: { transactionId: string; city: string; bpp: Bpp; 
 }
 
 /**
- * The reasons a buyer app may give for cancelling, from ONDC's retail
- * cancellation codes. A seller is entitled to refuse any other code from us.
+ * The reasons a buyer app may give for cancelling: the codes ONDC's retail
+ * specification marks "Who can use code: Buyer NP" (error_codes/Cancellation
+ * in ONDC-RET-Specifications). A seller is entitled to refuse any other code
+ * from us. 009 is a wrong product delivered, not a wrong address; a changed
+ * address is 010.
  */
 export const BUYER_CANCEL_REASONS = {
   "001": "Price of one or more items changed and more payment was asked for",
   "003": "Product available at a lower price",
   "006": "Order not shipped within the promised time",
-  "009": "Wrong delivery address",
-  "010": "Buyer wants to change the address or other order details",
+  "009": "Wrong product delivered",
+  "010": "Buyer wants to modify the address or other order details",
 } as const;
 export type BuyerCancelReason = keyof typeof BUYER_CANCEL_REASONS;
 

@@ -1,4 +1,5 @@
 import { createAuthorizationHeader, type SigningIdentity } from "./signing.js";
+import { recordNo, responseLog } from "./observability.js";
 
 // Sends a signed message to a seller app or the gateway and reads the
 // synchronous acknowledgement. ONDC is asynchronous: the ACK only means the
@@ -52,8 +53,18 @@ export async function sendSigned(
       // A body that is not JSON is not an acknowledgement.
     }
     const acked = res.status >= 200 && res.status < 300 && parsed.message?.ack?.status === "ACK";
+    // Network Observability: the message, then what the other side said.
+    const answered = parsed.message?.ack?.status === "ACK" || parsed.message?.ack?.status === "NACK";
+    if (answered) {
+      recordNo(action, envelope);
+      recordNo(`${action}_response`, responseLog(envelope.context, acked ? "ACK" : "NACK", parsed.error as never));
+    } else {
+      recordNo(action, { ...envelope, error: { type: "TECH-ERROR", code: String(res.status), message: "No acknowledgement in the response" } });
+    }
     return acked ? { ack: true, status: res.status } : { ack: false, status: res.status, error: parsed.error };
   } catch (err) {
-    return { ack: false, status: 0, error: err instanceof Error ? err.message : String(err) };
+    const message = err instanceof Error ? err.message : String(err);
+    recordNo(action, { ...envelope, error: { type: "TECH-ERROR", code: "503", message: message.slice(0, 200) } });
+    return { ack: false, status: 0, error: message };
   }
 }
