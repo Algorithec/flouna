@@ -2,7 +2,8 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, ExternalLink, Loader2, Store } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ExternalLink, Headset, Loader2, Store } from "lucide-react";
 import { api } from "@/lib/api";
 import { rupees } from "@/lib/money";
 import { useBackTo } from "@/lib/navHistory";
@@ -234,6 +235,12 @@ export default function OndcOrderPage({ params }: { params: Promise<{ id: string
                 </button>
               )}
             </>
+          )}
+          {/* Once money has moved or the store has the order, there is something to complain about. */}
+          {(order.paid || ["placed", "cancelled", "failed"].includes(order.status)) && (
+            <Link href={`/orders/${order.id}/help`} className={`${PILL} w-full text-ink hover:bg-beige/60`}>
+              <Headset size={15} /> {t("history.needHelp")}
+            </Link>
           )}
           {actionFailed && <p className="text-center text-[13px] text-danger">{t("oo.failedAction")}</p>}
         </div>
