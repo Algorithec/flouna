@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { matchTopic, topicBySlug, type SupportTopic } from "./support.kb.js";
 import { istDateLabel } from "../../lib/istTime.js";
+import { completeDueOrders } from "../orders/lifecycle.js";
 
 /** Integer paise in, display rupees out — the server has no shared helper. */
 const rupeesFromPaise = (paise: number) =>
@@ -50,6 +51,9 @@ function closingOptions(): BotOption[] {
 }
 
 async function recentOrders(userId: string) {
+  // Finished first, or an order whose screen was closed early is greeted as
+  // live weeks later.
+  await completeDueOrders(userId);
   return prisma.order.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },

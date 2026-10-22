@@ -79,11 +79,9 @@ function statusChip(status: string, t: (k: TranslationKey) => string) {
   }
 }
 
-// The orders money was actually spent on: not one waiting for payment, one
-// cancelled, or an ONDC order paid and refunded because it was never placed.
-// Spend and savings both count only these, so a saving is never shown on
-// money that was not spent.
-const paidFor = (o: { status: string }) => !["pending_payment", "cancelled", "failed"].includes(o.status);
+// The snapshot's totals, worked out by the server over every order: the list
+// stops at fifty, so totals added up from it stopped growing there.
+type OrderStats = { total: number; completed: number; spentPaise: number; savedPaise: number };
 
 // "₹5.4k" in the snapshot tiles — paise in, compact rupees out.
 function compactRupees(paise: number) {
@@ -99,6 +97,7 @@ export default function HistoryPage() {
   const localeTag = lang === "hi" ? "hi-IN" : lang === "te" ? "te-IN" : "en-IN";
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("");
   const [orders, setOrders] = useState<OrderSummary[] | null>(null);
+  const [stats, setStats] = useState<OrderStats | null>(null);
   const [error, setError] = useState("");
   const [cancelling, setCancelling] = useState<OrderSummary | null>(null);
 
@@ -106,11 +105,15 @@ export default function HistoryPage() {
   if (prevTab !== tab) {
     setPrevTab(tab);
     setOrders(null);
+    setStats(null);
   }
 
   const load = useCallback(() => {
-    api<{ orders: OrderSummary[] }>(`/api/orders${tab ? `?domain=${tab}` : ""}`)
-      .then((d) => setOrders(d.orders))
+    api<{ orders: OrderSummary[]; stats: OrderStats }>(`/api/orders${tab ? `?domain=${tab}` : ""}`)
+      .then((d) => {
+        setOrders(d.orders);
+        setStats(d.stats);
+      })
       .catch(() => setError(t("history.loadError")));
   }, [tab, t]);
   useEffect(load, [load]);
@@ -162,7 +165,7 @@ export default function HistoryPage() {
 
       {/* Activity Snapshot — All tab only, per the design, and shown at zero
           on an empty account rather than hidden. */}
-      {tab === "" && orders && (
+      {tab === "" && stats && (
         <>
           <h3 className="mt-5 flex items-center gap-1.5 text-[16px] font-extrabold text-ink">
             {t("history.snapshot")} <TrendingUp size={15} className="text-cocoa" />
@@ -170,22 +173,22 @@ export default function HistoryPage() {
           <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatTile
               icon={Calendar}
-              value={String(orders.length)}
+              value={String(stats.total)}
               label={t("history.totalBookings")}
             />
             <StatTile
               icon={CircleCheck}
-              value={String(orders.filter((o) => o.status === "completed").length)}
+              value={String(stats.completed)}
               label={t("status.completed")}
             />
             <StatTile
               icon={ReceiptText}
-              value={compactRupees(orders.filter(paidFor).reduce((s, o) => s + o.amount, 0))}
+              value={compactRupees(stats.spentPaise)}
               label={t("history.totalSpend")}
             />
             <StatTile
               icon={Star}
-              value={compactRupees(orders.filter(paidFor).reduce((s, o) => s + (o.savedPaise ?? 0), 0))}
+              value={compactRupees(stats.savedPaise)}
               label={t("history.totalSavings")}
               plainLabel
             />
