@@ -171,6 +171,10 @@ describe("logging what sellers send us", () => {
     const other = crypto.generateKeyPairSync("ed25519").privateKey.export({ type: "pkcs8", format: "der" }).subarray(-32).toString("base64");
     await request(app()).post("/ondc/on_search").set("Content-Type", "application/json")
       .set("Authorization", createAuthorizationHeader(b, { subscriberId: "seller.test", uniqueKeyId: "s", signingPrivateKey: other })).send(b).expect(401);
+    // Both rows, the message and our answer, before the test ends. Waiting
+    // for one let the other land after the next test had cleared the table,
+    // where it was counted as that test's unsent log.
+    for (let i = 0; i < 40 && (await prisma.ondcNoLog.count()) < 2; i++) await new Promise((r) => setTimeout(r, 25));
     await logs({ type: "on_search_response" });
     const response = JSON.parse((await prisma.ondcNoLog.findFirstOrThrow({ where: { type: "on_search_response" } })).payload);
     expect(response.data).toMatchObject({ message: { ack: { status: "NACK" } }, error: { code: "20001" } });
@@ -182,8 +186,7 @@ describe("pushing to ONDC", () => {
     prisma.ondcNoLog.create({ data: { domain, type, payload: JSON.stringify({ type, data: { context: { domain, action: type } } }) } });
 
   it("sends each log with its profile's bearer token and marks it sent", async () => {
-    await queue("ONDC:RET11", "on_search");
-    await queue("ONDC:TRV10", "on_select");
+    const mine = [(await queue("ONDC:RET11", "on_search")).id, (await queue("ONDC:TRV10", "on_select")).id];
     const calls: { url: string; auth: string; body: string }[] = [];
     const r = await pushPending({
       url: "https://no.test/v1/api/push-txn-logs",
@@ -195,7 +198,8 @@ describe("pushing to ONDC", () => {
     expect(r).toEqual({ tried: 2, sent: 2 });
     expect(calls.map((c) => c.auth)).toEqual(["Bearer retail-token", "Bearer ride-token"]);
     expect(JSON.parse(calls[0]!.body)).toEqual({ type: "on_search", data: { context: { domain: "ONDC:RET11", action: "on_search" } } });
-    expect(await prisma.ondcNoLog.count({ where: { sentAt: null } })).toBe(0);
+    // Only this test's rows: a write still landing from another test is not one of them.
+    expect(await prisma.ondcNoLog.count({ where: { sentAt: null, id: { in: mine } } })).toBe(0);
   });
 
   it("keeps a refused log with ONDC's reason and stops retrying after a limit", async () => {
