@@ -109,8 +109,15 @@ describe("production config gate", () => {
       ONDC_SETTLEMENT_UPI: "algorithec@hdfcbank",
       ONDC_SETTLEMENT_BENEFICIARY: "Algorithec Private Limited",
       ONDC_STATIC_TERMS_URL: "https://flouna.com/ondc/terms",
+      ONDC_STATIC_TERMS_EFFECTIVE_DATE: "2026-11-01",
+      ONDC_BAP_GSTIN: "00ALGTH0000A1Z0",
     });
+    expect(set.exited).toBe(false);
     expect(set.warns.join(" ")).not.toMatch(/founder decision pending/);
+    // Terms published without the date they apply from cannot be stated.
+    const undated = await loadEnv({ ONDC_STATIC_TERMS_URL: "https://flouna.com/ondc/terms" });
+    expect(undated.exited).toBe(true);
+    expect(undated.errors.join(" ")).toMatch(/ONDC_STATIC_TERMS_EFFECTIVE_DATE/);
   });
 
   it("warns without refusing when a feature is merely switched off", async () => {
