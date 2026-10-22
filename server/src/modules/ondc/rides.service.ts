@@ -382,7 +382,10 @@ export async function applyRideReply(cb: { action: string; body: Record<string, 
   if (!ride.sellerOrderId || (r.orderId && r.orderId !== ride.sellerOrderId)) return "ignored";
   if (r.at && ride.sellerUpdatedAt && r.at < ride.sellerUpdatedAt) return "ignored";
 
-  if (cb.action === "on_cancel" && answers("cancel_quoting")) {
+  const providerCancelled = r.status === "CANCELLED" || r.rideState === "RIDE_CANCELLED";
+  // A fee quote, unless the provider took the first step as final and
+  // cancelled outright: then the ride is cancelled, not waiting on the rider.
+  if (cb.action === "on_cancel" && answers("cancel_quoting") && !providerCancelled) {
     // The fee is the quote's total: charges, less the fare refunded.
     await prisma.ondcRide.update({
       where: { id: ride.id },
@@ -390,19 +393,18 @@ export async function applyRideReply(cb: { action: string; body: Record<string, 
     });
     return "applied";
   }
-  const status =
-    r.status === "CANCELLED" || r.rideState === "RIDE_CANCELLED"
-      ? "cancelled"
-      : r.status === "COMPLETED" || r.rideState === "RIDE_ENDED"
-        ? "completed"
-        : cb.action === "on_cancel" && answers("cancelling")
-          ? "booked"
-          : ride.status;
+  const status = providerCancelled
+    ? "cancelled"
+    : r.status === "COMPLETED" || r.rideState === "RIDE_ENDED"
+      ? "completed"
+      : cb.action === "on_cancel" && answers("cancelling")
+        ? "booked"
+        : ride.status;
   await prisma.ondcRide.update({
     where: { id: ride.id },
     data: {
       status,
-      ...(cb.action === "on_cancel" && answers("cancelling") && status === "booked" ? { problem: "The provider did not cancel this ride" } : {}),
+      ...((answers("cancelling") || answers("cancel_quoting")) && cb.action === "on_cancel" && status === "booked" ? { problem: "The provider did not cancel this ride" } : {}),
       ...(cb.action === "on_cancel" ? { awaitingMsgId: null } : {}),
       ...stateFields(r),
     },
