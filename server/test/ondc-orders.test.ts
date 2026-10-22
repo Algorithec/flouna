@@ -46,6 +46,8 @@ describe("ordering food from an ONDC seller", () => {
     // The receiver's own contact, with the phone in the 10 digit form sellers read.
     expect(init.fulfillments[0].end.contact.phone).toBe("9000000001");
     expect(init.billing.name).toBe("Test User");
+    // Every item, add-ons included, goes with the fulfillment the seller gave it in on_select.
+    expect(init.items.map((i: { fulfillment_id: string }) => i.fulfillment_id)).toEqual(Array(5).fill("2859f1ca-bc0a-4ad5-8ee5-e7374f7aa109"));
 
     await reply("on_init", fx("on_init"), { txnId: order.txnId, messageId: r.last().envelope.context.message_id }).expect(200);
     view = await ondcOrderView(c.userId, orderId);
@@ -62,6 +64,12 @@ describe("ordering food from an ONDC seller", () => {
     // The seller's quote and settlement details go back exactly as it sent them.
     expect(confirm.quote).toEqual(fx("on_init").message.order.quote);
     expect(confirm.payment["@ondc/org/settlement_details"]).toEqual(fx("on_init").message.order.payment["@ondc/org/settlement_details"]);
+    // So do the seller's terms; ours carry our GSTIN, as ONDC's validator requires of a confirm.
+    expect(confirm.tags).toEqual([
+      fx("on_init").message.order.tags.find((t: { code: string }) => t.code === "bpp_terms"),
+      { code: "bap_terms", list: [{ code: "tax_number", value: process.env.ONDC_BAP_GSTIN }] },
+    ]);
+    expect(confirm.items.map((i: { fulfillment_id: string }) => i.fulfillment_id)).toEqual(Array(5).fill("2859f1ca-bc0a-4ad5-8ee5-e7374f7aa109"));
 
     await reply("on_confirm", fx("on_confirm"), { txnId: order.txnId, messageId: r.last().envelope.context.message_id, at: new Date("2026-10-21T10:00:00Z") }).expect(200);
     view = await ondcOrderView(c.userId, orderId);
@@ -130,6 +138,33 @@ describe("ordering food from an ONDC seller", () => {
     const stranger = await customerWithSearch();
     await expect(startPizza({ userId: stranger.userId, searchId: c.searchId }, r.deps)).rejects.toThrow(/Search not found/);
     expect(r.sent).toHaveLength(0);
+  });
+
+  it("starts no order while our GSTIN is unset, since it could be paid for and never placed", async () => {
+    const c = await customerWithSearch();
+    const r = recorder();
+    const saved = process.env.ONDC_BAP_GSTIN;
+    delete process.env.ONDC_BAP_GSTIN;
+    try {
+      await expect(startPizza(c, r.deps)).rejects.toThrow(/not set up/);
+    } finally {
+      process.env.ONDC_BAP_GSTIN = saved;
+    }
+    expect(r.sent).toHaveLength(0);
+    expect(await prisma.ondcOrder.count({ where: { userId: c.userId } })).toBe(0);
+  });
+
+  it("says so when the seller would split the cart across deliveries, rather than send items the wrong one", async () => {
+    const c = await customerWithSearch();
+    const r = recorder();
+    const { orderId } = await startPizza(c, r.deps);
+    const order = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: orderId } });
+    const split = fx("on_select");
+    split.message.order.items[0].fulfillment_id = "another-fulfillment";
+    await reply("on_select", split, { txnId: order.txnId, messageId: r.last().envelope.context.message_id }).expect(200);
+    const view = await ondcOrderView(c.userId, orderId);
+    expect(view.status).toBe("unavailable");
+    expect(view.problem).toMatch(/in parts/);
   });
 
   it("says the store is unavailable when its app refuses the select", async () => {
