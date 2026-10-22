@@ -176,6 +176,8 @@ export type OrderStateReply =
       fulfillmentState?: string;
       quote?: Quote;
       cancelReasonId?: string;
+      /** Who cancelled, as the seller reports it: its own id when it was the seller. */
+      cancelledBy?: string;
       at?: Date;
     }
   | { problem: string };
@@ -194,6 +196,7 @@ export function readOrderState(body: unknown): OrderStateReply {
   const quote = order.quote ? readQuote(order.quote) : undefined;
   const cancellation = obj(order.cancellation);
   const cancelReasonId = str(obj(cancellation.reason).id);
+  const cancelledBy = str(cancellation.cancelled_by);
   const ts = str(obj(obj(body).context).timestamp);
   const at = ts && !Number.isNaN(Date.parse(ts)) ? new Date(ts) : undefined;
   return {
@@ -202,6 +205,7 @@ export function readOrderState(body: unknown): OrderStateReply {
     ...(fulfillmentState ? { fulfillmentState } : {}),
     ...(quote && !("problem" in quote) ? { quote } : {}),
     ...(cancelReasonId ? { cancelReasonId } : {}),
+    ...(cancelledBy ? { cancelledBy } : {}),
     ...(at ? { at } : {}),
   };
 }

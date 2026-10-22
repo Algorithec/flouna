@@ -16,6 +16,7 @@ import {
   type CartLine,
 } from "./retail.js";
 import { ondcSearchResults } from "./search.service.js";
+import { owe, recordPayout, refundAfterCancel } from "./ondcMoney.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
 
@@ -55,7 +56,7 @@ function actionUrl(bppUri: string, action: string) {
   return `${bppUri.replace(/\/+$/, "")}/${action}`;
 }
 
-type OrderRow = NonNullable<Awaited<ReturnType<typeof prisma.ondcOrder.findUnique>>>;
+export type OrderRow = NonNullable<Awaited<ReturnType<typeof prisma.ondcOrder.findUnique>>>;
 
 /**
  * Sends one request for an order and records which answer we now wait for.
@@ -187,7 +188,7 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   return { orderId: order.id };
 }
 
-async function billingFor(order: OrderRow) {
+export async function billingFor(order: OrderRow) {
   const [user, address] = await Promise.all([
     prisma.user.findUnique({ where: { id: order.userId }, select: { name: true, email: true, phone: true } }),
     order.addressId ? prisma.address.findUnique({ where: { id: order.addressId } }) : null,
@@ -238,7 +239,7 @@ export async function markOndcOrderPaid(id: string, payment: { amountPaise: numb
   if (payment.amountPaise !== order.totalPaise) throw new ApiError(409, "The amount paid does not match the seller's total");
   const done = await prisma.ondcOrder.updateMany({
     where: { id, status: "ready_to_pay" },
-    data: { status: "paid", paidAt: payment.at ?? new Date(), paymentRef: payment.reference },
+    data: { status: "paid", paidAt: payment.at ?? new Date(), paymentRef: payment.reference, paidPaise: payment.amountPaise },
   });
   if (done.count === 0) throw new ApiError(409, "This order changed while it was being paid");
 }
@@ -410,11 +411,19 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       // Paid but not placed: the money has to go back, so this is recorded as
       // a failure the payment flow refunds, never left looking like progress.
       await prisma.ondcOrder.update({ where: { id: order.id }, data: { status: "failed", problem: r.problem, awaitingMsgId: null } });
+      if (order.paidPaise) await owe(order.id, { paise: order.paidPaise });
       return "applied";
     }
+    // The seller's settlement terms arrive with its acceptance: when, and
+    // counted from what, it expects to be paid.
+    const pay = ((cb.body.message as { order?: { payment?: Record<string, unknown> } }).order?.payment ?? {}) as Record<string, unknown>;
+    const terms = { ...(JSON.parse(order.payment ?? "{}") as Record<string, unknown>) };
+    if (typeof pay["@ondc/org/settlement_window"] === "string") terms.settlementWindow = pay["@ondc/org/settlement_window"];
+    if (typeof pay["@ondc/org/settlement_basis"] === "string") terms.settlementBasis = pay["@ondc/org/settlement_basis"];
     await prisma.ondcOrder.update({
       where: { id: order.id },
       data: {
+        payment: JSON.stringify(terms),
         status: r.sellerState === "Cancelled" ? "failed" : "placed",
         problem: r.sellerState === "Cancelled" ? "The seller did not accept the order" : null,
         sellerOrderId: r.sellerOrderId,
@@ -424,6 +433,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
         awaitingMsgId: null,
       },
     });
+    if (r.sellerState === "Cancelled" && order.paidPaise) await owe(order.id, { paise: order.paidPaise });
     return "applied";
   }
 
@@ -453,8 +463,21 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       ...(r.cancelReasonId ? { cancelReasonId: r.cancelReasonId } : {}),
       ...(cb.action === "on_cancel" ? { awaitingMsgId: null } : {}),
       ...(r.quote ? { totalPaise: r.quote.totalPaise, quote: JSON.stringify((cb.body.message as { order: { quote: unknown } }).order.quote) } : {}),
+      ...(r.sellerState === "Completed" && !order.completedAt ? { completedAt: r.at ?? new Date() } : {}),
     },
   });
+  if (r.sellerState === "Cancelled" && order.paidPaise) {
+    await owe(order.id, refundAfterCancel({ paidPaise: order.paidPaise, cancelledBySeller: r.cancelledBy === order.bppId, finalTotalPaise: r.quote?.totalPaise }));
+  } else if (order.paidPaise && r.quote && r.quote.totalPaise < order.paidPaise) {
+    // The seller cut the bill on an order it is still fulfilling (it could
+    // not supply an item, say). The customer is owed the difference. Several
+    // such cuts can come on one order, each needing its own refund, so for
+    // now this goes to a person with both amounts rather than move money.
+    await owe(order.id, {
+      review: `The seller reduced the bill from ${order.paidPaise / 100} to ${r.quote.totalPaise / 100} rupees; refund the difference`,
+    });
+  }
+  if (r.sellerState === "Completed") await recordPayout(order.id, order.completedAt ?? r.at ?? new Date());
   return "applied";
 }
 
@@ -473,6 +496,8 @@ export type OndcOrderView = {
   fulfillmentState: string | null;
   paid: boolean;
   tracking: { url: string; status?: string } | null;
+  /** Money on its way back to the customer, when any is owed. */
+  refund: { status: string; paise: number | null } | null;
   createdAt: string;
 };
 
@@ -491,6 +516,7 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
     fulfillmentState: o.fulfillmentState,
     paid: Boolean(o.paidAt),
     tracking: o.sellerOrderId ? await trackingFor(o) : null,
+    refund: o.refundStatus ? { status: o.refundStatus, paise: o.refundPaise } : null,
     createdAt: o.createdAt.toISOString(),
   };
 }
