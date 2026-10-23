@@ -127,7 +127,17 @@ export async function startOndcSearch(
   // Recorded before sending, so answers that arrive quickly have a search to
   // belong to.
   await prisma.ondcSearch.create({
-    data: { id: searchId, userId, query: query.slice(0, 80), lat: address.lat, lng: address.lng, city, status: "sending" },
+    data: {
+      id: searchId,
+      userId,
+      query: query.slice(0, 80),
+      lat: address.lat,
+      lng: address.lng,
+      city,
+      status: "sending",
+      termsUrl: terms.staticTerms?.url ?? null,
+      termsEffective: terms.staticTerms?.effectiveDate ?? null,
+    },
   });
   const send = async () => {
     const result = await (opts.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(GATEWAY_URL[env.ONDC_REGISTRY_ENV], "search", envelope, id);
