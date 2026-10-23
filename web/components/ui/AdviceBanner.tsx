@@ -27,9 +27,13 @@ export type Advice = {
 export function AdviceBanner({
   advice,
   className,
+  domain = "food",
 }: {
   advice: Advice;
   className?: string;
+  // A ride is booked, not ordered: "Good time to order" sat over "Good time
+  // to book" on the ride screen.
+  domain?: "food" | "ride";
 }) {
   const { t } = useI18n();
   const wait = advice.action === "wait";
@@ -85,7 +89,7 @@ export function AdviceBanner({
                 wait ? "text-accent" : "text-success",
               )}
             >
-              {wait ? t("adv.wait") : t("adv.good")}
+              {wait ? t("adv.wait") : domain === "ride" ? t("adv.goodRide") : t("adv.good")}
             </p>
             {/* The figure the advice turns on, stated rather than implied. */}
             {wait && saving && (
