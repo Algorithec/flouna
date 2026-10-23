@@ -206,3 +206,100 @@ export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; ln
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
+
+// ---------------------------------------------------------------------------
+// Options on a dish (ONDC "customisations")
+//
+// A dish names the option groups it starts with (its custom_group tags). Each
+// group is a category of type custom_group with its own rule: pick at least
+// `min` and at most `max`. Each option belongs to one group (its parent tag)
+// and may open further groups when chosen (its child tags): a crust opens
+// sizes, a size opens toppings. So what can be chosen depends on what has
+// been chosen, and a choice is only valid if it follows that tree.
+
+export type OptionGroup = { id: string; name: string; min: number; max: number; seq: number; options: Option[] };
+export type Option = { id: string; name: string; pricePaise: number; isDefault: boolean; opens: string[]; veg: boolean | null };
+export type OptionTree = { starts: string[]; groups: Record<string, OptionGroup> };
+
+function tagValues(tags: unknown, code: string, key: string): string[] {
+  const out: string[] = [];
+  for (const t of arr(tags)) {
+    const tt = obj(t);
+    if (tt.code !== code) continue;
+    for (const e of arr(tt.list)) {
+      const ee = obj(e);
+      if (ee.code === key && str(ee.value)) out.push(str(ee.value)!);
+    }
+  }
+  return out;
+}
+
+/** The option tree for one dish in one seller's catalogue, or null if the dish has no options or is not there. */
+export function optionsFor(body: unknown, providerId: string, itemId: string): OptionTree | null {
+  const catalog = obj(obj(obj(body).message).catalog);
+  const provider = arr(catalog["bpp/providers"]).map(obj).find((p) => str(p.id) === providerId);
+  if (!provider) return null;
+  const items = arr(provider.items).map(obj);
+  const dish = items.find((i) => str(i.id) === itemId);
+  if (!dish) return null;
+  const starts = tagValues(dish.tags, "custom_group", "id");
+  if (starts.length === 0) return null;
+
+  const groups: Record<string, OptionGroup> = {};
+  for (const c of arr(provider.categories).map(obj)) {
+    const id = str(c.id);
+    if (!id || tag(c.tags, "type", "type") !== "custom_group") continue;
+    const min = Number(tag(c.tags, "config", "min") ?? 0);
+    const max = Number(tag(c.tags, "config", "max") ?? 1);
+    if (!Number.isInteger(min) || !Number.isInteger(max) || min < 0 || max < Math.max(min, 1)) continue;
+    groups[id] = { id, name: str(obj(c.descriptor).name) ?? id, min, max, seq: Number(tag(c.tags, "config", "seq") ?? 0) || 0, options: [] };
+  }
+  for (const i of items) {
+    if (tag(i.tags, "type", "type") !== "customization") continue;
+    const id = str(i.id);
+    const group = groups[tag(i.tags, "parent", "id") ?? ""];
+    const pricePaise = paiseFromRupees(obj(i.price).value);
+    if (!id || !group || pricePaise === null || !enabled(i.time)) continue;
+    const available = obj(obj(i.quantity).available).count;
+    if (available !== undefined && Number(available) <= 0) continue;
+    const vegTag = tag(i.tags, "veg_nonveg", "veg");
+    group.options.push({
+      id,
+      name: str(obj(i.descriptor).name) ?? id,
+      pricePaise,
+      isDefault: tag(i.tags, "parent", "default") === "yes",
+      opens: tagValues(i.tags, "child", "id").filter((g) => groups[g] !== undefined),
+      veg: vegTag === "yes" ? true : vegTag === "no" ? false : null,
+    });
+  }
+  // A starting group the seller never defined cannot be satisfied.
+  if (starts.some((g) => !groups[g])) return null;
+  return { starts, groups };
+}
+
+/**
+ * Checks a set of chosen option ids against the tree. Returns the group of
+ * each chosen option, in the order they were chosen, or the first rule broken.
+ */
+export function checkChoices(tree: OptionTree, chosen: string[]): { picks: { itemId: string; groupId: string }[] } | { problem: string } {
+  if (new Set(chosen).size !== chosen.length) return { problem: "An option was chosen twice" };
+  const remaining = new Set(chosen);
+  const picks: { itemId: string; groupId: string }[] = [];
+  const visited = new Set<string>();
+  const queue = [...tree.starts];
+  while (queue.length) {
+    const g = tree.groups[queue.shift()!]!;
+    if (visited.has(g.id)) continue;
+    visited.add(g.id);
+    const inGroup = g.options.filter((o) => remaining.has(o.id));
+    if (inGroup.length < g.min) return { problem: `Choose at least ${g.min} from ${g.name}` };
+    if (inGroup.length > g.max) return { problem: `Choose at most ${g.max} from ${g.name}` };
+    for (const o of inGroup) {
+      remaining.delete(o.id);
+      picks.push({ itemId: o.id, groupId: g.id });
+      queue.push(...o.opens);
+    }
+  }
+  if (remaining.size) return { problem: `Not an option for this dish: ${[...remaining].join(", ")}` };
+  return { picks };
+}
