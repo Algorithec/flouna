@@ -314,7 +314,7 @@ export function RideRecommendation({
           the tab does. */}
       <RideWhyBest why={rec.why} best={best} quotes={shown} />
 
-      {rec.advice && <AdviceBanner advice={rec.advice} />}
+      {rec.advice && <AdviceBanner advice={rec.advice} domain="ride" />}
 
       {rec.scheduledAt && (
         <p className="flex items-center gap-1.5 self-start rounded-pill bg-accent-soft px-3 py-1 text-[12px] font-semibold text-accent-ink">

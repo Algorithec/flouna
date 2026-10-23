@@ -176,11 +176,11 @@ export default function SupportChatPage() {
           >
             <ArrowLeft size={18} className="text-acct-ink" />
           </button>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-acct-tint">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-acct-tint max-[359px]:hidden">
             <Headset size={17} className="text-acct-accent" />
           </span>
           <span className="min-w-0 flex-1">
-            <h1 className="truncate text-[15px] font-extrabold text-acct-ink">
+            <h1 className="line-clamp-2 text-[15px] font-extrabold text-acct-ink">
               {t("pp.chat.title")}
             </h1>
             <span className="block text-[11px] font-semibold text-success">

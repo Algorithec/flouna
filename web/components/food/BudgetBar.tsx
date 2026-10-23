@@ -50,8 +50,8 @@ export function BudgetBar({ budget }: { budget: Budget }) {
         </span>
         <span className={cn("font-bold", over ? "text-danger" : "text-success")}>
           {over
-            ? `${rupees(budget.spentPaise - budget.budgetPaise)} over`
-            : `${rupees(budget.remainingPaise ?? 0)} left`}
+            ? t("bb.over").replace("{amount}", rupees(budget.spentPaise - budget.budgetPaise))
+            : t("bb.left").replace("{amount}", rupees(budget.remainingPaise ?? 0))}
         </span>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-beige">

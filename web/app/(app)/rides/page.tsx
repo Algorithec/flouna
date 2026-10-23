@@ -101,8 +101,14 @@ function PlaceSearch({
   const [open, setOpen] = useState(false);
   // One search session per use of this box; replaced once a place is chosen.
   const session = useRef(newSearchSession());
+  const input = useRef<HTMLInputElement>(null);
+  // The list opens only while the field has focus. A search that came back
+  // after the rider had moved on used to open it over the next field, where
+  // it stayed: nothing but choosing a place closed it.
+  const focused = useRef(false);
 
   useEffect(() => {
+    let current = true;
     const short = text.length < 2;
     const t = setTimeout(
       () => {
@@ -112,14 +118,18 @@ function PlaceSearch({
         }
         searchPlaces(text, { near, session: session.current })
           .then((found) => {
+            if (!current) return; // a later search has replaced this one
             setPlaces(found);
-            setOpen(true);
+            if (focused.current) setOpen(true);
           })
-          .catch(() => setPlaces([]));
+          .catch(() => current && setPlaces([]));
       },
       short ? 0 : 250,
     );
-    return () => clearTimeout(t);
+    return () => {
+      current = false;
+      clearTimeout(t);
+    };
   }, [text, near]);
 
   return (
@@ -134,7 +144,16 @@ function PlaceSearch({
             onSelect(null);
             setText(e.target.value);
           }}
-          onFocus={() => places.length > 0 && setOpen(true)}
+          ref={input}
+          onFocus={() => {
+            focused.current = true;
+            if (places.length > 0) setOpen(true);
+          }}
+          onBlur={() => {
+            focused.current = false;
+            setOpen(false);
+          }}
+          onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
           placeholder={label}
           className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-cocoa/50"
         />
@@ -145,9 +164,13 @@ function PlaceSearch({
           {places.map((p) => (
             <button
               key={suggestionKey(p)}
+              // Keeps the focus in the field, so its blur cannot close the
+              // list before this choice lands.
+              onPointerDown={(e) => e.preventDefault()}
               onClick={async () => {
                 setOpen(false);
                 setText("");
+                input.current?.blur();
                 // A Google suggestion has no coordinates until it is chosen.
                 const place = await resolvePlace(p, session.current);
                 session.current = newSearchSession();
@@ -571,7 +594,7 @@ function RidesInner() {
       <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-0 lg:px-8 lg:pb-6">
         {/* Booking panel — mobile: floating bottom sheet; desktop: LEFT panel
             (Figma desktop places the location panel left of the map) */}
-        <div className="absolute inset-x-0 bottom-0 z-10 order-2 flex max-h-[58dvh] min-h-0 flex-col gap-3 overflow-y-auto rounded-t-[25px] bg-card px-4 py-5 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.18)] lg:static lg:order-1 lg:max-h-none lg:w-[420px] lg:flex-none lg:rounded-l-[18px] lg:rounded-tr-none lg:border lg:border-line lg:px-5 lg:shadow-card">
+        <div className="absolute inset-x-0 bottom-0 z-10 order-2 flex max-h-[58dvh] min-h-0 flex-col gap-3 overflow-y-auto rounded-t-[25px] bg-card px-4 pb-0 pt-5 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.18)] lg:static lg:order-1 lg:max-h-none lg:w-[420px] lg:flex-none lg:rounded-l-[18px] lg:rounded-tr-none lg:border lg:border-line lg:px-5 lg:shadow-card">
           <FadeIn y={8}>
             <div className="flex items-center justify-between">
               <h1 className="text-[17px] font-bold text-ink">
@@ -698,7 +721,7 @@ function RidesInner() {
 
           {quotes.length > 0 && (
             <>
-              {advice && <AdviceBanner advice={advice} />}
+              {advice && <AdviceBanner advice={advice} domain="ride" />}
               <div className="flex gap-2">
                 {VEHICLES.map((v) => (
                   <button
@@ -741,14 +764,14 @@ function RidesInner() {
                               <p className="text-[14px] font-bold text-ink">
                                 {q.displayName}
                               </p>
-                              <p className="mt-0.5 flex items-center gap-2 text-[12px] text-cocoa">
+                              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-cocoa">
                                 {seats && (
-                                  <span className="flex items-center gap-0.5">
+                                  <span className="flex items-center gap-0.5 whitespace-nowrap">
                                     <Users size={12} />{" "}
                                     {seats > 1 ? t("rd.seats").replace("{n}", String(seats)) : t("rd.seat")}
                                   </span>
                                 )}
-                                <span className="flex items-center gap-0.5">
+                                <span className="flex items-center gap-0.5 whitespace-nowrap">
                                   <Clock size={12} /> {q.pickupEtaMinutes} {t("track.minAway")}
                                 </span>
                                 <span className="flex items-center gap-0.5">
@@ -784,7 +807,10 @@ function RidesInner() {
 
           {error && <p className="text-[13px] text-danger">{error}</p>}
 
-          <div className="sticky bottom-0 mt-auto bg-card pb-1 pt-2">
+          {/* Pinned to the sheet's very bottom and edges, with the sheet's
+              padding inside it: a sticky footer stops above its scroller's
+              padding, and the fares scrolling by showed in that gap. */}
+          <div className="sticky bottom-0 -mx-4 mt-auto bg-card px-4 pb-5 pt-2 lg:-mx-5 lg:px-5">
             {/* Ride now vs schedule for later */}
             {pickup && drop && (
               <div className="mb-2 flex items-center gap-2">
@@ -818,7 +844,7 @@ function RidesInner() {
                     setScheduledAt(v ? new Date(v).toISOString() : null);
                   }}
                   className={cn(
-                    "flex-1 rounded-pill border px-3 py-1.5 text-[12px] font-medium outline-none transition-colors",
+                    "min-w-0 flex-1 rounded-pill border px-3 py-1.5 text-[12px] font-medium outline-none transition-colors",
                     scheduledAt
                       ? "border-accent bg-accent-soft/50 text-accent-ink"
                       : "border-line bg-card text-cocoa",

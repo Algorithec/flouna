@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
@@ -16,13 +17,13 @@ function minutesUntil(target: number, now: number): number {
   return Math.max(0, Math.ceil((target - now) / 60_000));
 }
 
-function relativeTime(then: number, now: number): string {
+function relativeTime(then: number, now: number, t: (key: TranslationKey) => string): string {
   const mins = Math.floor((now - then) / 60_000);
-  if (mins < 1) return "just now";
-  if (mins === 1) return "1 min ago";
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t("tt.justNow");
+  if (mins === 1) return t("tt.minAgoOne");
+  if (mins < 60) return t("tt.minsAgo").replace("{n}", String(mins));
   const hrs = Math.floor(mins / 60);
-  return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
+  return hrs === 1 ? t("tt.hourAgo") : t("tt.hoursAgo").replace("{n}", String(hrs));
 }
 
 export function TrackingTimeline({
@@ -44,15 +45,18 @@ export function TrackingTimeline({
   const allDone = reachedCount === events.length;
   const isFood = domain === "food";
 
-  // The step being worked on right now, and when it should finish.
+  // The step being worked on right now.
   const activeIndex = allDone ? events.length - 1 : reachedCount;
-  const nextAt = times[activeIndex];
-  const etaMinutes = nextAt !== undefined ? minutesUntil(nextAt, now) : 0;
 
   // Progress across the whole timeline, so the bar moves smoothly between
   // steps rather than jumping only when one completes.
   const start = times[0] ?? now;
   const end = times[times.length - 1] ?? now;
+  // The header promises the delivery (for a ride the pickup, its last step),
+  // so it counts to the end of the timeline. Counting to the end of the step
+  // under way, it said "Estimated delivery ~1 min" while the food was still
+  // being cooked.
+  const etaMinutes = minutesUntil(end, now);
   const span = Math.max(1, end - start);
   const progress = allDone
     ? 100
@@ -67,7 +71,7 @@ export function TrackingTimeline({
             <p className="mt-0.5 text-[12px] text-cocoa">
               {isFood ? t("tt.estDelivery") : t("tt.estPickup")} ·{" "}
               <span className="font-semibold text-accent">
-                {etaMinutes === 0 ? t("tt.anyMoment") : `~${etaMinutes} min`}
+                {etaMinutes === 0 ? t("tt.anyMoment") : t("tt.aboutMin").replace("{n}", String(etaMinutes))}
               </span>
             </p>
           )}
@@ -133,11 +137,11 @@ export function TrackingTimeline({
                 </p>
                 <p className="text-[11px] text-cocoa">
                   {isReached
-                    ? relativeTime(at, now)
+                    ? relativeTime(at, now, t)
                     : isActive
                       ? minutesUntil(at, now) === 0
                         ? t("tt.anyMoment")
-                        : `in ~${minutesUntil(at, now)} min`
+                        : t("tt.inAboutMin").replace("{n}", String(minutesUntil(at, now)))
                       : new Date(at).toLocaleTimeString("en-IN", {
                           hour: "2-digit",
                           minute: "2-digit",

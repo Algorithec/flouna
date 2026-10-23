@@ -16,6 +16,8 @@ import { LoadingView, ErrorView } from "@/components/ui/StatusView";
 import { cn } from "@/lib/cn";
 import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { orderRef } from "@/lib/format";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 type TrackingEvent = {
   id: string;
@@ -56,6 +58,14 @@ type OrderDetail = {
 };
 
 const POLL_MS = 15_000;
+
+// A payment's state as the reader says it ("UPI · Paid", not "UPI · success").
+const PAY_STATUS: Record<string, TranslationKey> = {
+  success: "od.pay.success",
+  pending: "od.pay.pending",
+  failed: "od.pay.failed",
+  refunded: "od.pay.refunded",
+};
 
 export default function OrderDetailPage({
   params,
@@ -149,6 +159,9 @@ export default function OrderDetailPage({
   // polling a route that could never succeed, once every few seconds, for as
   // long as the page stayed open.
   const trackable = hasTrackingCoords && order.status !== "pending_payment";
+  // Money taken: the same test the invoice uses. Until then the total is
+  // what is to be paid, and any saving is only a saving once it is paid.
+  const paid = ["confirmed", "in_progress", "completed"].includes(order.status) || order.payment?.status === "success";
 
   const discount =
     order.details.offers?.reduce((s, o) => s + o.discountPaise, 0) ?? 0;
@@ -215,7 +228,7 @@ export default function OrderDetailPage({
           <DecisionReceipt
             comparedOptions={order.details.comparedOptions}
             comparedPlatforms={order.details.comparedPlatforms ?? 1}
-            savedPaise={order.savedPaise}
+            savedPaise={paid ? order.savedPaise : 0}
             domain={order.domain}
             title={order.title}
           />
@@ -230,7 +243,7 @@ export default function OrderDetailPage({
           </h2>
           <Link
             href={`/orders/${order.id}/invoice`}
-            className="text-[12px] font-semibold text-accent hover:underline"
+            className="tap-target text-[12px] font-semibold text-accent hover:underline"
           >
             {t("order.viewDownload")}
           </Link>
@@ -270,8 +283,8 @@ export default function OrderDetailPage({
           )}
           {discount > 0 && <Row label={t("bill.offers")} value={`− ${rupees(discount)}`} accent />}
           <div className="my-1.5 h-px bg-line" />
-          <Row label={t("bill.totalPaid")} value={rupees(order.amount)} bold />
-          {order.savedPaise > 0 && (
+          <Row label={paid ? t("bill.totalPaid") : t("bill.totalDue")} value={rupees(order.amount)} bold />
+          {paid && order.savedPaise > 0 && (
             <Row
               label={t("bill.savedVsNext")}
               value={rupees(order.savedPaise)}
@@ -282,11 +295,13 @@ export default function OrderDetailPage({
             label={t("bill.payment")}
             value={
               order.payment
-                ? `${order.payment.method?.toUpperCase() ?? " "} · ${order.payment.status}`
+                ? `${order.payment.method?.toUpperCase() ?? " "} · ${
+                    PAY_STATUS[order.payment.status] ? t(PAY_STATUS[order.payment.status]!) : order.payment.status
+                  }`
                 : t("od.notRecorded")
             }
           />
-          <Row label={t("bill.orderId")} value={order.id} mono />
+          <Row label={t("bill.orderId")} value={`#${orderRef(order.id)}`} mono />
         </div>
       </Card>
 

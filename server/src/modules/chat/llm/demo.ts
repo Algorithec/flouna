@@ -104,7 +104,7 @@ const KNOWN_WORDS = `${DISHES}|${CUISINES}`.split("|").filter((w) => !w.includes
  * not hold cannot be corrected toward one we do without inventing a
  * destination the customer never asked for.
  */
-function repairTypos(message: string): string {
+export function repairTypos(message: string): string {
   return message.replace(/\b[a-z]{4,}\b/gi, (word) => {
     // A capital in the middle of a sentence is usually a name, and a place we
     // do not hold must never be nudged toward a dish we do. "India" is one

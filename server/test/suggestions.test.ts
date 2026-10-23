@@ -44,6 +44,8 @@ describe("chat suggestions", () => {
     );
     expect(reorder).toBeTruthy();
     expect(reorder.prompt).toMatch(/again$/);
+    // Names the dish, so home can leave it out when the usual shortcut shows it.
+    expect(reorder.dishId).toBe("masala-dosa");
   });
 
   it("never returns more than three suggestions", async () => {

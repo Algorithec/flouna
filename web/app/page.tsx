@@ -6,6 +6,7 @@ import { FadeIn } from "@/components/ui/motion";
 import { FlounaLogo } from "@/components/brand/FlounaLogo";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { useAuth } from "@/components/auth/AuthContext";
 
 // Public landing — matches the Figma "intial landing page" frame: the mark
 // and headline sit in the upper third, then an open middle, then the three
@@ -15,6 +16,7 @@ import { useI18n } from "@/components/i18n/I18nContext";
 // hydration like the rest of the app.
 export default function LandingPage() {
   const { t } = useI18n();
+  const { user } = useAuth();
   const [googleError, setGoogleError] = useState("");
 
   return (
@@ -39,34 +41,47 @@ export default function LandingPage() {
         <div className="flex-1" />
 
         <FadeIn delay={0.25} className="w-full max-w-[340px] lg:max-w-[400px]">
-          <div className="flex flex-col gap-3">
-            <GoogleButton onError={setGoogleError} label="Continue with Google" variant="surface" />
+          {/* Someone already signed in is offered the way in, not sign-in
+              options that would only send them round again. */}
+          {user ? (
             <Link
-              href="/login"
-              className="flex h-14 w-full items-center justify-center rounded-pill border border-line bg-card text-[16px] font-semibold text-ink shadow-soft transition-colors hover:bg-beige/40"
+              href="/home"
+              className="flex h-14 w-full items-center justify-center rounded-pill bg-accent text-[16px] font-semibold text-white shadow-soft transition-opacity hover:opacity-90"
             >
-              {t("landing.loginOrSignup")}
+              {t("landing.continueAs").replace("{name}", user.name.split(" ")[0] || user.name)}
             </Link>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <GoogleButton onError={setGoogleError} label="Continue with Google" variant="surface" />
+              <Link
+                href="/login"
+                className="flex h-14 w-full items-center justify-center rounded-pill border border-line bg-card text-[16px] font-semibold text-ink shadow-soft transition-colors hover:bg-beige/40"
+              >
+                {t("landing.loginOrSignup")}
+              </Link>
+            </div>
+          )}
           {googleError && (
             <p role="alert" className="mt-3 text-[13px] text-danger">
               {googleError}
             </p>
           )}
-          <Link
-            href="/home"
-            className="mt-5 block text-center text-[14px] font-medium text-cocoa hover:text-ink"
-          >
-            {t("landing.continueGuest")}
-          </Link>
+          {!user && (
+            <Link
+              href="/home"
+              className="tap-target mt-5 block text-center text-[14px] font-medium text-cocoa hover:text-ink"
+            >
+              {t("landing.continueGuest")}
+            </Link>
+          )}
         </FadeIn>
 
         <FadeIn delay={0.4} className="mt-6 flex items-center gap-4 text-[12px] text-muted">
-          <Link href="/legal/privacy" className="hover:text-cocoa">
+          <Link href="/legal/privacy" className="tap-target hover:text-cocoa">
             {t("landing.privacy")}
           </Link>
           <span className="text-line">·</span>
-          <Link href="/legal/terms" className="hover:text-cocoa">
+          <Link href="/legal/terms" className="tap-target hover:text-cocoa">
             {t("landing.terms")}
           </Link>
         </FadeIn>

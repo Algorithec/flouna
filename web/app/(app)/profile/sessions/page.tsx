@@ -180,7 +180,7 @@ export default function LoginActivityPage() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
-                      <span className="truncate text-[15px] font-bold text-acct-ink">
+                      <span className="line-clamp-2 min-w-0 text-[15px] font-bold text-acct-ink">
                         {describe(s.userAgent, t("pp.sess.unknownDevice"))}
                       </span>
                       {current && (
@@ -189,7 +189,7 @@ export default function LoginActivityPage() {
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 block truncate text-[12px] text-acct-muted">
+                    <span className="mt-0.5 block text-[12px] text-acct-muted">
                       {t("pp.sess.signedIn")} {when(s.createdAt, t, locale)} ·{" "}
                       {t("pp.sess.lastActive")} {when(s.lastUsedAt ?? s.createdAt, t, locale)}
                     </span>

@@ -15,8 +15,8 @@ import { recordSelection } from "../advisor/decisionLog.service.js";
 import { env } from "../../config/env.js";
 import { rideProvider } from "../providers/index.js";
 import { catchUpDriverMessages } from "../rides/rideChat.service.js";
-import { creditCashback, refundToWallet } from "../users/wallet.service.js";
-import { getConfig } from "../backoffice/config.service.js";
+import { refundToWallet } from "../users/wallet.service.js";
+import { completeDueOrders, completeOrder, timelineElapsed } from "./lifecycle.js";
 import {
   isPlusActive,
   CONVENIENCE_FEE_PAISE,
@@ -680,25 +680,51 @@ ordersRouter.post(
 ordersRouter.get("/", async (req, res, next) => {
   try {
     const domain = req.query.domain;
-    const orders = await prisma.order.findMany({
-      where: {
-        userId: req.userId!,
-        ...(domain === "food" || domain === "ride" || domain === "shop" ? { domain } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      select: {
-        id: true,
-        domain: true,
-        status: true,
-        provider: true,
-        title: true,
-        amount: true,
-        savedPaise: true,
-        createdAt: true,
+    const where = {
+      userId: req.userId!,
+      ...(domain === "food" || domain === "ride" || domain === "shop" ? { domain } : {}),
+    };
+    // Finished before they are listed, or an order whose screen was closed
+    // early is listed as still going for good.
+    await completeDueOrders(req.userId!);
+    const [orders, total, completed, spent] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          domain: true,
+          status: true,
+          provider: true,
+          title: true,
+          amount: true,
+          savedPaise: true,
+          createdAt: true,
+        },
+      }),
+      prisma.order.count({ where }),
+      prisma.order.count({ where: { ...where, status: "completed" } }),
+      // The orders money was actually spent on: not one waiting for payment,
+      // one cancelled, or an ONDC order paid and refunded because it was never
+      // placed. Spend and savings both count only these, so a saving is never
+      // shown on money that was not spent.
+      prisma.order.aggregate({
+        where: { ...where, status: { notIn: ["pending_payment", "cancelled", "failed"] } },
+        _sum: { amount: true, savedPaise: true },
+      }),
+    ]);
+    res.json({
+      orders,
+      // Totals over every order, not just the fifty listed. The history used
+      // to add up the list, so past fifty orders its totals stopped growing.
+      stats: {
+        total,
+        completed,
+        spentPaise: spent._sum.amount ?? 0,
+        savedPaise: spent._sum.savedPaise ?? 0,
       },
     });
-    res.json({ orders });
   } catch (err) {
     next(err);
   }
@@ -718,53 +744,14 @@ ordersRouter.get("/:id", async (req, res, next) => {
     });
     if (!order) throw new ApiError(404, "Order not found");
 
-    // Lazy lifecycle completion: once every tracking step has elapsed,
-    // a confirmed order becomes completed (real ONDC webhooks replace this).
-    if (
-      order.status === "confirmed" &&
-      order.trackingEvents.length > 0 &&
-      order.trackingEvents.every((e) => e.createdAt <= new Date())
-    ) {
-      // Only if it is still confirmed. This write used to be unconditional,
-      // so a cancellation landing between the read above and this line was
-      // overwritten: the order showed completed with a refund flagged against
-      // it and cashback paid on it.
-      const completed = await prisma.order.updateMany({
-        where: { id: order.id, status: "confirmed" },
-        data: { status: "completed" },
-      });
-      if (completed.count === 0) {
+    // Lazy lifecycle completion (see lifecycle.ts).
+    if (timelineElapsed(order)) {
+      if (!(await completeOrder(order))) {
         // Something else changed it first; show what it is now.
         const current = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
         return res.json({ order: { ...order, ...current, details: JSON.parse(current.details) } });
       }
       order = { ...order, status: "completed" };
-
-      // Completing the order is what earns the buyer's cashback. The rate is
-      // the platform's own configured numbers — the ONDC margin floor, and the
-      // share of it handed back — so nothing about the reward is invented here.
-      // The ledger's unique index makes a repeat call a no-op, which matters
-      // because this route is polled.
-      //
-      // Only on money actually collected. Cash on delivery confirms the order
-      // and leaves its payment at "pending" until the money is taken in
-      // person, and nothing ever marks it taken — so every COD order reached
-      // here and paid out a share of a margin Flouna had not earned. A buyer
-      // could place COD orders, refuse them at the door, and still be credited
-      // real spendable balance. The cashback follows the payment, and a COD
-      // order earns it once collection is recorded.
-      const paid = order.payment?.status === "success";
-      const { ondcMinMarginBps, cashbackUserSharePct } = await getConfig();
-      if (paid && cashbackUserSharePct > 0) {
-        await creditCashback({
-          userId: order.userId,
-          orderId: order.id,
-          marginPaise: Math.floor((order.amount * ondcMinMarginBps) / 10_000),
-          title: order.title,
-        }).catch(() => {
-          // A reward must never break the order it rewards.
-        });
-      }
     }
 
     res.json({

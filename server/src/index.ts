@@ -16,6 +16,7 @@ import { seedDemoCoupons } from "./data/coupons.js";
 import { shouldSync, syncSchema } from "./lib/schemaSync.js";
 import { pruneOndcSearches } from "./modules/ondc/search.service.js";
 import { pruneNoLogs, pushPending } from "./modules/ondc/observability.js";
+import { keepConnectionsAlive } from "./lib/keepAlive.js";
 
 initMonitoring();
 
@@ -60,6 +61,9 @@ const app = createApp();
 const server = app.listen(env.PORT, () => {
   console.log(`flouna-api listening on http://localhost:${env.PORT}`);
 });
+// Idle connections outlive the web proxy's pool, so a reused one is never
+// closed under a request (see lib/keepAlive.ts).
+keepConnectionsAlive(server);
 
 // Realtime channel for live price-drop alerts.
 initRealtime(server);
