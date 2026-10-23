@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Wallet, Bell, Languages, Moon, Sun } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { Wallet, Bell, Languages, Moon, Sun, Smartphone, Bug, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { SubPage } from "@/components/profile/SubPage";
 import { Card } from "@/components/ui/Card";
@@ -17,6 +17,8 @@ import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { LANGUAGES } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/cn";
 import { useTheme } from "@/components/theme/ThemeContext";
+import { Switch } from "@/components/support/ReportProblem";
+import { OPEN_REPORT_EVENT, setShakeEnabled, shakeSupported, useShakeEnabled } from "@/lib/shake";
 
 // Server-persisted preferences (PUT /api/users/preferences). Security mail
 // (password changed, new address, etc.) isn't listed here — it always sends
@@ -53,6 +55,9 @@ type Prefs = {
 
 export default function SettingsPage() {
   const { theme, toggle } = useTheme();
+  const shakeOn = useShakeEnabled();
+  // Read on the client only: the server cannot know what this device can sense.
+  const canShake = useSyncExternalStore(noSubscribe, shakeSupported, () => false);
   const { t, lang, setLang } = useI18n();
   const [prefs, setPrefs] = useState<Prefs>({
     emailUpdates: true,
@@ -241,6 +246,33 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {/* Report a technical problem: shake the phone, as on Instagram, or tap
+          the row. The switch is per device, like the theme. */}
+      <Card className="mb-4 p-0">
+        {canShake && (
+          <div className="flex items-center gap-3 border-b border-line/70 px-4 py-3.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-beige/70">
+              <Smartphone size={16} className="text-accent" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-medium text-ink">{t("rp.shakeToggle")}</p>
+              <p className="text-[12px] text-cocoa">{shakeOn ? t("st.shakeOn") : t("st.off")}</p>
+            </div>
+            <Switch on={shakeOn} label={t("rp.shakeToggle")} onToggle={() => void setShakeEnabled(!shakeOn)} />
+          </div>
+        )}
+        <button
+          onClick={() => window.dispatchEvent(new Event(OPEN_REPORT_EVENT))}
+          className="tap-target flex w-full items-center gap-3 px-4 py-3.5 text-left"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-beige/70">
+            <Bug size={16} className="text-accent" />
+          </span>
+          <span className="min-w-0 flex-1 text-[14px] font-medium text-ink">{t("rp.title")}</span>
+          <ChevronRight size={17} className="shrink-0 text-muted/60" />
+        </button>
+      </Card>
+
       {/* Push notifications — real Web Push subscription */}
       <Card className="mb-4">
         <div className="flex items-center gap-3">
@@ -319,3 +351,5 @@ export default function SettingsPage() {
     </SubPage>
   );
 }
+
+const noSubscribe = () => () => {};

@@ -136,6 +136,7 @@ describe("logging what we send", () => {
   });
 
   it("queues nothing for a profile with no token", async () => {
+    await prisma.ondcNoLog.deleteMany({});
     env.ONDC_NO_TOKEN_RETAIL = undefined;
     const select = buildSelect({ ...order, gps: "12.971600,77.594600", areaCode: "560038" });
     await sendSigned("https://seller.test/ondc", "select", select, identity, async () => ({ status: 200, text: async () => JSON.stringify({ message: { ack: { status: "ACK" } } }) }));
