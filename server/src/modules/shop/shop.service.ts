@@ -61,11 +61,24 @@ export function quotesForProduct(productId: string): ProductQuote[] {
   return toQuotes(product).sort((a, b) => a.effectivePaise - b.effectivePaise);
 }
 
-export function searchProducts(opts: {
+type ProductSearch = {
   query: string;
   budgetPaise?: number | null;
   category?: string | null;
-}): ProductQuote[] {
+};
+
+export function searchProducts(opts: ProductSearch): ProductQuote[] {
+  return searchProductsTraced(opts).quotes;
+}
+
+/**
+ * The same search, also saying when nothing matched and the whole range was
+ * shown instead, so the screen can say so rather than list it as results.
+ */
+export function searchProductsTraced(opts: ProductSearch): {
+  quotes: ProductQuote[];
+  substituted: boolean;
+} {
   const terms = opts.query.toLowerCase().split(/\s+/).filter(Boolean);
 
   let matched = products.filter((p) =>
@@ -76,6 +89,7 @@ export function searchProducts(opts: {
         p.brand.toLowerCase().includes(t),
     ),
   );
+  const substituted = matched.length === 0 && terms.length > 0;
   if (matched.length === 0) matched = products; // generic browse
 
   if (opts.category) {
@@ -87,7 +101,7 @@ export function searchProducts(opts: {
     const within = quotes.filter((q) => q.effectivePaise <= opts.budgetPaise!);
     if (within.length > 0) quotes = within;
   }
-  return quotes.sort((a, b) => a.effectivePaise - b.effectivePaise);
+  return { quotes: quotes.sort((a, b) => a.effectivePaise - b.effectivePaise), substituted };
 }
 
 // Decision step: score every option on price, rating and delivery speed,

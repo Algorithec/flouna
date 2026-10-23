@@ -27,9 +27,13 @@ export type Advice = {
 export function AdviceBanner({
   advice,
   className,
+  domain = "food",
 }: {
   advice: Advice;
   className?: string;
+  // A ride is booked, not ordered: "Good time to order" sat over "Good time
+  // to book" on the ride screen.
+  domain?: "food" | "ride";
 }) {
   const { t } = useI18n();
   const wait = advice.action === "wait";
@@ -55,7 +59,9 @@ export function AdviceBanner({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-card border pl-4 pr-3.5 py-3",
+        // shrink-0: hidden overflow lets a flex item shrink to nothing, and in
+        // the ride sheet's column the advice was squashed to a 26px sliver.
+        "relative shrink-0 overflow-hidden rounded-card border pl-4 pr-3.5 py-3",
         // The rail carries the verdict's colour, so the fill can stay light
         // enough for the text on it to be comfortable.
         "before:absolute before:inset-y-0 before:left-0 before:w-1",
@@ -83,7 +89,7 @@ export function AdviceBanner({
                 wait ? "text-accent" : "text-success",
               )}
             >
-              {wait ? t("adv.wait") : t("adv.good")}
+              {wait ? t("adv.wait") : domain === "ride" ? t("adv.goodRide") : t("adv.good")}
             </p>
             {/* The figure the advice turns on, stated rather than implied. */}
             {wait && saving && (

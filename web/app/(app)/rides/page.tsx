@@ -721,7 +721,7 @@ function RidesInner() {
 
           {quotes.length > 0 && (
             <>
-              {advice && <AdviceBanner advice={advice} />}
+              {advice && <AdviceBanner advice={advice} domain="ride" />}
               <div className="flex gap-2">
                 {VEHICLES.map((v) => (
                   <button
