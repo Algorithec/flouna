@@ -48,6 +48,13 @@ export const CALLBACK_ACTIONS = [
   // other answer, so without them a seller's reply to a complaint was a 404.
   "on_issue",
   "on_issue_status",
+  // Settlement (RSF, ONDC:NTS10): the settlement agency's answers, and seller
+  // apps reconciling orders with us. recon is a request, which we answer
+  // with on_recon.
+  "on_settle",
+  "on_report",
+  "recon",
+  "on_recon",
 ] as const;
 
 export type ReceivedCallback = {
