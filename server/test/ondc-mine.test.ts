@@ -79,3 +79,33 @@ describe("a customer's ONDC orders and rides", () => {
     await stranger.agent.get(`/api/ondc/mine/${r.id}`).expect(404);
   });
 });
+
+// From the review on #86: one row that does not parse used to fail the whole
+// list with a 500, and the list could hold fifty orders and fifty rides.
+describe("the ONDC history, past a bad row and at its length", () => {
+  it("stays readable past a row whose stored details do not parse", async () => {
+    const c = await customer();
+    const badRide = await ride(c.userId, "booked", new Date());
+    await prisma.ondcRide.update({ where: { id: badRide.id }, data: { drop: "not json" } });
+    const badFood = await food(c.userId, "placed", new Date());
+    await prisma.ondcOrder.update({ where: { id: badFood.id }, data: { lines: "not json" } });
+    const list = await c.agent.get("/api/ondc/mine").expect(200);
+    expect(list.body.entries.find((e: { id: string }) => e.id === badRide.id)).toMatchObject({ title: "" });
+    expect((await c.agent.get(`/api/ondc/mine/${badRide.id}`).expect(200)).body).toMatchObject({ kind: "ride", title: "" });
+    expect((await c.agent.get(`/api/ondc/mine/${badFood.id}`).expect(200)).body).toMatchObject({ kind: "food", itemCount: null });
+  });
+
+  it("shows fifty in all, newest first, not fifty of each", async () => {
+    const c = await customer();
+    const at = (i: number) => new Date(Date.UTC(2026, 9, 1, 0, i));
+    const base = { userId: c.userId, bppId: "s", bppUri: "https://s", providerId: "p", locationId: "l", storeName: "Store", city: "std:080", lines: "[]", status: "placed" };
+    await prisma.ondcOrder.createMany({ data: Array.from({ length: 30 }, (_, i) => ({ ...base, txnId: crypto.randomUUID(), createdAt: at(2 * i) })) });
+    await prisma.ondcRide.createMany({
+      data: Array.from({ length: 30 }, (_, i) => ({ userId: c.userId, txnId: crypto.randomUUID(), status: "completed", city: "std:080", pickup: "{}", drop: "{}", createdAt: at(2 * i + 1) })),
+    });
+    const entries = (await c.agent.get("/api/ondc/mine").expect(200)).body.entries as { createdAt: string }[];
+    expect(entries).toHaveLength(50);
+    expect(entries[0]!.createdAt).toBe(at(59).toISOString());
+    expect(entries.every((e, i) => i === 0 || entries[i - 1]!.createdAt >= e.createdAt)).toBe(true);
+  });
+});

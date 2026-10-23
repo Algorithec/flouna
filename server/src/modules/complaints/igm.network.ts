@@ -74,14 +74,32 @@ export function ondcOrderRef(details: string | null | undefined): IgmOrderRef | 
  * (OndcRide). Only once the seller has accepted it, so there is a seller
  * order id to name; before that there is nothing for the seller to look up.
  */
+/** A food order's lines, or null if what is stored does not read as them: the complaint is held, not crashed. */
+function cartLines(json: string): { itemId: string; count: number }[] | null {
+  try {
+    const lines = JSON.parse(json) as unknown;
+    if (!Array.isArray(lines) || lines.length === 0) return null;
+    const ok = lines.every((l) => typeof (l as { itemId?: unknown }).itemId === "string" && Number.isInteger((l as { count?: unknown }).count));
+    return ok ? (lines as { itemId: string; count: number }[]) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function igmRefFor(orderId: string | null | undefined): Promise<IgmOrderRef | null> {
   if (!orderId) return null;
   const order = await prisma.order.findUnique({ where: { id: orderId }, select: { details: true } });
   if (order) return ondcOrderRef(order.details);
-  const food = await prisma.ondcOrder.findUnique({ where: { id: orderId } });
+  const food = await prisma.ondcOrder.findUnique({
+    where: { id: orderId },
+    select: { sellerOrderId: true, fulfillmentId: true, city: true, txnId: true, bppId: true, bppUri: true, providerId: true, lines: true },
+  });
   if (food) {
-    if (!food.sellerOrderId || !food.fulfillmentId) return null;
-    const lines = JSON.parse(food.lines) as { itemId: string; count: number }[];
+    // Every field the issue names has to be there, as for a ride: a seller's
+    // gateway may drop an issue with an empty one without a word.
+    if (!food.sellerOrderId || !food.fulfillmentId || !food.city || !food.txnId || !food.bppId || !food.bppUri || !food.providerId) return null;
+    const lines = cartLines(food.lines);
+    if (!lines) return null;
     return {
       domain: "ONDC:RET11",
       city: food.city,
@@ -93,7 +111,10 @@ export async function igmRefFor(orderId: string | null | undefined): Promise<Igm
       items: lines.map((l) => ({ id: l.itemId, count: l.count })),
     };
   }
-  const ride = await prisma.ondcRide.findUnique({ where: { id: orderId } });
+  const ride = await prisma.ondcRide.findUnique({
+    where: { id: orderId },
+    select: { sellerOrderId: true, bppId: true, bppUri: true, providerId: true, fulfillmentId: true, itemId: true, city: true, txnId: true },
+  });
   if (ride?.sellerOrderId && ride.bppId && ride.bppUri && ride.providerId && ride.fulfillmentId && ride.itemId) {
     return {
       domain: "ONDC:TRV10",

@@ -16,6 +16,29 @@ ondcMineRouter.use(requireAuth);
 const FOOD_SHOWN = ["paid", "confirming", "placed", "cancelling", "cancelled", "failed"];
 const RIDE_SHOWN = ["booked", "cancel_quoting", "cancel_quoted", "cancelling", "cancelled", "completed"];
 
+/** The history shows this many, newest first, across food and rides together. */
+const SHOWN = 50;
+
+/** Where a ride went, or "" if what is stored does not read: one bad row must not fail the list. */
+function dropAddress(json: string): string {
+  try {
+    const address = (JSON.parse(json) as { address?: unknown } | null)?.address;
+    return typeof address === "string" ? address : "";
+  } catch {
+    return "";
+  }
+}
+
+/** How many lines a food order had, or null if they do not read. */
+function lineCount(json: string): number | null {
+  try {
+    const lines = JSON.parse(json) as unknown;
+    return Array.isArray(lines) ? lines.length : null;
+  } catch {
+    return null;
+  }
+}
+
 type Entry = {
   id: string;
   kind: "food" | "ride";
@@ -32,13 +55,13 @@ ondcMineRouter.get("/", async (req, res, next) => {
       prisma.ondcOrder.findMany({
         where: { userId: req.userId!, status: { in: FOOD_SHOWN } },
         orderBy: { createdAt: "desc" },
-        take: 50,
+        take: SHOWN,
         select: { id: true, storeName: true, status: true, sellerState: true, totalPaise: true, createdAt: true },
       }),
       prisma.ondcRide.findMany({
         where: { userId: req.userId!, status: { in: RIDE_SHOWN } },
         orderBy: { createdAt: "desc" },
-        take: 50,
+        take: SHOWN,
         select: { id: true, drop: true, status: true, farePaise: true, createdAt: true },
       }),
     ]);
@@ -48,13 +71,16 @@ ondcMineRouter.get("/", async (req, res, next) => {
       ...rides.map((r) => ({
         id: r.id,
         kind: "ride" as const,
-        title: (JSON.parse(r.drop) as { address?: string }).address ?? "",
+        title: dropAddress(r.drop),
         status: r.status,
         amountPaise: r.farePaise,
         createdAt: r.createdAt.toISOString(),
         href: `/rides/ondc/${r.id}`,
       })),
-    ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    ]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      // Fifty in all, not fifty of each.
+      .slice(0, SHOWN);
     res.json({ entries });
   } catch (err) {
     next(err);
@@ -64,15 +90,15 @@ ondcMineRouter.get("/", async (req, res, next) => {
 /** One of them, by id, for the help screen: what it was and when. */
 ondcMineRouter.get("/:id", async (req, res, next) => {
   try {
-    if (!z.string().min(1).max(40).regex(/^[a-z0-9]+$/).safeParse(req.params.id).success) return res.status(404).json({ error: "Order not found" });
+    if (!z.string().min(1).max(40).regex(/^[A-Za-z0-9_-]+$/).safeParse(req.params.id).success) return res.status(404).json({ error: "Order not found" });
     const where = { id: req.params.id!, userId: req.userId! };
     const food = await prisma.ondcOrder.findFirst({ where, select: { storeName: true, createdAt: true, lines: true } });
     if (food) {
-      return res.json({ kind: "food", title: food.storeName, createdAt: food.createdAt.toISOString(), itemCount: (JSON.parse(food.lines) as unknown[]).length });
+      return res.json({ kind: "food", title: food.storeName, createdAt: food.createdAt.toISOString(), itemCount: lineCount(food.lines) });
     }
     const ride = await prisma.ondcRide.findFirst({ where, select: { drop: true, createdAt: true } });
     if (ride) {
-      return res.json({ kind: "ride", title: (JSON.parse(ride.drop) as { address?: string }).address ?? "", createdAt: ride.createdAt.toISOString(), itemCount: null });
+      return res.json({ kind: "ride", title: dropAddress(ride.drop), createdAt: ride.createdAt.toISOString(), itemCount: null });
     }
     res.status(404).json({ error: "Order not found" });
   } catch (err) {

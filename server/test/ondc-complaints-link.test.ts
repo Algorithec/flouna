@@ -98,3 +98,21 @@ describe("complaints about orders placed through ONDC", () => {
     await stranger.agent.post("/api/complaints").send({ orderId: order.id, category: "ORDER", subCategory: "WRONG_ITEM_DELIVERED", description: "Not mine" }).expect(404);
   });
 });
+
+// From the review on #85: a food order's stored lines were parsed without a
+// guard, and only two of the fields the issue names were checked.
+describe("an ONDC complaint reference that cannot be built", () => {
+  it("holds the complaint rather than crash on lines that do not parse", async () => {
+    const c = await customer();
+    const order = await foodOrder(c.userId);
+    await prisma.ondcOrder.update({ where: { id: order.id }, data: { lines: "not json" } });
+    expect(await igmRefFor(order.id)).toBeNull();
+  });
+
+  it("holds it rather than send an issue with a field missing", async () => {
+    const c = await customer();
+    const order = await foodOrder(c.userId);
+    await prisma.ondcOrder.update({ where: { id: order.id }, data: { providerId: "" } });
+    expect(await igmRefFor(order.id)).toBeNull();
+  });
+});
