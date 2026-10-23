@@ -12,8 +12,8 @@ import {
   startOndcOrder,
   trackOndcOrder,
 } from "../src/modules/ondc/orders.service.js";
-import { authedAgent } from "./helpers.js";
-import { customerWithSearch, fx, identity, placedOrder, recorder, reply, SELLER, SELLER_URI, startPizza } from "./ondc-order-helpers.js";
+import { authedAgent, consoleAgent } from "./helpers.js";
+import { customerWithSearch, fx, identity, placedOrder, recorder, reply, SELLER, SELLER_URI, startPizza, withPublishedTerms } from "./ondc-order-helpers.js";
 
 // A food order with an ONDC seller, end to end: ONDC's mock seller (Pramaan)
 // answers every step with the replies from a certified buyer app flow,
@@ -291,5 +291,46 @@ describe("the ONDC order routes", () => {
     } finally {
       env.ONDC_SEARCH_ENABLED = false;
     }
+  });
+});
+
+describe("which version of our static terms each seller app accepted (static terms 17.6.1)", () => {
+  const TERMS = { termsUrl: "https://flouna.com/ondc/static_terms_v1.0.1.pdf", termsEffective: "2026-11-01T00:00:00.000Z" };
+
+  it("records the seller app, the version, when and the signed on_confirm that accepted it", async () => {
+    await prisma.ondcTermsAcceptance.deleteMany({ where: { bppId: SELLER } });
+    const first = await withPublishedTerms(() => placedOrder());
+    const row = await prisma.ondcTermsAcceptance.findUniqueOrThrow({ where: { bppId_termsUrl_termsEffective: { bppId: SELLER, ...TERMS } } });
+    expect(row).toMatchObject({
+      firstOrderId: first.orderId,
+      firstMessageId: first.confirmMessageId,
+      firstAcceptedAt: new Date("2026-10-21T10:00:00Z"),
+      ordersAccepted: 1,
+      statedAccept: false,
+    });
+    // The signed message it points to is in the transaction log.
+    expect(await prisma.ondcTransaction.count({ where: { messageId: first.confirmMessageId, action: "on_confirm" } })).toBeGreaterThan(0);
+
+    // A later order under the same version counts against the same record and keeps the first as the evidence.
+    await withPublishedTerms(() => placedOrder((m) => m.message.order.tags[0].list.push({ code: "accept_bap_terms", value: "Y" })));
+    const after = await prisma.ondcTermsAcceptance.findUniqueOrThrow({ where: { id: row.id } });
+    expect(after).toMatchObject({ firstOrderId: first.orderId, ordersAccepted: 2, statedAccept: true });
+  });
+
+  it("records nothing for an order whose search stated no terms, or that the seller did not accept", async () => {
+    await prisma.ondcTermsAcceptance.deleteMany({ where: { bppId: SELLER } });
+    await placedOrder();
+    expect(await prisma.ondcTermsAcceptance.count({ where: { bppId: SELLER } })).toBe(0);
+    await withPublishedTerms(() => placedOrder((m) => (m.message.order.state = "Cancelled")));
+    expect(await prisma.ondcTermsAcceptance.count({ where: { bppId: SELLER } })).toBe(0);
+  });
+
+  it("is listed for admins only", async () => {
+    const admin = await consoleAgent("admin");
+    const res = await admin.agent.get("/api/console/admin/ondc/terms-acceptances").expect(200);
+    expect(Array.isArray(res.body.acceptances)).toBe(true);
+    const user = await authedAgent();
+    // The console answers anyone else as if it did not exist.
+    await user.agent.get("/api/console/admin/ondc/terms-acceptances").expect(404);
   });
 });

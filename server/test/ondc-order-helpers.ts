@@ -107,7 +107,7 @@ export async function startPizza(c: { userId: string; searchId: string }, deps: 
 }
 
 /** Runs the order up to placed, returning what was sent. */
-export async function placedOrder() {
+export async function placedOrder(onConfirm?: (m: any) => void) {
   const c = await customerWithSearch();
   const r = recorder();
   const { orderId } = await startPizza(c, r.deps);
@@ -117,6 +117,21 @@ export async function placedOrder() {
   await reply("on_init", fx("on_init"), { txnId: order.txnId, messageId: r.last().envelope.context.message_id }).expect(200);
   await markOndcOrderPaid(orderId, { amountPaise: 47500, reference: "pay_1" });
   await confirmOndcOrder(c.userId, orderId, r.deps);
-  await reply("on_confirm", fx("on_confirm"), { txnId: order.txnId, messageId: r.last().envelope.context.message_id, at: new Date("2026-10-21T10:00:00Z") }).expect(200);
-  return { c, r, orderId, txnId: order.txnId };
+  const confirmed = fx("on_confirm");
+  onConfirm?.(confirmed);
+  const confirmMessageId = r.last().envelope.context.message_id;
+  await reply("on_confirm", confirmed, { txnId: order.txnId, messageId: confirmMessageId, at: new Date("2026-10-21T10:00:00Z") }).expect(200);
+  return { c, r, orderId, txnId: order.txnId, confirmMessageId };
+}
+
+/** Runs fn with our static terms published, as a deployment would have them. */
+export async function withPublishedTerms<T>(fn: () => Promise<T>): Promise<T> {
+  process.env.ONDC_STATIC_TERMS_URL = "https://flouna.com/ondc/static_terms_v1.0.1.pdf";
+  process.env.ONDC_STATIC_TERMS_EFFECTIVE_DATE = "2026-11-01";
+  try {
+    return await fn();
+  } finally {
+    delete process.env.ONDC_STATIC_TERMS_URL;
+    delete process.env.ONDC_STATIC_TERMS_EFFECTIVE_DATE;
+  }
 }

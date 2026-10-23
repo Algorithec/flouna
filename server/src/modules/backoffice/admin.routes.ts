@@ -6,6 +6,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireRole } from "../../middleware/auth.js";
+import { listTermsAcceptances } from "../ondc/termsAcceptance.js";
 import {
   listComplaintsForOps,
   getComplaintForOps,
@@ -276,6 +277,16 @@ adminRouter.post(
 );
 
 // --- Support tickets -----------------------------------------------------
+// --- ONDC: which version of our static terms each seller app accepted ------
+// The record static terms 17.6.1 asks us to keep (see ondc/termsAcceptance.ts).
+adminRouter.get("/ondc/terms-acceptances", async (_req, res, next) => {
+  try {
+    res.json({ acceptances: await listTermsAcceptances() });
+  } catch (err) {
+    next(err);
+  }
+});
+
 adminRouter.get("/tickets", async (req, res, next) => {
   try {
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
