@@ -45,15 +45,18 @@ export function TrackingTimeline({
   const allDone = reachedCount === events.length;
   const isFood = domain === "food";
 
-  // The step being worked on right now, and when it should finish.
+  // The step being worked on right now.
   const activeIndex = allDone ? events.length - 1 : reachedCount;
-  const nextAt = times[activeIndex];
-  const etaMinutes = nextAt !== undefined ? minutesUntil(nextAt, now) : 0;
 
   // Progress across the whole timeline, so the bar moves smoothly between
   // steps rather than jumping only when one completes.
   const start = times[0] ?? now;
   const end = times[times.length - 1] ?? now;
+  // The header promises the delivery (for a ride the pickup, its last step),
+  // so it counts to the end of the timeline. Counting to the end of the step
+  // under way, it said "Estimated delivery ~1 min" while the food was still
+  // being cooked.
+  const etaMinutes = minutesUntil(end, now);
   const span = Math.max(1, end - start);
   const progress = allDone
     ? 100
