@@ -69,6 +69,9 @@ export default function FoodLandingPage() {
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodQuote[] | null>(null);
+  // Said above the results when they are not what was typed: nothing matched
+  // and these are popular instead, or a misspelling was searched as the dish.
+  const [searchNote, setSearchNote] = useState("");
   const [error, setError] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [sort, setSort] = useState<"default" | "best" | "offers" | "new">("default");
@@ -97,17 +100,27 @@ export default function FoodLandingPage() {
     // the results list showing dishes for a query nobody had asked for.
     let active = true;
     const timer = setTimeout(() => {
-      api<{ quotes: FoodQuote[] }>(
+      api<{ quotes: FoodQuote[]; substituted?: boolean; searchedFor?: string }>(
         `/api/food/search?q=${encodeURIComponent(activeQuery)}`,
       )
-        .then((d) => active && setResults(d.quotes))
+        .then((d) => {
+          if (!active) return;
+          setResults(d.quotes);
+          setSearchNote(
+            d.substituted
+              ? t("search.noMatch").replace("{q}", activeQuery)
+              : d.searchedFor
+                ? t("search.showingFor").replace("{q}", d.searchedFor)
+                : "",
+          );
+        })
         .catch(() => active && setResults([]));
     }, 250);
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [activeQuery]);
+  }, [activeQuery, t]);
 
   const showSearch = activeQuery !== "" && results !== null;
   const loading = !feed && !error;
@@ -277,12 +290,13 @@ export default function FoodLandingPage() {
           <StateScreen
             illustration={<StateGlyph icon={Search} />}
             title={t("fp.noResults")}
-            message={`We couldn't find anything matching "${activeQuery}".`}
+            message={t("fp.noResultsMsg").replace("{q}", activeQuery)}
             primary={{ label: t("fp.clearSearch"), onClick: () => setQuery("") }}
           />
         ) : (
           <section className="mt-6">
             <h2 className="text-[17px] font-bold text-ink">{t("fp.results")}</h2>
+            {searchNote && <p className="mt-1 text-[13px] text-cocoa">{searchNote}</p>}
             <Stagger className="mt-3 flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
               {results.map((q) => (
                 <StaggerItem key={`${q.dishId}-${q.platform}`}>

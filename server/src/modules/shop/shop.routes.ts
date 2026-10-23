@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../../middleware/auth.js";
-import { recommendProduct, searchProducts, quotesForProduct } from "./shop.service.js";
+import { recommendProduct, searchProducts, searchProductsTraced, quotesForProduct } from "./shop.service.js";
 import { products } from "../../data/products.js";
 
 export const shopRouter = Router();
@@ -31,12 +31,12 @@ const searchQuery = z.object({
 shopRouter.get("/search", (req, res, next) => {
   try {
     const parsed = searchQuery.parse(req.query);
-    const quotes = searchProducts({
+    const { quotes, substituted } = searchProductsTraced({
       query: parsed.q,
       budgetPaise: parsed.budget ? parsed.budget * 100 : null,
       category: parsed.category ?? null,
     });
-    res.json({ quotes: quotes.slice(0, 24) });
+    res.json({ quotes: quotes.slice(0, 24), substituted });
   } catch (err) {
     next(err);
   }
