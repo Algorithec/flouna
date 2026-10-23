@@ -16,6 +16,7 @@ import { LoadingView, ErrorView } from "@/components/ui/StatusView";
 import { cn } from "@/lib/cn";
 import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { orderRef } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 type TrackingEvent = {
@@ -300,7 +301,7 @@ export default function OrderDetailPage({
                 : t("od.notRecorded")
             }
           />
-          <Row label={t("bill.orderId")} value={order.id} mono />
+          <Row label={t("bill.orderId")} value={`#${orderRef(order.id)}`} mono />
         </div>
       </Card>
 

@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { FadeIn, SlideIn } from "@/components/ui/motion";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { orderRef } from "@/lib/format";
 
 
 type AddressSummary = { label: string; line1: string; city: string; isDefault: boolean };
@@ -398,7 +399,7 @@ export default function PayPage({
                 : t("pay.successRide")}
           </p>
           <span className="mt-3 rounded-pill border border-success/40 bg-success/5 px-3 py-1 font-mono text-[11px] font-semibold text-success">
-            {t("py.orderId").replace("{id}", orderId.slice(-8).toUpperCase())}
+            {t("py.orderId").replace("{id}", orderRef(orderId))}
           </span>
 
           {/* ETA banner */}
