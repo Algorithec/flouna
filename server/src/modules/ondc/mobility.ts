@@ -165,3 +165,31 @@ export function buildRideStatus(o: { transactionId: string; city: string; bpp: {
     message: { order_id: o.orderId },
   };
 }
+
+/**
+ * Cancelling a ride is two steps. SOFT_CANCEL asks what it would cost: the
+ * provider answers with a quote carrying the cancellation charge, and nothing
+ * is cancelled. CONFIRM_CANCEL then cancels at that charge. The rider sees the
+ * charge between the two, so no one is charged a fee they were not shown.
+ */
+export function buildRideCancel(o: {
+  transactionId: string;
+  city: string;
+  bpp: { id: string; uri: string };
+  orderId: string;
+  reasonId: string;
+  step: "SOFT_CANCEL" | "CONFIRM_CANCEL";
+}) {
+  return {
+    context: buildContext({ domain: DOMAIN, action: "cancel", city: o.city, transactionId: o.transactionId, bppId: o.bpp.id, bppUri: o.bpp.uri }),
+    message: { cancellation_reason_id: o.reasonId, descriptor: { code: o.step, name: "Ride Cancellation" }, order_id: o.orderId },
+  };
+}
+
+/** Asks where the ride is now. The answer arrives as on_track. */
+export function buildRideTrack(o: { transactionId: string; city: string; bpp: { id: string; uri: string }; orderId: string }) {
+  return {
+    context: buildContext({ domain: DOMAIN, action: "track", city: o.city, transactionId: o.transactionId, bppId: o.bpp.id, bppUri: o.bpp.uri }),
+    message: { order_id: o.orderId },
+  };
+}
