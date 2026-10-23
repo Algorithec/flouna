@@ -1654,6 +1654,9 @@ model OndcRide {
   startOtp          String?
   sellerUpdatedAt   DateTime?
   problem           String?
+  // When the provider's latest quote lapses (its ttl, from when it arrived).
+  // A lapsed fare is asked for again rather than carried into a booking.
+  quoteExpiresAt    DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

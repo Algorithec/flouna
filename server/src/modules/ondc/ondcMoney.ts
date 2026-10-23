@@ -129,11 +129,17 @@ export function finderFeePaise(totalPaise: number, terms: { finderFee?: string; 
   return Math.round((totalPaise * clamped) / 100);
 }
 
-/** "P3D", "PT12H" to milliseconds; anything else to null. */
+/**
+ * "P3D", "PT12H", "PT30S" to milliseconds; anything else to null. "P200S",
+ * which ONDC's own examples write for 200 seconds, is read as that too. The
+ * T stays required for hours and minutes: without it "P1M" is a month.
+ */
 export function durationMs(iso: string | null | undefined): number | null {
-  const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(iso ?? "");
+  const loose = /^P(\d+)S$/i.exec(iso ?? "");
+  if (loose) return Number(loose[1]) * 1000;
+  const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(iso ?? "");
   if (!m || iso === "P" || iso === "PT") return null;
-  return ((Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0)) * 60 + Number(m[3] ?? 0)) * 60_000;
+  return (((Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0)) * 60 + Number(m[3] ?? 0)) * 60 + Number(m[4] ?? 0)) * 1000;
 }
 
 /**
