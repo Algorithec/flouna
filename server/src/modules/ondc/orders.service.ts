@@ -16,6 +16,8 @@ import {
   type CartLine,
 } from "./retail.js";
 import { ondcSearchResults } from "./search.service.js";
+import { checkChoices, optionsFor, type OptionTree } from "./catalog.js";
+import { owe, recordPayout, refundAfterCancel } from "./ondcMoney.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
 
@@ -36,6 +38,11 @@ import { sendSigned, type SendResult } from "./transport.js";
 // this transaction, answering that message. Anything else is still stored by
 // the callbacks router, but changes nothing here.
 
+/**
+ * Sends a signed message. `url` is the seller app's registered base URI:
+ * sendSigned adds the action itself, so ".../select" here would be posted
+ * to ".../select/select".
+ */
 type Send = (url: string, action: string, envelope: { context: Record<string, unknown>; message: unknown }, id: SigningIdentity) => Promise<SendResult>;
 
 export type OrderDeps = {
@@ -50,12 +57,7 @@ function defaultIdentity(): SigningIdentity | null {
     : null;
 }
 
-/** Where a seller app takes an action: its registered URI plus the action. */
-function actionUrl(bppUri: string, action: string) {
-  return `${bppUri.replace(/\/+$/, "")}/${action}`;
-}
-
-type OrderRow = NonNullable<Awaited<ReturnType<typeof prisma.ondcOrder.findUnique>>>;
+export type OrderRow = NonNullable<Awaited<ReturnType<typeof prisma.ondcOrder.findUnique>>>;
 
 /**
  * Sends one request for an order and records which answer we now wait for.
@@ -76,7 +78,7 @@ async function sendStep(
   await prisma.ondcOrder.update({ where: { id: order.id }, data: { status: waiting, awaitingMsgId: messageId, problem: null, ...extra } });
   let result: SendResult;
   try {
-    result = await (deps.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(actionUrl(order.bppUri, action), action, envelope, id);
+    result = await (deps.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(order.bppUri, action, envelope, id);
   } catch (err) {
     result = { ack: false, status: 0, error: err instanceof Error ? err.message : String(err) };
   }
@@ -122,7 +124,8 @@ export type StartInput = {
   bppId: string;
   providerId: string;
   locationId: string;
-  lines: CartLine[];
+  /** Dishes and the option ids chosen for each; groups and line ids are filled in from the catalogue. */
+  lines: { itemId: string; count: number; customizations?: { itemId: string; groupId?: string }[] }[];
   addressId?: string;
 };
 
@@ -132,6 +135,9 @@ export type StartInput = {
  */
 export async function startOndcOrder(userId: string, input: StartInput, deps: OrderDeps = {}) {
   if (input.lines.length === 0 || input.lines.length > 30) throw new ApiError(400, "An order needs between 1 and 30 items");
+  // Checked before anything is stored, so a deployment without an ONDC
+  // identity does not leave an order waiting on a price that never comes.
+  if (!(deps.identity ?? defaultIdentity)()) throw new ApiError(503, "ONDC is not configured on this deployment");
   // Every confirm carries Algorithec's GSTIN. Without it an order could be
   // priced and paid for and then never placed, so none is started.
   if (!commercialTerms().gstin) throw new ApiError(503, "Food ordering on ONDC is not set up on this deployment yet");
@@ -146,6 +152,23 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   // on_select.
   for (const l of input.lines) {
     if (!listed.has(l.itemId)) throw new ApiError(400, `Item ${l.itemId} is not on that store's menu`);
+  }
+  // Options are checked against the seller's own rules (one crust, up to two
+  // toppings) before anything is sent, and the group each one belongs to is
+  // taken from the catalogue, not from the request. Each dish with options
+  // gets its own line id, which ties the options to it on the wire.
+  const lines: CartLine[] = [];
+  for (const l of input.lines) {
+    const tree = await dishOptions(userId, input.searchId, input.bppId, input.providerId, l.itemId);
+    const chosen = (l.customizations ?? []).map((c) => c.itemId);
+    if (!tree) {
+      if (chosen.length) throw new ApiError(400, `${l.itemId} has no options to choose`);
+      lines.push({ itemId: l.itemId, count: l.count });
+      continue;
+    }
+    const checked = checkChoices(tree, chosen);
+    if ("problem" in checked) throw new ApiError(400, checked.problem);
+    lines.push({ itemId: l.itemId, count: l.count, parentItemId: crypto.randomBytes(5).toString("hex"), customizations: checked.picks });
   }
   const address = await prisma.address.findFirst({
     where: input.addressId ? { id: input.addressId, userId } : { userId, isDefault: true },
@@ -167,7 +190,7 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
       locationId: seller.locationId,
       storeName: seller.name,
       city: search!.city,
-      lines: JSON.stringify(input.lines),
+      lines: JSON.stringify(lines),
       addressId: address.id,
       gps,
       areaCode: address.pincode,
@@ -179,7 +202,7 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
     bpp: { id: order.bppId, uri: order.bppUri },
     providerId: order.providerId,
     locationId: order.locationId,
-    lines: input.lines,
+    lines,
     gps,
     areaCode: address.pincode,
   });
@@ -187,7 +210,7 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   return { orderId: order.id };
 }
 
-async function billingFor(order: OrderRow) {
+export async function billingFor(order: OrderRow) {
   const [user, address] = await Promise.all([
     prisma.user.findUnique({ where: { id: order.userId }, select: { name: true, email: true, phone: true } }),
     order.addressId ? prisma.address.findUnique({ where: { id: order.addressId } }) : null,
@@ -238,7 +261,7 @@ export async function markOndcOrderPaid(id: string, payment: { amountPaise: numb
   if (payment.amountPaise !== order.totalPaise) throw new ApiError(409, "The amount paid does not match the seller's total");
   const done = await prisma.ondcOrder.updateMany({
     where: { id, status: "ready_to_pay" },
-    data: { status: "paid", paidAt: payment.at ?? new Date(), paymentRef: payment.reference },
+    data: { status: "paid", paidAt: payment.at ?? new Date(), paymentRef: payment.reference, paidPaise: payment.amountPaise },
   });
   if (done.count === 0) throw new ApiError(409, "This order changed while it was being paid");
 }
@@ -289,7 +312,7 @@ async function askAboutOrder(userId: string, id: string, action: "status" | "tra
   if (!ident) throw new ApiError(503, "ONDC is not configured on this deployment");
   const args = { transactionId: order.txnId, city: order.city, bpp: { id: order.bppId, uri: order.bppUri }, orderId: order.sellerOrderId };
   const envelope = action === "status" ? buildStatus(args) : buildTrack(args);
-  const result = await (deps.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(actionUrl(order.bppUri, action), action, envelope, ident).catch(
+  const result = await (deps.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(order.bppUri, action, envelope, ident).catch(
     (err: unknown) => ({ ack: false as const, status: 0, error: String(err) }),
   );
   await prisma.ondcTransaction.create({
@@ -410,11 +433,19 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       // Paid but not placed: the money has to go back, so this is recorded as
       // a failure the payment flow refunds, never left looking like progress.
       await prisma.ondcOrder.update({ where: { id: order.id }, data: { status: "failed", problem: r.problem, awaitingMsgId: null } });
+      if (order.paidPaise) await owe(order.id, { paise: order.paidPaise });
       return "applied";
     }
+    // The seller's settlement terms arrive with its acceptance: when, and
+    // counted from what, it expects to be paid.
+    const pay = ((cb.body.message as { order?: { payment?: Record<string, unknown> } }).order?.payment ?? {}) as Record<string, unknown>;
+    const terms = { ...(JSON.parse(order.payment ?? "{}") as Record<string, unknown>) };
+    if (typeof pay["@ondc/org/settlement_window"] === "string") terms.settlementWindow = pay["@ondc/org/settlement_window"];
+    if (typeof pay["@ondc/org/settlement_basis"] === "string") terms.settlementBasis = pay["@ondc/org/settlement_basis"];
     await prisma.ondcOrder.update({
       where: { id: order.id },
       data: {
+        payment: JSON.stringify(terms),
         status: r.sellerState === "Cancelled" ? "failed" : "placed",
         problem: r.sellerState === "Cancelled" ? "The seller did not accept the order" : null,
         sellerOrderId: r.sellerOrderId,
@@ -424,6 +455,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
         awaitingMsgId: null,
       },
     });
+    if (r.sellerState === "Cancelled" && order.paidPaise) await owe(order.id, { paise: order.paidPaise });
     return "applied";
   }
 
@@ -453,8 +485,21 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       ...(r.cancelReasonId ? { cancelReasonId: r.cancelReasonId } : {}),
       ...(cb.action === "on_cancel" ? { awaitingMsgId: null } : {}),
       ...(r.quote ? { totalPaise: r.quote.totalPaise, quote: JSON.stringify((cb.body.message as { order: { quote: unknown } }).order.quote) } : {}),
+      ...(r.sellerState === "Completed" && !order.completedAt ? { completedAt: r.at ?? new Date() } : {}),
     },
   });
+  if (r.sellerState === "Cancelled" && order.paidPaise) {
+    await owe(order.id, refundAfterCancel({ paidPaise: order.paidPaise, cancelledBySeller: r.cancelledBy === order.bppId, finalTotalPaise: r.quote?.totalPaise }));
+  } else if (order.paidPaise && r.quote && r.quote.totalPaise < order.paidPaise) {
+    // The seller cut the bill on an order it is still fulfilling (it could
+    // not supply an item, say). The customer is owed the difference. Several
+    // such cuts can come on one order, each needing its own refund, so for
+    // now this goes to a person with both amounts rather than move money.
+    await owe(order.id, {
+      review: `The seller reduced the bill from ${order.paidPaise / 100} to ${r.quote.totalPaise / 100} rupees; refund the difference`,
+    });
+  }
+  if (r.sellerState === "Completed") await recordPayout(order.id, order.completedAt ?? r.at ?? new Date());
   return "applied";
 }
 
@@ -473,6 +518,8 @@ export type OndcOrderView = {
   fulfillmentState: string | null;
   paid: boolean;
   tracking: { url: string; status?: string } | null;
+  /** Money on its way back to the customer, when any is owed. */
+  refund: { status: string; paise: number | null } | null;
   createdAt: string;
 };
 
@@ -491,6 +538,32 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
     fulfillmentState: o.fulfillmentState,
     paid: Boolean(o.paidAt),
     tracking: o.sellerOrderId ? await trackingFor(o) : null,
+    refund: o.refundStatus ? { status: o.refundStatus, paise: o.refundPaise } : null,
     createdAt: o.createdAt.toISOString(),
   };
+}
+
+/**
+ * The options a dish has, read from the catalogue its seller sent in answer
+ * to this customer's search (the latest one, if the seller refreshed it).
+ * Null when the dish has none.
+ */
+export async function dishOptions(userId: string, searchId: string, bppId: string, providerId: string, itemId: string): Promise<OptionTree | null> {
+  const search = await prisma.ondcSearch.findUnique({ where: { id: searchId }, select: { userId: true } });
+  if (!search || search.userId !== userId) throw new ApiError(404, "Search not found");
+  const rows = await prisma.ondcTransaction.findMany({
+    where: { txnId: searchId, action: "on_search", bppId },
+    orderBy: { createdAt: "desc" },
+    select: { response: true },
+    take: 5,
+  });
+  for (const row of rows) {
+    try {
+      const tree = optionsFor(JSON.parse(row.response ?? "null"), providerId, itemId);
+      if (tree) return tree;
+    } catch {
+      // A catalogue that does not parse has no options to offer.
+    }
+  }
+  return null;
 }

@@ -1529,6 +1529,14 @@ model OndcOrder {
   payment          String? // JSON: the seller's payment terms from on_init (collector, settlement details)
   paidAt           DateTime?
   paymentRef       String? // the payment's transaction id, sent in confirm
+  paidPaise        Int? // what the gateway actually took
+  // Money owed back to the customer: the paid amount less what the seller
+  // finally charged. "owed" until sent to the gateway, "review" when the
+  // amount needs a person to decide.
+  refundPaise      Int?
+  refundStatus     String? // owed | review | requested | done | failed
+  refundRef        String?
+  completedAt      DateTime? // when the seller reported it delivered
   sellerOrderId    String?
   sellerState      String? // Created | Accepted | In-progress | Completed | Cancelled
   fulfillmentState String? // Pending | Packed | Agent-assigned | Order-picked-up | Out-for-delivery | Order-delivered | Cancelled
@@ -1584,6 +1592,31 @@ model OndcRide {
   updatedAt         DateTime  @updatedAt
 
   @@index([userId, createdAt])
+}
+
+// What Flouna owes a seller app for one paid ONDC order: the seller's final
+// total less our finder fee, due after the settlement window the seller set.
+// Paid by an operator, who records the bank reference. Nothing here moves
+// money on its own.
+model OndcPayout {
+  id               String    @id @default(cuid())
+  ondcOrderId      String    @unique
+  bppId            String
+  orderTotalPaise  Int
+  feePaise         Int
+  amountPaise      Int // orderTotalPaise - feePaise
+  settlement       String // JSON: the seller's settlement details from on_init
+  settlementWindow String? // "P3D"
+  settlementBasis  String? // "return_window_expiry" | "delivery" | ...
+  dueAt            DateTime
+  status           String    @default("due") // due | paid | held
+  paidAt           DateTime?
+  utr              String? // the bank's reference for the transfer
+  paidBy           String? // operator user id
+  note             String?
+  createdAt        DateTime  @default(now())
+
+  @@index([status, dueAt])
 }
 
 // ONDC Network Observability outbox: one row per log, already anonymised,
