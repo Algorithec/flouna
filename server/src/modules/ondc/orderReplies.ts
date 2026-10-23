@@ -6,6 +6,8 @@
 // or whose lines do not add up to it, is reported as a problem rather than
 // shown at a price the seller may not have meant.
 
+import { PROBLEM } from "./problems.js";
+
 type Wire = Record<string, unknown>;
 const obj = (v: unknown): Wire => (v && typeof v === "object" && !Array.isArray(v) ? (v as Wire) : {});
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
@@ -86,12 +88,12 @@ export function sellerProblem(body: unknown): string | null {
   const code = str(e.code) ?? (typeof e.code === "number" ? String(e.code) : undefined);
   if (!code && !str(e.message)) return null;
   const known: Record<string, string> = {
-    "40002": "Some items are out of stock",
-    "30009": "The store cannot deliver to this address",
-    "30008": "This location is not served by the store",
-    "40000": "The store is not taking orders right now",
-    "30004": "An item is not available any more",
-    "30005": "The store has closed for now",
+    "40002": PROBLEM.someOutOfStock,
+    "30009": PROBLEM.cannotDeliver,
+    "30008": PROBLEM.notServed,
+    "40000": PROBLEM.notTaking,
+    "30004": PROBLEM.itemGone,
+    "30005": PROBLEM.storeClosed,
   };
   return (code && known[code]) ?? str(e.message) ?? `The seller refused the request (code ${code})`;
 }
@@ -109,9 +111,9 @@ export function readOnSelect(body: unknown): SelectReply {
   // here, and ONDC checks the two match. One delivery per order is what we
   // send, so a seller splitting the cart across fulfillments is said plainly.
   const assigned = new Set(arr(order.items).map((i) => str(obj(i).fulfillment_id)).filter((s): s is string => Boolean(s)));
-  if (assigned.size > 1) return { problem: refused ?? "The store would deliver this order in parts, which is not supported yet" };
+  if (assigned.size > 1) return { problem: refused ?? PROBLEM.splitDelivery };
   const fulfillment = fulfillments.find((f) => f.serviceable && (assigned.size === 0 || assigned.has(f.id)));
-  if (!fulfillment) return { problem: refused ?? "The store cannot deliver to this address" };
+  if (!fulfillment) return { problem: refused ?? PROBLEM.cannotDeliver };
   // An item the seller cannot supply is marked in the breakup with an
   // available count of 0 (and error 40002 on the reply). The rest of the
   // quote is still the seller's price for what it can supply, so it is shown

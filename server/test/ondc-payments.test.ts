@@ -152,6 +152,8 @@ describe("refunding a paid ONDC order", () => {
     const o = await paidAndPlaced(rejected);
     expect(gateway.createCashfreeRefund).toHaveBeenCalledWith(expect.objectContaining({ amountRupees: 475 }));
     expect((await ondcOrderView(o.c.userId, o.orderId)).refund).toEqual({ status: "done", paise: 47500 });
+    // Said in the customer's language: the app gets a code for it.
+    expect((await ondcOrderView(o.c.userId, o.orderId)).problemCode).toEqual({ code: "sellerRefused" });
   });
 
   it("refunds what was paid less the seller's final bill when the customer cancels", async () => {

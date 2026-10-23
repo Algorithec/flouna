@@ -9,6 +9,7 @@ import { parseRideOnSearch, readRideOnInit, readRideOnSelect, readRideState, rea
 import { stdCodeFor } from "./search.service.js";
 import type { SigningIdentity } from "./signing.js";
 import { GATEWAY_URL, sendSigned, type SendResult } from "./transport.js";
+import { fareChangedProblem, PROBLEM, problemCode } from "./problems.js";
 
 // Booking a ride with an ONDC ride provider (TRV10 2.0.1).
 //
@@ -93,7 +94,7 @@ async function sendStep(ride: RideRow, action: string, envelope: { context: Reco
   if (!result.ack && waiting) {
     await prisma.ondcRide.updateMany({
       where: { id: ride.id, awaitingMsgId: messageId, status: waiting },
-      data: { status: fallback[waiting] ?? waiting, problem: "The ride provider's app did not accept the request. Try again in a moment." },
+      data: { status: fallback[waiting] ?? waiting, problem: PROBLEM.providerUnreachable },
     });
   }
   return result.ack;
@@ -176,7 +177,7 @@ export async function startRideSearch(userId: string, input: { pickup: PlaceInpu
   });
   const ok = await sendStep(ride, "search", envelope, null, deps, GATEWAY_URL[env.ONDC_REGISTRY_ENV]);
   if (!ok) {
-    await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "failed", problem: "The ONDC network did not accept the search just now" } });
+    await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "failed", problem: PROBLEM.searchRefused } });
   }
   return { rideId: ride.id };
 }
@@ -395,7 +396,7 @@ export async function applyRideReply(cb: { action: string; body: Record<string, 
           payment: JSON.stringify(r.payment),
           cancellationTerms: r.cancellationTerms ? JSON.stringify(r.cancellationTerms) : null,
           quoteExpiresAt: quoteExpiry(quoteOf(cb.body)),
-          problem: fareChanged ? `Fare updated from ₹${ride.farePaise! / 100} to ₹${r.quote.totalPaise / 100}` : null,
+          problem: fareChanged ? fareChangedProblem(ride.farePaise!, r.quote.totalPaise) : null,
           awaitingMsgId: null,
         },
       });
@@ -407,7 +408,7 @@ export async function applyRideReply(cb: { action: string; body: Record<string, 
   if (cb.action === "on_confirm") {
     if (!answers("confirming")) return "ignored";
     if ("problem" in r || !r.orderId || r.status === "CANCELLED") {
-      await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "failed", problem: "problem" in r ? r.problem : "The provider could not book this ride", awaitingMsgId: null } });
+      await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "failed", problem: "problem" in r ? r.problem : PROBLEM.bookingFailed, awaitingMsgId: null } });
       return "applied";
     }
     await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "booked", sellerOrderId: r.orderId, awaitingMsgId: null, ...stateFields(r) } });
@@ -446,7 +447,7 @@ export async function applyRideReply(cb: { action: string; body: Record<string, 
     where: { id: ride.id },
     data: {
       status,
-      ...((answers("cancelling") || answers("cancel_quoting")) && cb.action === "on_cancel" && status === "booked" ? { problem: "The provider did not cancel this ride" } : {}),
+      ...((answers("cancelling") || answers("cancel_quoting")) && cb.action === "on_cancel" && status === "booked" ? { problem: PROBLEM.rideCancelRefused } : {}),
       ...(cb.action === "on_cancel" ? { awaitingMsgId: null } : {}),
       ...stateFields(r),
     },
@@ -484,6 +485,7 @@ export async function rideView(userId: string, id: string) {
     id: r.id,
     status: r.status,
     problem: r.problem,
+    problemCode: problemCode(r.problem),
     pickup: stopOf(r.pickup),
     drop: stopOf(r.drop),
     vehicle: r.vehicle,

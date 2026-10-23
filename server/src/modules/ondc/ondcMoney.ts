@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { cashfreeConfigured, createCashfreeRefund } from "../payments/cashfree.js";
 import { commercialTerms } from "./commercial.js";
 import type { PaymentTerms } from "./orderReplies.js";
+import { PROBLEM } from "./problems.js";
 
 // The money side of an ONDC order Flouna collected for: what goes back to the
 // customer, and what goes on to the seller app.
@@ -59,8 +60,8 @@ export async function owe(ondcOrderId: string, refund: Refund) {
 /** What a cancelled, paid order owes back, from the seller's own last word on it. */
 export function refundAfterCancel(o: { paidPaise: number; cancelledBySeller: boolean; finalTotalPaise?: number }): Refund {
   if (o.cancelledBySeller) return { paise: o.paidPaise };
-  if (o.finalTotalPaise === undefined) return { review: "The seller cancelled without a final bill, so the refund needs checking" };
-  if (o.finalTotalPaise > o.paidPaise) return { review: "The seller's final bill is more than was paid" };
+  if (o.finalTotalPaise === undefined) return { review: PROBLEM.refundNoBill };
+  if (o.finalTotalPaise > o.paidPaise) return { review: PROBLEM.refundOverBill };
   return { paise: o.paidPaise - o.finalTotalPaise };
 }
 

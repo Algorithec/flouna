@@ -22,6 +22,7 @@ import { recordTermsAcceptance, statesAcceptance } from "./termsAcceptance.js";
 import { recordSettlement } from "./settlement.service.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
+import { billReducedProblem, outOfStockProblem, PROBLEM, problemCode, type ProblemCode } from "./problems.js";
 
 // Placing a food order with an ONDC seller.
 //
@@ -99,7 +100,7 @@ async function sendStep(
     },
   });
   if (!result.ack) {
-    const problem = "The seller's app did not accept the request. Try again in a moment.";
+    const problem = PROBLEM.sellerUnreachable;
     // Only if nothing has answered meanwhile: a fast reply has already moved it on.
     await prisma.ondcOrder.updateMany({ where: { id: order.id, awaitingMsgId: messageId, status: waiting }, data: { status: failedStatusFor(waiting), problem } });
   }
@@ -411,7 +412,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
         status: r.outOfStock.length ? "unavailable" : "quoted",
         // Named as the store names them in its quote, not by its item ids.
         problem: r.outOfStock.length
-          ? `Out of stock: ${r.outOfStock.map((id) => r.quote.lines.find((l) => l.itemId === id && l.title)?.title ?? id).join(", ")}`
+          ? outOfStockProblem(r.outOfStock.map((id) => r.quote.lines.find((l) => l.itemId === id && l.title)?.title ?? id))
           : null,
         quote: JSON.stringify(r.raw.quote),
         totalPaise: r.quote.totalPaise,
@@ -461,7 +462,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       data: {
         payment: JSON.stringify(terms),
         status: r.sellerState === "Cancelled" ? "failed" : "placed",
-        problem: r.sellerState === "Cancelled" ? "The seller did not accept the order" : null,
+        problem: r.sellerState === "Cancelled" ? PROBLEM.sellerRefused : null,
         sellerOrderId: r.sellerOrderId,
         sellerState: r.sellerState,
         fulfillmentState: r.fulfillmentState ?? null,
@@ -505,7 +506,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
     where: { id: order.id },
     data: {
       status,
-      ...(refusedCancel ? { problem: "The seller did not agree to cancel this order" } : {}),
+      ...(refusedCancel ? { problem: PROBLEM.cancelRefused } : {}),
       sellerState: r.sellerState,
       fulfillmentState: r.fulfillmentState ?? order.fulfillmentState,
       sellerUpdatedAt: r.at ?? order.sellerUpdatedAt,
@@ -522,9 +523,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
     // not supply an item, say). The customer is owed the difference. Several
     // such cuts can come on one order, each needing its own refund, so for
     // now this goes to a person with both amounts rather than move money.
-    await owe(order.id, {
-      review: `The seller reduced the bill from ${order.paidPaise / 100} to ${r.quote.totalPaise / 100} rupees; refund the difference`,
-    });
+    await owe(order.id, { review: billReducedProblem(order.paidPaise, r.quote.totalPaise) });
   }
   if (r.sellerState === "Completed") {
     const completedAt = order.completedAt ?? r.at ?? new Date();
@@ -542,6 +541,8 @@ export type OndcOrderView = {
   status: string;
   store: string;
   problem: string | null;
+  /** The problem as a code the app translates, when it is one it knows. */
+  problemCode: ProblemCode | null;
   totalPaise: number | null;
   quote: Quote | null;
   sellerOrderId: string | null;
@@ -569,6 +570,7 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
     status: o.status,
     store: o.storeName,
     problem: o.problem,
+    problemCode: problemCode(o.problem),
     totalPaise: o.totalPaise,
     quote: q && !("problem" in q) ? q : null,
     sellerOrderId: o.sellerOrderId,
