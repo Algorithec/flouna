@@ -51,7 +51,9 @@ describe("payment methods", () => {
       where: { id: res.body.method.id },
     });
     expect(JSON.stringify(row)).not.toContain("4242424242424242");
-    expect(JSON.stringify(row)).not.toContain("123");
+    expect(row).not.toHaveProperty("cvv");
+    const vals = Object.values(row).map(String).join("|");
+    expect(vals).not.toMatch(/\b123\b/);
   });
 
   it("saves a UPI id and rejects a malformed one", async () => {
