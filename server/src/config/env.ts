@@ -264,6 +264,17 @@ if (isProd) {
         "in production, so checkout would dead-end with no way to pay",
     );
   }
+  // Every way into an account runs through an emailed code: sign-up, a new
+  // device under two-factor, a password reset, the console's step-up. With no
+  // transport those codes reach nobody, and the development fallback of
+  // printing them would put them in the server log, readable by whoever can
+  // read the logs. Fail at boot instead, as for payments.
+  if (!env.BREVO_API_KEY && !(env.SMTP_HOST && env.SMTP_PORT)) {
+    problems.push(
+      "No mail transport is configured (BREVO_API_KEY, or SMTP_HOST and SMTP_PORT), " +
+        "so sign-up, two-factor, reset and step-up codes could not be delivered",
+    );
+  }
   if (problems.length > 0) {
     console.error("Refusing to start: unsafe production configuration:");
     for (const p of problems) console.error(`  - ${p}`);

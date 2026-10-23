@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { env } from "../config/env.js";
+import { env, isProd } from "../config/env.js";
 import { otpEmail, welcomeEmail, receiptEmail, type OtpPurpose } from "./emailTemplates.js";
 
 const transport =
@@ -105,6 +105,10 @@ export async function sendOtpEmail(
     return;
   }
   if (!transport && !useHttpApi()) {
+    // Production should never get here (config/env.ts refuses to boot without
+    // a transport), and refuses again if it does: a code printed to the log is
+    // readable by whoever can read the logs, not only the person signing in.
+    if (isProd) throw new Error("No mail transport is configured");
     // Dev mode: no mail configured — surface the code in the server console.
     console.log(`[mailer] OTP for ${to}: ${code}`);
     return;
