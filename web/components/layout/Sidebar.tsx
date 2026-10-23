@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Home,
   History,
@@ -15,14 +15,12 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { useAuth } from "@/components/auth/AuthContext";
 import { FlounaLogo } from "@/components/brand/FlounaLogo";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
-
-type ChatSessionSummary = { id: string; title: string | null };
+import { RecentChats } from "./RecentChats";
 
 // Sidebar (Figma 2177:1233): outlined "New Conversation" pill, an
 // nav card whose rows carry a round icon badge and a chevron, and a
@@ -73,11 +71,8 @@ export function Sidebar({
   onClose: () => void;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { t } = useI18n();
   const { user } = useAuth();
-  const [recent, setRecent] = useState<ChatSessionSummary[]>([]);
-  const [showAll, setShowAll] = useState(false);
   // Collapse preference lives in localStorage (SSR renders expanded).
   const collapsed = useSyncExternalStore(
     subscribeCollapse,
@@ -89,25 +84,6 @@ export function Sidebar({
     localStorage.setItem(COLLAPSE_KEY, collapsed ? "0" : "1");
     window.dispatchEvent(new Event(COLLAPSE_EVENT));
   }
-
-  // Refresh the list whenever navigation happens (a new chat updates the URL).
-  // Skipped entirely for a guest — there's no session to list, and no point
-  // firing a request that can only come back 401.
-  //
-  // Depends on user?.id rather than user itself: the auth check re-runs
-  // (a silent refresh, React re-fetching after StrictMode's dev-only double
-  // effect) and hands back a new object each time even when nothing about
-  // the session actually changed, which was re-firing this fetch — visibly,
-  // since the list re-renders on every one of those "changes" without one.
-  const userId = user?.id;
-  useEffect(() => {
-    if (!userId) return;
-    api<{ sessions: ChatSessionSummary[] }>("/api/chat/sessions")
-      .then((d) => setRecent(d.sessions))
-      .catch(() => setRecent([]));
-  }, [pathname, searchParams, userId]);
-
-  const visible = showAll ? recent : recent.slice(0, 5);
 
   return (
     <>
@@ -255,34 +231,7 @@ export function Sidebar({
             collapsed && "lg:invisible",
           )}
         >
-          {recent.length > 0 && (
-            <>
-              <p className="px-1 text-[13px] font-bold text-muted">
-                {t("sb.recent")}
-              </p>
-              <div className="mt-2 flex flex-col gap-0.5">
-                {visible.map((s) => (
-                  <Link
-                    key={s.id}
-                    href={`/home?chat=${s.id}`}
-                    onClick={onClose}
-                    className="tap-target flex items-center gap-2 truncate rounded-[12px] px-3 py-2 text-[14px] text-ink/80 transition-colors hover:bg-beige/50"
-                  >
-                    <MessageSquare size={14} className="shrink-0 text-muted" />
-                    <span className="truncate">{s.title ?? t("sb.newChat")}</span>
-                  </Link>
-                ))}
-                {recent.length > 5 && !showAll && (
-                  <button
-                    onClick={() => setShowAll(true)}
-                    className="tap-target px-3 py-2 text-left text-[13px] font-semibold text-accent hover:underline"
-                  >
-                    {t("sb.showAll")}
-                  </button>
-                )}
-              </div>
-            </>
-          )}
+          {user && <RecentChats onNavigate={onClose} />}
         </div>
 
         {/* Foot: profile card for an account, Login/Signup + a language
