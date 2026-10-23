@@ -47,9 +47,9 @@ export function AdviceBanner({
   const wallClock = (() => {
     const m = advice.waitMinutes;
     if (!m || m <= 0) return null;
-    if (m < 90) return `${m} min`;
+    if (m < 90) return `${m} ${t("u.min")}`;
     const hours = Math.round(m / 60);
-    return `${hours} hr${hours === 1 ? "" : "s"}`;
+    return `${hours} ${hours === 1 ? t("u.hr") : t("u.hrs")}`;
   })();
 
   return (

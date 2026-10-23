@@ -16,6 +16,7 @@ import { LoadingView, ErrorView } from "@/components/ui/StatusView";
 import { cn } from "@/lib/cn";
 import { useBackTo } from "@/lib/navHistory";
 import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 type TrackingEvent = {
   id: string;
@@ -56,6 +57,14 @@ type OrderDetail = {
 };
 
 const POLL_MS = 15_000;
+
+// A payment's state as the reader says it ("UPI · Paid", not "UPI · success").
+const PAY_STATUS: Record<string, TranslationKey> = {
+  success: "od.pay.success",
+  pending: "od.pay.pending",
+  failed: "od.pay.failed",
+  refunded: "od.pay.refunded",
+};
 
 export default function OrderDetailPage({
   params,
@@ -285,7 +294,9 @@ export default function OrderDetailPage({
             label={t("bill.payment")}
             value={
               order.payment
-                ? `${order.payment.method?.toUpperCase() ?? " "} · ${order.payment.status}`
+                ? `${order.payment.method?.toUpperCase() ?? " "} · ${
+                    PAY_STATUS[order.payment.status] ? t(PAY_STATUS[order.payment.status]!) : order.payment.status
+                  }`
                 : t("od.notRecorded")
             }
           />

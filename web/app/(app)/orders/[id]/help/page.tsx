@@ -222,7 +222,8 @@ export default function OrderHelpPage() {
                 <>
                   <p className="mt-0.5 text-[13px] text-cocoa">
                     {order.title}
-                    {order.itemCount != null && `, ${order.itemCount} item${order.itemCount === 1 ? "" : "s"}`}
+                    {order.itemCount != null &&
+                      `, ${order.itemCount === 1 ? t("oh.itemOne") : t("oh.items").replace("{n}", String(order.itemCount))}`}
                   </p>
                   <p className="mt-0.5 text-[12px] text-muted">
                     {new Date(order.createdAt).toLocaleDateString("en-IN", {

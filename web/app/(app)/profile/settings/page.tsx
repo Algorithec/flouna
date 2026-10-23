@@ -174,7 +174,7 @@ export default function SettingsPage() {
           <Input
             label={t("st.budgetLabel")}
             inputMode="numeric"
-            placeholder="e.g. 1500"
+            placeholder={t("st.budgetPlaceholder")}
             value={budgetInput}
             onChange={(e) => setBudgetInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
           />

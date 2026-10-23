@@ -41,15 +41,16 @@ import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import type { FoodQuote } from "@/components/chat/types";
 import { FlounaLogo } from "@/components/brand/FlounaLogo";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 // Fixed category set matching the Figma food landing. `value` is the search
 // term sent to the backend ("" = All / unfiltered).
-const FOOD_CATEGORIES: { label: string; value: string; icon: LucideIcon }[] = [
-  { label: "All", value: "All", icon: Soup },
-  { label: "Burger", value: "Burger", icon: Beef },
-  { label: "Pizza", value: "Pizza", icon: Pizza },
-  { label: "Healthy", value: "Healthy", icon: Salad },
-  { label: "More", value: "More", icon: Grid2x2 },
+const FOOD_CATEGORIES: { labelKey: TranslationKey; value: string; icon: LucideIcon }[] = [
+  { labelKey: "food.cat.all", value: "All", icon: Soup },
+  { labelKey: "food.cat.burger", value: "Burger", icon: Beef },
+  { labelKey: "food.cat.pizza", value: "Pizza", icon: Pizza },
+  { labelKey: "food.cat.healthy", value: "Healthy", icon: Salad },
+  { labelKey: "food.cat.more", value: "More", icon: Grid2x2 },
 ];
 
 type Feed = {
@@ -195,7 +196,8 @@ export default function FoodLandingPage() {
       {/* Categories — mobile: 52px icon tiles; desktop: wide chip buttons */}
       <FadeIn delay={0.06} y={8}>
         <div className="no-scrollbar mt-4 flex justify-between gap-2 overflow-x-auto lg:hidden">
-          {FOOD_CATEGORIES.map(({ label, value, icon: Icon }) => {
+          {FOOD_CATEGORIES.map(({ labelKey, value, icon: Icon }) => {
+            const label = t(labelKey);
             const active = category === value;
             return (
               <button
@@ -226,7 +228,8 @@ export default function FoodLandingPage() {
           })}
         </div>
         <div className="mt-5 hidden gap-3 lg:flex">
-          {FOOD_CATEGORIES.map(({ label, value, icon: Icon }) => {
+          {FOOD_CATEGORIES.map(({ labelKey, value, icon: Icon }) => {
+            const label = t(labelKey);
             const active = category === value;
             return (
               <button
@@ -334,21 +337,21 @@ export default function FoodLandingPage() {
                 <ExploreTile
                   icon={BarChart3}
                   title={t("fp.bestSellers")}
-                  subtitle="Most ordered right now"
+                  subtitle={t("fp.bestSellersSub")}
                   active={sort === "best"}
                   onClick={() => setSort(sort === "best" ? "default" : "best")}
                 />
                 <ExploreTile
                   icon={Tag}
                   title={t("fp.offers")}
-                  subtitle="Great deals & discounts"
+                  subtitle={t("fp.offersSub")}
                   active={sort === "offers"}
                   onClick={() => setSort(sort === "offers" ? "default" : "offers")}
                 />
                 <ExploreTile
                   icon={Sparkles}
                   title={t("fp.newOnFlouna")}
-                  subtitle="Fresh & fastest arrivals"
+                  subtitle={t("fp.newSub")}
                   active={sort === "new"}
                   onClick={() => setSort(sort === "new" ? "default" : "new")}
                 />
@@ -369,8 +372,8 @@ export default function FoodLandingPage() {
                   iconBg="bg-accent-soft"
                   iconClass="text-accent"
                   title={t("fp.fastest")}
-                  subtitle="Get your food in the least time possible"
-                  value={`From ${feed?.suggestions.fastestDeliveryMinutes ?? " "} min`}
+                  subtitle={t("fp.fastestSub")}
+                  value={t("fp.fromMin").replace("{n}", String(feed?.suggestions.fastestDeliveryMinutes ?? " "))}
                   onPick={() => setQuery("momos")}
                 />
                 <SuggestionRow
@@ -378,8 +381,8 @@ export default function FoodLandingPage() {
                   iconBg="bg-success-soft"
                   iconClass="text-success"
                   title={t("fp.nearest")}
-                  subtitle="Top restaurants near your location"
-                  value={`Within ${feed?.suggestions.nearestKm ?? " "} km`}
+                  subtitle={t("fp.nearestSub")}
+                  value={t("fp.withinKm").replace("{n}", String(feed?.suggestions.nearestKm ?? " "))}
                   onPick={() => setQuery("thali")}
                 />
                 <SuggestionRow
@@ -387,8 +390,8 @@ export default function FoodLandingPage() {
                   iconBg="bg-[#efe7fb]"
                   iconClass="text-[#8b5cf6]"
                   title={t("fp.topRated")}
-                  subtitle="Highly rated restaurants you'll love"
-                  value="4.0+ rated"
+                  subtitle={t("fp.topRatedSub")}
+                  value={t("fp.ratedAbove")}
                   onPick={() => setQuery("cake")}
                 />
               </div>
@@ -468,7 +471,7 @@ function DishRow({ q }: { q: FoodQuote }) {
       pricePaise: q.effectivePaise,
     });
     setAdded(true);
-    toast(`${q.name} added to cart`);
+    toast(t("fp.addedToCart").replace("{name}", q.name));
     setTimeout(() => setAdded(false), 1200);
   }
   return (

@@ -68,7 +68,12 @@ export default function GroupRidePage({
 
   async function shareCode() {
     if (!cart?.ride) return;
-    const text = `Share my ${cart.ride.displayName} to ${cart.ride.drop} on Flouna! Join with code ${cart.code}, we split the fare.`;
+    // With a link: a code alone left the friend to find where to type it.
+    const text = t("grp.shareRideText")
+      .replace("{ride}", cart.ride.displayName)
+      .replace("{drop}", cart.ride.drop)
+      .replace("{code}", cart.code)
+      .replace("{link}", `${window.location.origin}/food/group?code=${cart.code}`);
     if (navigator.share) {
       try {
         await navigator.share({ text });
@@ -180,7 +185,9 @@ export default function GroupRidePage({
           </div>
           <p className="mt-2 text-[12px] text-cocoa">
             {seatsLeft > 0
-              ? `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left · friends join from Rides → Join a shared ride`
+              ? seatsLeft === 1
+                ? t("grp.seatLeftOne")
+                : t("grp.seatsLeftN").replace("{n}", String(seatsLeft))
             : t("grp.rideFull")}
           </p>
         </Card>

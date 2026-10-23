@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/i18n/I18nContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
@@ -16,13 +17,13 @@ function minutesUntil(target: number, now: number): number {
   return Math.max(0, Math.ceil((target - now) / 60_000));
 }
 
-function relativeTime(then: number, now: number): string {
+function relativeTime(then: number, now: number, t: (key: TranslationKey) => string): string {
   const mins = Math.floor((now - then) / 60_000);
-  if (mins < 1) return "just now";
-  if (mins === 1) return "1 min ago";
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t("tt.justNow");
+  if (mins === 1) return t("tt.minAgoOne");
+  if (mins < 60) return t("tt.minsAgo").replace("{n}", String(mins));
   const hrs = Math.floor(mins / 60);
-  return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
+  return hrs === 1 ? t("tt.hourAgo") : t("tt.hoursAgo").replace("{n}", String(hrs));
 }
 
 export function TrackingTimeline({
@@ -67,7 +68,7 @@ export function TrackingTimeline({
             <p className="mt-0.5 text-[12px] text-cocoa">
               {isFood ? t("tt.estDelivery") : t("tt.estPickup")} ·{" "}
               <span className="font-semibold text-accent">
-                {etaMinutes === 0 ? t("tt.anyMoment") : `~${etaMinutes} min`}
+                {etaMinutes === 0 ? t("tt.anyMoment") : t("tt.aboutMin").replace("{n}", String(etaMinutes))}
               </span>
             </p>
           )}
@@ -133,11 +134,11 @@ export function TrackingTimeline({
                 </p>
                 <p className="text-[11px] text-cocoa">
                   {isReached
-                    ? relativeTime(at, now)
+                    ? relativeTime(at, now, t)
                     : isActive
                       ? minutesUntil(at, now) === 0
                         ? t("tt.anyMoment")
-                        : `in ~${minutesUntil(at, now)} min`
+                        : t("tt.inAboutMin").replace("{n}", String(minutesUntil(at, now)))
                       : new Date(at).toLocaleTimeString("en-IN", {
                           hour: "2-digit",
                           minute: "2-digit",

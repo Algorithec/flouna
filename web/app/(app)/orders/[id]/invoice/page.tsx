@@ -127,7 +127,7 @@ export default function InvoicePage({
     const fare = order.details.farePaise;
     if (fare != null)
       lines.push({
-        label: `${order.details.displayName ?? t("cx.ride")} · ${order.details.pickup ?? "pickup"} → ${order.details.drop ?? "drop"}`,
+        label: `${order.details.displayName ?? t("cx.ride")} · ${order.details.pickup ?? t("bill.pickup")} → ${order.details.drop ?? t("bill.drop")}`,
         value: fare,
       });
   }
