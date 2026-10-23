@@ -105,6 +105,7 @@ model User {
   orders               Order[]
   ondcSearches         OndcSearch[]
   ondcOrders           OndcOrder[]
+  ondcRides            OndcRide[]
   cart                 Cart?
   payments             Payment[]
   otpCodes             OtpCode[]
@@ -1538,6 +1539,49 @@ model OndcOrder {
   cancelReasonId   String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+// One ride booked with an ONDC ride provider (TRV10), from the search to the
+// end of the trip. Rides keep one transaction from search to completion, so
+// the row is created with the search and found by it afterwards. The
+// provider collects the fare; Flouna only records what it was told.
+model OndcRide {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  txnId             String    @unique
+  // searching | selecting | quoted | initialising | ready | confirming |
+  // booked | cancel_quoting | cancel_quoted | cancelling | cancelled |
+  // completed | failed
+  status            String
+  awaitingMsgId     String?
+  city              String // STD code form, "std:080"
+  pickup            String // JSON: { gps, address, area }
+  drop              String // JSON: { gps, address, area }
+  bppId             String?
+  bppUri            String?
+  providerId        String?
+  itemId            String?
+  fulfillmentId     String?
+  vehicle           String?
+  quote             String? // JSON: the provider's latest quote, as sent
+  farePaise         Int?
+  payment           String? // JSON: the provider's payment terms from on_init
+  cancellationTerms String? // JSON: the fee at each stage, from on_init
+  cancelReasonId    String?
+  cancelFeePaise    Int? // what the provider said cancelling would cost
+  sellerOrderId     String?
+  orderStatus       String? // ACTIVE | COMPLETED | CANCELLED | SOFT_CANCEL
+  rideState         String? // RIDE_ASSIGNED, RIDE_ENROUTE_PICKUP, ...
+  driver            String? // JSON: { name, phone }
+  vehicleInfo       String? // JSON: { registration, make, model, color }
+  startOtp          String?
+  sellerUpdatedAt   DateTime?
+  problem           String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([userId, createdAt])
 }
