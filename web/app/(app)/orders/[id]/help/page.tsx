@@ -129,6 +129,14 @@ export default function OrderHelpPage() {
           domain: d.order.domain,
         });
       })
+      // Not an app order: it may be a food order or ride placed through
+      // ONDC, which lives apart. Its kind decides food or ride problems.
+      .catch(() =>
+        api<{ kind: "food" | "ride"; title: string; createdAt: string; itemCount: number | null }>(`/api/ondc/mine/${orderId}`).then((d) => {
+          if (cancelled) return;
+          setOrder({ title: d.title, itemCount: d.itemCount, createdAt: d.createdAt, domain: d.kind });
+        }),
+      )
       .catch(() => {});
     return () => {
       cancelled = true;
