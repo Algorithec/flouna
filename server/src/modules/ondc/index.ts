@@ -5,6 +5,7 @@ import { createRegistryClient, REGISTRY_URL } from "./registryClient.js";
 import { applyOnIssue } from "../complaints/igm.network.js";
 import { applyRetailReply } from "./orders.service.js";
 import { applyRideReply } from "./rides.service.js";
+import { applySettlementMessage } from "./settlement.service.js";
 
 /**
  * The live ONDC wiring, or null when this deployment has no ONDC identity.
@@ -61,6 +62,8 @@ export const recordInbound: CallbackDeps["record"] = async ({ action, body, raw,
   await applyRetailReply({ action, body, senderId });
   // And a ride provider's, on the same terms.
   await applyRideReply({ action, body, senderId });
+  // Settlement: the agency's answers, and seller apps reconciling with us.
+  await applySettlementMessage({ action, body, senderId });
   return { duplicate };
 };
 

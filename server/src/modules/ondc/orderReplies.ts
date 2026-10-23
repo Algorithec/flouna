@@ -134,6 +134,14 @@ export type PaymentTerms = {
    * Absent on orders priced before they were kept.
    */
   sellerTerms?: { code: string; value: string }[];
+  /** "percent" (the usual) or "amount": how finderFee is to be read. */
+  finderFeeType?: string;
+  /** When the order's money settles: "delivery", "return_window_expiry", ... */
+  settlementBasis?: string;
+  /** How long after the basis it settles, ISO 8601 ("P7D"). */
+  settlementWindow?: string;
+  /** What the collector holds back for returns, in paise. */
+  withholdingPaise?: number;
 };
 
 export type InitReply = { quote: Quote; payment: PaymentTerms; raw: { quote: unknown } } | { problem: string };
@@ -162,7 +170,18 @@ export function readOnInit(body: unknown): InitReply {
     .map((e) => ({ code: e.code as string, value: e.value as string }));
   return {
     quote,
-    payment: { collectedBy, finderFee: str(p["@ondc/org/buyer_app_finder_fee_amount"]), settlementDetails, sellerTerms },
+    payment: {
+      collectedBy,
+      finderFee: str(p["@ondc/org/buyer_app_finder_fee_amount"]),
+      finderFeeType: str(p["@ondc/org/buyer_app_finder_fee_type"]),
+      settlementDetails,
+      sellerTerms,
+      // Settlement terms. Many sellers leave them out (the certified WITSLAB
+      // flow does); ONDC's reference seller sends all three.
+      settlementBasis: str(p["@ondc/org/settlement_basis"]),
+      settlementWindow: str(p["@ondc/org/settlement_window"]),
+      withholdingPaise: paiseOf(p["@ondc/org/withholding_amount"]) ?? undefined,
+    },
     raw: { quote: order.quote },
   };
 }
