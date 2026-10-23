@@ -55,7 +55,9 @@ export function AdviceBanner({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-card border pl-4 pr-3.5 py-3",
+        // shrink-0: hidden overflow lets a flex item shrink to nothing, and in
+        // the ride sheet's column the advice was squashed to a 26px sliver.
+        "relative shrink-0 overflow-hidden rounded-card border pl-4 pr-3.5 py-3",
         // The rail carries the verdict's colour, so the fill can stay light
         // enough for the text on it to be comfortable.
         "before:absolute before:inset-y-0 before:left-0 before:w-1",
