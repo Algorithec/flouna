@@ -131,7 +131,7 @@ describe("paying for an ONDC order", () => {
     const o = await readyToPay();
     expect(await settleOndcPayment(o.gid, 47000, "cf_pay_2", o.r.deps)).toMatchObject({ outcome: "refunded" });
     expect(o.r.sent.some((s) => s.action === "confirm")).toBe(false);
-    expect(gateway.createCashfreeRefund).toHaveBeenCalledWith(expect.objectContaining({ orderId: o.gid, refundId: `${o.gid}_refund_47000`, amountRupees: 470 }));
+    expect(gateway.createCashfreeRefund).toHaveBeenCalledWith(expect.objectContaining({ orderId: o.gid, refundId: `${o.gid}_refund_0_47000`, amountRupees: 470 }));
     const view = await ondcOrderView(o.c.userId, o.orderId);
     expect(view).toMatchObject({ status: "failed", refund: { status: "done", paise: 47000 } });
   });
@@ -219,6 +219,78 @@ describe("a seller cutting the bill on a paid order", () => {
     // The operator refunds exactly the difference.
     expect(await resolveRefund(o.orderId, { paise: 9500 })).toBe(true);
     expect(gateway.createCashfreeRefund).toHaveBeenCalledWith(expect.objectContaining({ amountRupees: 95 }));
+  });
+});
+
+// An order can need more than one refund. Each used to be recorded only if no
+// refund had happened yet, so once the first had gone through, a cancellation
+// or a second cut to the bill was dropped and the customer never got it back.
+describe("refunds that come in more than one step", () => {
+  /** The seller's update with the given lines dropped from the bill. */
+  function billWithout(...titles: string[]) {
+    const update = fx("on_status_pending");
+    const q = update.message.order.quote;
+    let total = 475;
+    for (const line of q.breakup) {
+      if (titles.includes(line.title)) {
+        total -= Number(line.price.value);
+        line.price.value = "0.00";
+      }
+    }
+    q.price.value = total.toFixed(2);
+    return update;
+  }
+  function sellerCancelled() {
+    const update = fx("on_status_pending");
+    update.message.order.state = "Cancelled";
+    update.message.order.cancellation = { cancelled_by: SELLER, reason: { id: "005" } };
+    return update;
+  }
+  const at = (minute: number) => new Date(`2026-10-21T10:${String(minute).padStart(2, "0")}:00Z`);
+
+  it("refunds the rest when the seller cancels after part of the bill went back", async () => {
+    const o = await paidAndPlaced();
+    await reply("on_update", billWithout("Pepper Barbeque Chicken"), { txnId: o.txnId, messageId: crypto.randomUUID(), at: at(5) }).expect(200);
+    expect(await resolveRefund(o.orderId, { paise: 9500 })).toBe(true);
+    expect(gateway.createCashfreeRefund).toHaveBeenLastCalledWith(expect.objectContaining({ refundId: `${o.gid}_refund_0_9500`, amountRupees: 95 }));
+
+    await reply("on_status", sellerCancelled(), { txnId: o.txnId, messageId: crypto.randomUUID(), at: at(30) }).expect(200);
+    expect(gateway.createCashfreeRefund).toHaveBeenLastCalledWith(expect.objectContaining({ refundId: `${o.gid}_refund_9500_38000`, amountRupees: 380 }));
+    expect((await ondcOrderView(o.c.userId, o.orderId)).refund).toEqual({ status: "done", paise: 47500 });
+
+    // The seller repeating itself refunds nothing more.
+    await reply("on_status", sellerCancelled(), { txnId: o.txnId, messageId: crypto.randomUUID(), at: at(31) }).expect(200);
+    expect(gateway.createCashfreeRefund).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks a person again when the seller cuts the bill a second time", async () => {
+    const o = await paidAndPlaced();
+    await reply("on_update", billWithout("Pepper Barbeque Chicken"), { txnId: o.txnId, messageId: crypto.randomUUID(), at: at(5) }).expect(200);
+    expect(await resolveRefund(o.orderId, { paise: 9500 })).toBe(true);
+
+    await reply("on_update", billWithout("Pepper Barbeque Chicken", "Fresh Tomato"), { txnId: o.txnId, messageId: crypto.randomUUID(), at: at(10) }).expect(200);
+    const view = await ondcOrderView(o.c.userId, o.orderId);
+    expect(view.refund).toMatchObject({ status: "review" });
+    expect(view.problem).toMatch(/to 345 rupees/);
+    // No more than has not gone back yet: ₹475 paid, ₹95 already refunded.
+    expect(await resolveRefund(o.orderId, { paise: 38001 })).toBe(false);
+    expect(await resolveRefund(o.orderId, { paise: 3500 })).toBe(true);
+    expect(gateway.createCashfreeRefund).toHaveBeenLastCalledWith(expect.objectContaining({ refundId: `${o.gid}_refund_9500_3500`, amountRupees: 35 }));
+    expect((await ondcOrderView(o.c.userId, o.orderId)).refund).toEqual({ status: "done", paise: 13000 });
+  });
+
+  it("sends what came due while another refund was on its way", async () => {
+    const o = await paidAndPlaced();
+    await reply("on_update", billWithout("Pepper Barbeque Chicken"), { txnId: o.txnId, messageId: crypto.randomUUID(), at: at(5) }).expect(200);
+    // The seller cancels while the operator's refund is still with the gateway.
+    gateway.createCashfreeRefund.mockImplementationOnce(async () => {
+      await reply("on_status", sellerCancelled(), { txnId: o.txnId, messageId: crypto.randomUUID(), at: at(30) }).expect(200);
+      return { cf_refund_id: "rf_a", refund_id: "x", refund_status: "SUCCESS", refund_amount: 95 };
+    });
+    expect(await resolveRefund(o.orderId, { paise: 9500 })).toBe(true);
+    expect(gateway.createCashfreeRefund).toHaveBeenCalledTimes(2);
+    expect(gateway.createCashfreeRefund).toHaveBeenLastCalledWith(expect.objectContaining({ refundId: `${o.gid}_refund_9500_38000`, amountRupees: 380 }));
+    expect((await ondcOrderView(o.c.userId, o.orderId)).refund).toEqual({ status: "done", paise: 47500 });
   });
 });
 

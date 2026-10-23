@@ -544,6 +544,13 @@ export type OndcOrderView = {
   createdAt: string;
 };
 
+/** The refund the customer is told about: all of it once done, else what is on its way. */
+function refundShown(o: OrderRow) {
+  if (o.refundStatus === "done") return o.refundedPaise || o.refundPaise;
+  if ((o.refundStatus === "owed" || o.refundStatus === "requested") && o.refundDuePaise != null) return o.refundDuePaise - o.refundedPaise;
+  return o.refundPaise;
+}
+
 export async function ondcOrderView(userId: string, id: string): Promise<OndcOrderView> {
   const o = await ownOrder(userId, id);
   const q = o.quote ? readQuote(JSON.parse(o.quote)) : null;
@@ -559,7 +566,7 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
     fulfillmentState: o.fulfillmentState,
     paid: Boolean(o.paidAt),
     tracking: o.sellerOrderId ? await trackingFor(o) : null,
-    refund: o.refundStatus ? { status: o.refundStatus, paise: o.refundPaise } : null,
+    refund: o.refundStatus ? { status: o.refundStatus, paise: refundShown(o) } : null,
     createdAt: o.createdAt.toISOString(),
   };
 }
