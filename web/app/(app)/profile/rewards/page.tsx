@@ -156,7 +156,7 @@ export default function RewardsPage() {
                     <span className="block truncate text-[15px] font-bold text-acct-ink">
                       {c.code}
                     </span>
-                    <span className="block truncate text-[12px] text-acct-muted">
+                    <span className="line-clamp-2 text-[12px] text-acct-muted">
                       {c.description}
                     </span>
                     {c.minOrderPaise > 0 && (

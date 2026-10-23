@@ -171,6 +171,9 @@ const envSchema = z.object({
   ONDC_STATIC_TERMS_URL: z.string().optional(),
   ONDC_STATIC_TERMS_EFFECTIVE_DATE: z.string().optional(), // YYYY-MM-DD, set with ONDC_STATIC_TERMS_URL
   ONDC_BAP_GSTIN: z.string().optional(), // Algorithec's GSTIN, carried on every food confirm
+  // The settlement agency (NBBL's NOCS), from its onboarding. Set together.
+  ONDC_SETTLEMENT_AGENCY_ID: z.string().optional(),
+  ONDC_SETTLEMENT_AGENCY_URL: z.string().optional(),
 
   // ₹50/month premium tier. Reuses the Cashfree gateway for the recurring
   // charge; falls back to a simulated activation in dev when unset.

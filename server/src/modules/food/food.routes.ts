@@ -5,6 +5,7 @@ import { recordDecision } from "../advisor/decisionLog.service.js";
 import {
   recommendFood,
   searchFood,
+  searchFoodTraced,
   quotesForDish,
   allQuotes,
   withoutTrace,
@@ -15,6 +16,7 @@ import { adviseFood } from "../advisor/advisor.service.js";
 import { recordObservation } from "../advisor/priceHistory.service.js";
 import { prisma } from "../../lib/prisma.js";
 import { istDayKey } from "../../lib/istTime.js";
+import { repairTypos } from "../chat/llm/demo.js";
 
 export const foodRouter = Router();
 foodRouter.use(requireAuth);
@@ -61,8 +63,14 @@ const searchQuery = z.object({
 foodRouter.get("/search", async (req, res, next) => {
   try {
     const parsed = searchQuery.parse(req.query);
-    const quotes = searchFood({
-      query: parsed.q,
+    // Repaired the way the chat repairs it: "biriyani" was answered with
+    // momos, while the same word in the chat found biryani. Lowercased first,
+    // because a phone capitalises the first letter of a search box and the
+    // repair leaves capitalised words alone as names.
+    const typed = parsed.q.toLowerCase();
+    const query = repairTypos(typed);
+    const { quotes, substituted } = searchFoodTraced({
+      query,
       budgetPaise: parsed.budget ? parsed.budget * 100 : null,
       dietary: parsed.dietary,
     });
@@ -72,6 +80,10 @@ foodRouter.get("/search", async (req, res, next) => {
         quotes.slice(0, 24),
         (q) => q.dishId,
       ),
+      // Nothing matched and the menu was shown instead. The screen used to
+      // list it under "Results" as if it had been asked for.
+      substituted,
+      ...(query !== typed ? { searchedFor: query } : {}),
     });
   } catch (err) {
     next(err);

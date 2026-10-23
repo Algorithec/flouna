@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { PriceAlertListener } from "@/components/alerts/PriceAlertListener";
+import { ReportProblem } from "@/components/support/ReportProblem";
 import { useAuth } from "@/components/auth/AuthContext";
 import { AppLock } from "@/components/security/AppLock";
 import { registerDeviceQuietly } from "@/lib/groupChatSetup";
@@ -84,6 +85,8 @@ export function AppShell({
     <TemporaryChatProvider>
     <div className="flex min-h-dvh w-full">
       <PriceAlertListener />
+      {/* Shake the phone (or pick it in Settings) to report a technical problem. */}
+      {user && <ReportProblem />}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col">

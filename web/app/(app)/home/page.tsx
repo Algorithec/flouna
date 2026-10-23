@@ -52,6 +52,7 @@ type Suggestion = {
   prompt: string;
   icon: string;
   theme: keyof typeof TILE_THEMES;
+  dishId?: string; // set on a reorder chip
 };
 
 const ICONS: Record<string, LucideIcon> = {
@@ -292,6 +293,9 @@ function ChatHome() {
   }
 
   const empty = messages.length === 0;
+  // A reorder chip for the usual dish would offer it twice: the usual shortcut
+  // below the chips does the same, and shows the price.
+  const chips = suggestions.filter((s) => !usual || s.dishId !== usual.dishId).slice(0, 3);
 
   return (
     <div
@@ -356,7 +360,7 @@ function ChatHome() {
           {/* Quick chips — flat, as drawn (Figma 2177:4763). Two per row on
               mobile. */}
           <Stagger delayChildren={0.15} className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            {suggestions.slice(0, 3).map((s) => {
+            {chips.map((s) => {
               const Icon = ICONS[s.icon] ?? Pizza;
               return (
                 <StaggerItem key={s.label}>
@@ -384,7 +388,7 @@ function ChatHome() {
                 className="flex items-center gap-2.5 rounded-pill border border-line bg-card px-4 py-3 text-left shadow-soft transition-colors hover:bg-beige/40"
               >
                 <RotateCcw size={16} className="shrink-0 text-accent" />
-                <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-ink">
+                <span className="line-clamp-2 min-w-0 flex-1 text-[14px] font-medium text-ink">
                   {t("chat.yourUsual")} {usual.name}
                 </span>
                 <span className="shrink-0 text-[14px] font-bold text-accent">

@@ -78,7 +78,7 @@ function Row({
       <span className="min-w-0 flex-1">
         <span className="block text-[12px] text-acct-muted">{label}</span>
         <span
-          className={`mt-0.5 block truncate text-[15px] font-semibold ${
+          className={`mt-0.5 line-clamp-2 text-[15px] font-semibold ${
             value ? "text-acct-ink" : "text-acct-muted"
           }`}
         >

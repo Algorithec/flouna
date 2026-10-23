@@ -28,6 +28,7 @@ import { api } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { orderRef } from "@/lib/format";
 
 // ONDC IGM 2.0 — raising a complaint, restyled to the Component-page Figma:
 // centred titles, warm outlined buttons, leading problem icons with the radio
@@ -224,13 +225,14 @@ export default function OrderHelpPage() {
                 {/* "Order #" over a trip is the same mix-up as offering a
                     rider a damaged item. */}
                 {order?.domain === "ride" ? t("cx.ride") : t("cx.order")} #
-                {orderId.slice(0, 8).toUpperCase()}
+                {orderRef(orderId)}
               </p>
               {order && (
                 <>
                   <p className="mt-0.5 text-[13px] text-cocoa">
                     {order.title}
-                    {order.itemCount != null && `, ${order.itemCount} item${order.itemCount === 1 ? "" : "s"}`}
+                    {order.itemCount != null &&
+                      `, ${order.itemCount === 1 ? t("oh.itemOne") : t("oh.items").replace("{n}", String(order.itemCount))}`}
                   </p>
                   <p className="mt-0.5 text-[12px] text-muted">
                     {new Date(order.createdAt).toLocaleDateString("en-IN", {

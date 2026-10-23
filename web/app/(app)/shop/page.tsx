@@ -20,6 +20,8 @@ export default function ShopLandingPage() {
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ProductQuote[] | null>(null);
+  // Said above the results when nothing matched and these are popular instead.
+  const [searchNote, setSearchNote] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -32,13 +34,25 @@ export default function ShopLandingPage() {
 
   useEffect(() => {
     if (!activeQuery) return;
-    const t = setTimeout(() => {
-      api<{ quotes: ProductQuote[] }>(`/api/shop/search?q=${encodeURIComponent(activeQuery)}`)
-        .then((d) => setResults(d.quotes))
-        .catch(() => setResults([]));
+    // A late answer for an older query must not replace a newer one, as the
+    // food search already guards: changing category mid-request did that.
+    let active = true;
+    const timer = setTimeout(() => {
+      api<{ quotes: ProductQuote[]; substituted?: boolean }>(
+        `/api/shop/search?q=${encodeURIComponent(activeQuery)}`,
+      )
+        .then((d) => {
+          if (!active) return;
+          setResults(d.quotes);
+          setSearchNote(d.substituted ? t("search.noMatch").replace("{q}", activeQuery) : "");
+        })
+        .catch(() => active && setResults([]));
     }, 250);
-    return () => clearTimeout(t);
-  }, [activeQuery]);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [activeQuery, t]);
 
   const showSearch = activeQuery !== "" && results !== null;
   const loading = !feed && !error;
@@ -93,6 +107,9 @@ export default function ShopLandingPage() {
             {showSearch ? t("shop.results") : t("shop.trending")}
           </h2>
           <Stagger className="mt-3 flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
+            {showSearch && searchNote && results.length > 0 && (
+              <p className="text-[13px] text-cocoa">{searchNote}</p>
+            )}
             {showSearch && results.length === 0 && (
               <p className="text-[13px] text-cocoa">
                 {t("sh.noMatches")}
@@ -122,7 +139,7 @@ function ProductCard({ q }: { q: ProductQuote }) {
           <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-ink">
             {q.tag}
           </span>
-          <p className="mt-1 truncate text-[15px] font-bold text-ink">{q.name}</p>
+          <p className="mt-1 line-clamp-2 text-[15px] font-bold text-ink">{q.name}</p>
           <p className="truncate text-[12px] text-cocoa">{q.brand}</p>
           <p className="flex items-center gap-2 text-[12px] text-cocoa">
             <span className="flex items-center gap-0.5">

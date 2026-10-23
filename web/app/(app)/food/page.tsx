@@ -41,15 +41,16 @@ import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import type { FoodQuote } from "@/components/chat/types";
 import { FlounaLogo } from "@/components/brand/FlounaLogo";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 // Fixed category set matching the Figma food landing. `value` is the search
 // term sent to the backend ("" = All / unfiltered).
-const FOOD_CATEGORIES: { label: string; value: string; icon: LucideIcon }[] = [
-  { label: "All", value: "All", icon: Soup },
-  { label: "Burger", value: "Burger", icon: Beef },
-  { label: "Pizza", value: "Pizza", icon: Pizza },
-  { label: "Healthy", value: "Healthy", icon: Salad },
-  { label: "More", value: "More", icon: Grid2x2 },
+const FOOD_CATEGORIES: { labelKey: TranslationKey; value: string; icon: LucideIcon }[] = [
+  { labelKey: "food.cat.all", value: "All", icon: Soup },
+  { labelKey: "food.cat.burger", value: "Burger", icon: Beef },
+  { labelKey: "food.cat.pizza", value: "Pizza", icon: Pizza },
+  { labelKey: "food.cat.healthy", value: "Healthy", icon: Salad },
+  { labelKey: "food.cat.more", value: "More", icon: Grid2x2 },
 ];
 
 type Feed = {
@@ -68,6 +69,9 @@ export default function FoodLandingPage() {
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodQuote[] | null>(null);
+  // Said above the results when they are not what was typed: nothing matched
+  // and these are popular instead, or a misspelling was searched as the dish.
+  const [searchNote, setSearchNote] = useState("");
   const [error, setError] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [sort, setSort] = useState<"default" | "best" | "offers" | "new">("default");
@@ -96,17 +100,27 @@ export default function FoodLandingPage() {
     // the results list showing dishes for a query nobody had asked for.
     let active = true;
     const timer = setTimeout(() => {
-      api<{ quotes: FoodQuote[] }>(
+      api<{ quotes: FoodQuote[]; substituted?: boolean; searchedFor?: string }>(
         `/api/food/search?q=${encodeURIComponent(activeQuery)}`,
       )
-        .then((d) => active && setResults(d.quotes))
+        .then((d) => {
+          if (!active) return;
+          setResults(d.quotes);
+          setSearchNote(
+            d.substituted
+              ? t("search.noMatch").replace("{q}", activeQuery)
+              : d.searchedFor
+                ? t("search.showingFor").replace("{q}", d.searchedFor)
+                : "",
+          );
+        })
         .catch(() => active && setResults([]));
     }, 250);
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [activeQuery]);
+  }, [activeQuery, t]);
 
   const showSearch = activeQuery !== "" && results !== null;
   const loading = !feed && !error;
@@ -195,7 +209,8 @@ export default function FoodLandingPage() {
       {/* Categories — mobile: 52px icon tiles; desktop: wide chip buttons */}
       <FadeIn delay={0.06} y={8}>
         <div className="no-scrollbar mt-4 flex justify-between gap-2 overflow-x-auto lg:hidden">
-          {FOOD_CATEGORIES.map(({ label, value, icon: Icon }) => {
+          {FOOD_CATEGORIES.map(({ labelKey, value, icon: Icon }) => {
+            const label = t(labelKey);
             const active = category === value;
             return (
               <button
@@ -226,7 +241,8 @@ export default function FoodLandingPage() {
           })}
         </div>
         <div className="mt-5 hidden gap-3 lg:flex">
-          {FOOD_CATEGORIES.map(({ label, value, icon: Icon }) => {
+          {FOOD_CATEGORIES.map(({ labelKey, value, icon: Icon }) => {
+            const label = t(labelKey);
             const active = category === value;
             return (
               <button
@@ -274,12 +290,13 @@ export default function FoodLandingPage() {
           <StateScreen
             illustration={<StateGlyph icon={Search} />}
             title={t("fp.noResults")}
-            message={`We couldn't find anything matching "${activeQuery}".`}
+            message={t("fp.noResultsMsg").replace("{q}", activeQuery)}
             primary={{ label: t("fp.clearSearch"), onClick: () => setQuery("") }}
           />
         ) : (
           <section className="mt-6">
             <h2 className="text-[17px] font-bold text-ink">{t("fp.results")}</h2>
+            {searchNote && <p className="mt-1 text-[13px] text-cocoa">{searchNote}</p>}
             <Stagger className="mt-3 flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
               {results.map((q) => (
                 <StaggerItem key={`${q.dishId}-${q.platform}`}>
@@ -334,21 +351,21 @@ export default function FoodLandingPage() {
                 <ExploreTile
                   icon={BarChart3}
                   title={t("fp.bestSellers")}
-                  subtitle="Most ordered right now"
+                  subtitle={t("fp.bestSellersSub")}
                   active={sort === "best"}
                   onClick={() => setSort(sort === "best" ? "default" : "best")}
                 />
                 <ExploreTile
                   icon={Tag}
                   title={t("fp.offers")}
-                  subtitle="Great deals & discounts"
+                  subtitle={t("fp.offersSub")}
                   active={sort === "offers"}
                   onClick={() => setSort(sort === "offers" ? "default" : "offers")}
                 />
                 <ExploreTile
                   icon={Sparkles}
                   title={t("fp.newOnFlouna")}
-                  subtitle="Fresh & fastest arrivals"
+                  subtitle={t("fp.newSub")}
                   active={sort === "new"}
                   onClick={() => setSort(sort === "new" ? "default" : "new")}
                 />
@@ -369,8 +386,8 @@ export default function FoodLandingPage() {
                   iconBg="bg-accent-soft"
                   iconClass="text-accent"
                   title={t("fp.fastest")}
-                  subtitle="Get your food in the least time possible"
-                  value={`From ${feed?.suggestions.fastestDeliveryMinutes ?? " "} min`}
+                  subtitle={t("fp.fastestSub")}
+                  value={t("fp.fromMin").replace("{n}", String(feed?.suggestions.fastestDeliveryMinutes ?? " "))}
                   onPick={() => setQuery("momos")}
                 />
                 <SuggestionRow
@@ -378,8 +395,8 @@ export default function FoodLandingPage() {
                   iconBg="bg-success-soft"
                   iconClass="text-success"
                   title={t("fp.nearest")}
-                  subtitle="Top restaurants near your location"
-                  value={`Within ${feed?.suggestions.nearestKm ?? " "} km`}
+                  subtitle={t("fp.nearestSub")}
+                  value={t("fp.withinKm").replace("{n}", String(feed?.suggestions.nearestKm ?? " "))}
                   onPick={() => setQuery("thali")}
                 />
                 <SuggestionRow
@@ -387,8 +404,8 @@ export default function FoodLandingPage() {
                   iconBg="bg-[#efe7fb]"
                   iconClass="text-[#8b5cf6]"
                   title={t("fp.topRated")}
-                  subtitle="Highly rated restaurants you'll love"
-                  value="4.0+ rated"
+                  subtitle={t("fp.topRatedSub")}
+                  value={t("fp.ratedAbove")}
                   onPick={() => setQuery("cake")}
                 />
               </div>
@@ -468,7 +485,7 @@ function DishRow({ q }: { q: FoodQuote }) {
       pricePaise: q.effectivePaise,
     });
     setAdded(true);
-    toast(`${q.name} added to cart`);
+    toast(t("fp.addedToCart").replace("{name}", q.name));
     setTimeout(() => setAdded(false), 1200);
   }
   return (
@@ -484,7 +501,7 @@ function DishRow({ q }: { q: FoodQuote }) {
           <span className="inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-ink">
             {q.tag}
           </span>
-          <p className="mt-1 truncate text-[15px] font-bold text-ink">{q.name}</p>
+          <p className="mt-1 line-clamp-2 text-[15px] font-bold text-ink">{q.name}</p>
           <p className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-[12px] text-cocoa">
             <Clock size={11} className="shrink-0" /> {q.etaMinutes} {t("u.min")}
             <span className="flex items-center gap-0.5">
@@ -550,7 +567,7 @@ function SuggestionRow({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-bold text-ink">{title}</p>
-          <p className="truncate text-[12px] text-cocoa">{subtitle}</p>
+          <p className="line-clamp-2 text-[12px] text-cocoa">{subtitle}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium text-cocoa">
           {value} <ChevronRight size={14} />

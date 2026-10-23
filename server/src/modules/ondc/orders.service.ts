@@ -19,6 +19,7 @@ import { ondcSearchResults } from "./search.service.js";
 import { checkChoices, optionsFor, type OptionTree } from "./catalog.js";
 import { owe, recordPayout, refundAfterCancel } from "./ondcMoney.js";
 import { recordTermsAcceptance, statesAcceptance } from "./termsAcceptance.js";
+import { recordSettlement } from "./settlement.service.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
 
@@ -515,7 +516,11 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       review: `The seller reduced the bill from ${order.paidPaise / 100} to ${r.quote.totalPaise / 100} rupees; refund the difference`,
     });
   }
-  if (r.sellerState === "Completed") await recordPayout(order.id, order.completedAt ?? r.at ?? new Date());
+  if (r.sellerState === "Completed") {
+    const completedAt = order.completedAt ?? r.at ?? new Date();
+    await recordPayout(order.id, completedAt);
+    await recordSettlement(order.id, completedAt);
+  }
   return "applied";
 }
 

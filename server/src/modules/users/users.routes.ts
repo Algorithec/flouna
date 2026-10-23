@@ -773,7 +773,9 @@ usersRouter.get("/usual", async (req, res, next) => {
 // defaults. `icon` is a string key the web maps to an icon component (React
 // components can't cross the JSON boundary).
 
-type Suggestion = { label: string; prompt: string; icon: string; theme: string };
+// `dishId` marks a reorder chip, so the home screen can leave it out when its
+// "your usual" shortcut already offers the same dish.
+type Suggestion = { label: string; prompt: string; icon: string; theme: string; dishId?: string };
 
 // Time-of-day food nudge — what most people are deciding right now.
 function mealSuggestion(now = new Date()): Suggestion {
@@ -843,13 +845,15 @@ usersRouter.get("/suggestions", async (req, res, next) => {
       }
     }
 
-    const topDish = [...dishCounts.values()].sort((a, b) => b.n - a.n)[0];
-    if (topDish && topDish.n >= 2) {
+    const topDish = [...dishCounts.entries()].sort((a, b) => b[1].n - a[1].n)[0];
+    if (topDish && topDish[1].n >= 2) {
+      const [dishId, { name }] = topDish;
       add({
-        label: `Reorder ${topDish.name}`,
-        prompt: `Order ${topDish.name} again`,
+        label: `Reorder ${name}`,
+        prompt: `Order ${name} again`,
         icon: "rotate",
         theme: "orange",
+        dishId,
       });
     }
 

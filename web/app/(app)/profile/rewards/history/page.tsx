@@ -117,10 +117,10 @@ export default function RewardHistoryPage() {
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-bold text-acct-ink">
+                    <span className="line-clamp-3 text-[15px] font-bold text-acct-ink">
                       {e.description}
                     </span>
-                    <span className="block truncate text-[12px] text-acct-muted">
+                    <span className="line-clamp-2 text-[12px] text-acct-muted">
                       {REASON_KEY[e.reason] ? t(REASON_KEY[e.reason]) : e.reason} ·{" "}
                       {new Date(e.createdAt).toLocaleDateString(`${lang}-IN`, {
                         day: "numeric",

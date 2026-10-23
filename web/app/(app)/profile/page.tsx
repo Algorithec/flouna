@@ -135,10 +135,10 @@ function RowList({ rows, trailing }: { rows: Row[]; trailing?: ReactNode }) {
               <Icon size={18} className="text-acct-accent" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-bold text-acct-ink">
+              <span className="line-clamp-2 text-[15px] font-bold text-acct-ink">
                 {t(titleKey)}
               </span>
-              <span className="block truncate text-[12px] text-acct-muted">
+              <span className="line-clamp-2 text-[12px] text-acct-muted">
                 {t(subtitleKey)}
               </span>
             </span>
@@ -171,10 +171,10 @@ function AppearanceRow() {
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-bold text-acct-ink">
+          <span className="line-clamp-2 text-[15px] font-bold text-acct-ink">
             {t("pp.profile.appearance")}
           </span>
-          <span className="block truncate text-[12px] text-acct-muted">
+          <span className="line-clamp-2 text-[12px] text-acct-muted">
             {t("pp.profile.appearanceSub")}
           </span>
         </span>
@@ -291,7 +291,7 @@ export default function ProfilePage() {
             ].map(({ icon: Icon, value, label }) => (
               <div key={label} className="flex min-w-0 flex-col items-center gap-1">
                 <Icon size={17} className="text-acct-accent" />
-                <span className="w-full truncate text-[12px] font-semibold text-acct-ink">
+                <span className="line-clamp-2 w-full break-words text-[12px] font-semibold text-acct-ink">
                   {value}
                 </span>
                 <span className="text-[11px] text-acct-muted">{label}</span>

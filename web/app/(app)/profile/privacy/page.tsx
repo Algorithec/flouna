@@ -107,10 +107,10 @@ function Row({
         <Icon size={16} className="text-acct-accent" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-semibold text-acct-ink">
+        <span className="line-clamp-2 text-[14px] font-semibold text-acct-ink">
           {title}
         </span>
-        <span className="mt-0.5 block truncate text-[12px] text-acct-muted">
+        <span className="mt-0.5 line-clamp-2 text-[12px] text-acct-muted">
           {subtitle}
         </span>
       </span>
