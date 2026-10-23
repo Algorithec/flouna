@@ -32,6 +32,14 @@ import { ApiError } from "../../middleware/error.js";
 import { auditFromReq } from "./audit.service.js";
 import { markPayoutPaid, payoutsDue, refundsNeedingAttention, resolveRefund } from "../ondc/ondcMoney.js";
 import {
+  declareNilSettlement,
+  instructSettlements,
+  listSettlements,
+  releaseSettlement,
+  requestSettlementReport,
+  sendRecon,
+} from "../ondc/settlement.service.js";
+import {
   searchUsers,
   getUserDetail,
   setUserSuspended,
@@ -249,6 +257,93 @@ adminRouter.post(
   },
 );
 
+// --- ONDC settlement (RSF): instructions to the settlement agency ------------
+// See ondc/settlement.service.ts. Nothing moves money until a person sends
+// an instruction, and every one is audited.
+const SETTLEMENT_STATUSES = ["held", "due", "instructed", "settled", "not_settled"] as const;
+
+adminRouter.get("/ondc/settlements", async (req, res, next) => {
+  try {
+    const status = typeof req.query.status === "string" && (SETTLEMENT_STATUSES as readonly string[]).includes(req.query.status) ? req.query.status : undefined;
+    res.json({ settlements: await listSettlements(status) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post("/ondc/settlements/:id/release", async (req, res, next) => {
+  try {
+    if (!(await releaseSettlement(req.params.id!))) return res.status(409).json({ error: "This settlement is not held" });
+    await auditFromReq(req, { action: "ondc.settlement_released", targetType: "ondc_settlement", targetId: req.params.id!, summary: "Released a held ONDC settlement" });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post(
+  "/ondc/settlements/instruct",
+  validateBody(
+    z
+      .object({
+        bppId: z.string().trim().min(3).max(200),
+        role: z.enum(["receiver", "collector"]),
+        ids: z.array(z.string().cuid()).min(1).max(100).optional(),
+      })
+      .strict(),
+  ),
+  async (req, res, next) => {
+    try {
+      const result = await instructSettlements(req.body as { bppId: string; role: "receiver" | "collector"; ids?: string[] });
+      await auditFromReq(req, {
+        action: "ondc.settlement_instructed",
+        targetType: "ondc_settlement",
+        targetId: result.settlementId,
+        summary: `Sent the settlement agency instructions for ${result.orders} orders with ${req.body.bppId} (${req.body.role})`,
+      });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+adminRouter.post("/ondc/settlements/nil", async (req, res, next) => {
+  try {
+    const result = await declareNilSettlement();
+    await auditFromReq(req, { action: "ondc.settlement_nil", targetType: "ondc_settlement", targetId: result.settlementId, summary: "Declared a nil settlement cycle to the settlement agency" });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post(
+  "/ondc/settlements/report",
+  validateBody(z.object({ settlementId: z.string().uuid() }).strict()),
+  async (req, res, next) => {
+    try {
+      res.json(await requestSettlementReport(req.body.settlementId));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+adminRouter.post(
+  "/ondc/settlements/recon",
+  validateBody(z.object({ ids: z.array(z.string().cuid()).min(1).max(100) }).strict()),
+  async (req, res, next) => {
+    try {
+      const result = await sendRecon(req.body.ids);
+      await auditFromReq(req, { action: "ondc.recon_sent", targetType: "ondc_settlement", targetId: req.body.ids[0], summary: `Sent a seller app our figures for ${result.sent} orders to reconcile` });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 adminRouter.get("/ondc/refunds", async (_req, res, next) => {
   try {
     res.json({ refunds: await refundsNeedingAttention() });
@@ -276,7 +371,6 @@ adminRouter.post(
   },
 );
 
-// --- Support tickets -----------------------------------------------------
 // --- ONDC: which version of our static terms each seller app accepted ------
 // The record static terms 17.6.1 asks us to keep (see ondc/termsAcceptance.ts).
 adminRouter.get("/ondc/terms-acceptances", async (_req, res, next) => {
@@ -287,6 +381,7 @@ adminRouter.get("/ondc/terms-acceptances", async (_req, res, next) => {
   }
 });
 
+// --- Support tickets -----------------------------------------------------
 adminRouter.get("/tickets", async (req, res, next) => {
   try {
     const status = typeof req.query.status === "string" ? req.query.status : undefined;

@@ -11,12 +11,14 @@ import crypto from "node:crypto";
 export const BAP_ID = "ondc.flouna.com";
 export const BAP_URI = "https://ondc.flouna.com/ondc";
 
-export type OndcDomain = "ONDC:RET11" | "ONDC:TRV10";
+// ONDC:NTS10 is settlement and reconciliation (RSF 2.0.0), which is not tied
+// to a city and speaks the 2.0.x layout.
+export type OndcDomain = "ONDC:RET11" | "ONDC:TRV10" | "ONDC:NTS10";
 
 export type ContextInput = {
   domain: OndcDomain;
   action: string;
-  /** STD code form, e.g. "std:080" for Bengaluru. */
+  /** STD code form, e.g. "std:080" for Bengaluru; "*" for settlement (NTS10). */
   city: string;
   transactionId: string;
   messageId?: string;
@@ -27,7 +29,9 @@ export type ContextInput = {
 };
 
 export function buildContext(c: ContextInput): Record<string, unknown> {
-  if (!/^std:\d{2,5}$/.test(c.city)) throw new Error(`ONDC city must be an STD code such as std:080, got ${c.city}`);
+  if (c.domain === "ONDC:NTS10" ? c.city !== "*" : !/^std:\d{2,5}$/.test(c.city)) {
+    throw new Error(`ONDC city must be an STD code such as std:080 (or "*" for settlement), got ${c.city}`);
+  }
   const base = {
     domain: c.domain,
     action: c.action,
@@ -40,10 +44,10 @@ export function buildContext(c: ContextInput): Record<string, unknown> {
     timestamp: (c.now ?? new Date()).toISOString(),
     ttl: c.ttl ?? "PT30S",
   };
-  if (c.domain === "ONDC:TRV10") {
+  if (c.domain === "ONDC:TRV10" || c.domain === "ONDC:NTS10") {
     return {
       ...base,
-      version: "2.0.1",
+      version: c.domain === "ONDC:NTS10" ? "2.0.0" : "2.0.1",
       location: { country: { code: "IND" }, city: { code: c.city } },
     };
   }
