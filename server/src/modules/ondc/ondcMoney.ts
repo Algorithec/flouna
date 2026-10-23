@@ -83,6 +83,23 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
   }
 }
 
+/**
+ * The Buyer Finder Fee on an order, in paise, as the seller agreed it in
+ * on_init: a percentage of the order total, or a fixed amount. Never more
+ * than the order, never negative: a misconfigured fee must not turn into a
+ * payout larger than the money taken, or a negative one.
+ */
+export function finderFeePaise(totalPaise: number, terms: { finderFee?: string; finderFeeType?: string }): number {
+  if (terms.finderFeeType === "amount") {
+    const v = terms.finderFee?.trim();
+    const paise = v && /^\d+(\.\d{1,2})?$/.test(v) ? Math.round(Number(v) * 100) : 0;
+    return Math.min(paise, totalPaise);
+  }
+  const percent = Number(terms.finderFee ?? commercialTerms().finderFeePercent);
+  const clamped = Number.isFinite(percent) ? Math.min(Math.max(percent, 0), 100) : 0;
+  return Math.round((totalPaise * clamped) / 100);
+}
+
 /** "P3D", "PT12H" to milliseconds; anything else to null. */
 export function durationMs(iso: string | null | undefined): number | null {
   const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(iso ?? "");
@@ -99,9 +116,7 @@ export async function recordPayout(ondcOrderId: string, completedAt: Date) {
   if (!order.paidAt || !order.payment || order.totalPaise == null) return;
   const terms = JSON.parse(order.payment) as PaymentTerms & { settlementWindow?: string; settlementBasis?: string };
   if (terms.collectedBy !== "BAP") return;
-  const percent = Number(terms.finderFee ?? commercialTerms().finderFeePercent);
-  const clampedPercent = Number.isFinite(percent) ? Math.min(Math.max(percent, 0), 100) : 0;
-  const fee = Math.round((order.totalPaise * clampedPercent) / 100);
+  const fee = finderFeePaise(order.totalPaise, terms);
   // The window is counted from delivery. A basis of return_window_expiry means
   // the seller expects it after its return window too, which the order does
   // not carry, so those are held for an operator to date.
