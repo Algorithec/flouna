@@ -179,6 +179,8 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   if (address.lat == null || address.lng == null) throw new ApiError(400, "Your delivery address has no map location");
 
   const search = await prisma.ondcSearch.findUnique({ where: { id: input.searchId }, select: { city: true, termsUrl: true, termsEffective: true } });
+  // Removed between reading its results and here: said plainly, not a crash.
+  if (!search) throw new ApiError(400, "That search has expired. Search again.");
   const seller = fromSeller[0]!.seller;
   const gps = `${address.lat.toFixed(6)},${address.lng.toFixed(6)}`;
   const order = await prisma.ondcOrder.create({
@@ -191,13 +193,13 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
       providerId: seller.providerId,
       locationId: seller.locationId,
       storeName: seller.name,
-      city: search!.city,
+      city: search.city,
       lines: JSON.stringify(lines),
       addressId: address.id,
       gps,
       areaCode: address.pincode,
-      termsUrl: search!.termsUrl,
-      termsEffective: search!.termsEffective,
+      termsUrl: search.termsUrl,
+      termsEffective: search.termsEffective,
     },
   });
   const envelope = buildSelect({
@@ -237,6 +239,7 @@ export async function billingFor(order: OrderRow) {
 export async function initOndcOrder(userId: string, id: string, deps: OrderDeps = {}) {
   const order = await ownOrder(userId, id);
   if (order.status !== "quoted") throw new ApiError(409, `This order is ${order.status}, not waiting for your details`);
+  if (!order.fulfillmentId || !order.gps) throw new ApiError(409, "This order is missing the details needed to continue. Start it again.");
   const b = await billingFor(order);
   const envelope = buildInit({
     transactionId: order.txnId,
@@ -246,7 +249,7 @@ export async function initOndcOrder(userId: string, id: string, deps: OrderDeps 
     locationId: order.locationId,
     lines: JSON.parse(order.lines) as CartLine[],
     billing: { name: b.name, phone: b.phone, email: b.email, address: b.address, at: order.createdAt },
-    delivery: { fulfillmentId: order.fulfillmentId!, gps: order.gps!, address: b.address, phone: b.phone, email: b.email },
+    delivery: { fulfillmentId: order.fulfillmentId, gps: order.gps, address: b.address, phone: b.phone, email: b.email },
   });
   await sendStep(order, "init", envelope, "initialising", deps);
   return { orderId: order.id };
@@ -274,9 +277,14 @@ export async function markOndcOrderPaid(id: string, payment: { amountPaise: numb
 export async function confirmOndcOrder(userId: string, id: string, deps: OrderDeps = {}) {
   const order = await ownOrder(userId, id);
   if (order.status !== "paid") throw new ApiError(409, `This order is ${order.status}, not ready to place`);
+  // A paid order has all of these by the time it gets here. If one is ever
+  // missing, it is said, rather than crashing on the way to the seller.
+  if (!order.quote || !order.payment || order.totalPaise == null || !order.fulfillmentId || !order.gps) {
+    throw new ApiError(409, "This order is missing the details needed to place it");
+  }
   const b = await billingFor(order);
-  const quote = JSON.parse(order.quote!) as unknown;
-  const terms = JSON.parse(order.payment!) as PaymentTerms;
+  const quote = JSON.parse(order.quote) as unknown;
+  const terms = JSON.parse(order.payment) as PaymentTerms;
   const commercial = commercialTerms();
   if (!commercial.gstin) throw new ApiError(503, "Food ordering on ONDC is not set up on this deployment yet");
   const envelope = buildConfirm({
@@ -289,11 +297,11 @@ export async function confirmOndcOrder(userId: string, id: string, deps: OrderDe
     // Our own id for the order: the seller answers with its id, kept separately.
     orderId: order.id,
     billing: { name: b.name, phone: b.phone, email: b.email, address: b.address, at: order.createdAt },
-    delivery: { fulfillmentId: order.fulfillmentId!, gps: order.gps!, address: b.address, phone: b.phone, email: b.email, personName: b.personName, tat: order.tat ?? "PT60M" },
+    delivery: { fulfillmentId: order.fulfillmentId, gps: order.gps, address: b.address, phone: b.phone, email: b.email, personName: b.personName, tat: order.tat ?? "PT60M" },
     quote,
     payment: {
       collectedBy: terms.collectedBy,
-      amountPaise: order.totalPaise!,
+      amountPaise: order.totalPaise,
       gatewayTransactionId: order.paymentRef ?? undefined,
       paid: Boolean(order.paidAt),
       finderFeePercent: commercial.finderFeePercent,
@@ -403,7 +411,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
         problem: r.outOfStock.length
           ? `Out of stock: ${r.outOfStock.map((id) => r.quote.lines.find((l) => l.itemId === id && l.title)?.title ?? id).join(", ")}`
           : null,
-        quote: JSON.stringify((cb.body.message as { order: { quote: unknown } }).order.quote),
+        quote: JSON.stringify(r.raw.quote),
         totalPaise: r.quote.totalPaise,
         fulfillmentId: r.fulfillment.id,
         tat: r.fulfillment.tat ?? null,
@@ -501,7 +509,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       sellerUpdatedAt: r.at ?? order.sellerUpdatedAt,
       ...(r.cancelReasonId ? { cancelReasonId: r.cancelReasonId } : {}),
       ...(cb.action === "on_cancel" ? { awaitingMsgId: null } : {}),
-      ...(r.quote ? { totalPaise: r.quote.totalPaise, quote: JSON.stringify((cb.body.message as { order: { quote: unknown } }).order.quote) } : {}),
+      ...(r.quote ? { totalPaise: r.quote.totalPaise, quote: JSON.stringify(r.rawQuote) } : {}),
       ...(r.sellerState === "Completed" && !order.completedAt ? { completedAt: r.at ?? new Date() } : {}),
     },
   });

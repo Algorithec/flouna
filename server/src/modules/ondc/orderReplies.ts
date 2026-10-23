@@ -96,7 +96,7 @@ export function sellerProblem(body: unknown): string | null {
   return (code && known[code]) ?? str(e.message) ?? `The seller refused the request (code ${code})`;
 }
 
-export type SelectReply = { quote: Quote; fulfillment: Fulfillment; outOfStock: string[] } | { problem: string };
+export type SelectReply = { quote: Quote; fulfillment: Fulfillment; outOfStock: string[]; raw: { quote: unknown } } | { problem: string };
 
 /** on_select: the price of this cart, delivered to this point, and how. */
 export function readOnSelect(body: unknown): SelectReply {
@@ -122,7 +122,8 @@ export function readOnSelect(body: unknown): SelectReply {
     .map((b) => str(b["@ondc/org/item_id"]))
     .filter((s): s is string => Boolean(s));
   if (refused && outOfStock.length === 0) return { problem: refused };
-  return { quote, fulfillment, outOfStock };
+  // The quote as sent, from the place it was read and checked, for confirm to echo.
+  return { quote, fulfillment, outOfStock, raw: { quote: order.quote } };
 }
 
 export type PaymentTerms = {
@@ -194,6 +195,8 @@ export type OrderStateReply =
       sellerState: (typeof SELLER_STATES)[number];
       fulfillmentState?: string;
       quote?: Quote;
+      /** The quote as sent, from where `quote` was read; present with it. */
+      rawQuote?: unknown;
       cancelReasonId?: string;
       /** Who cancelled, as the seller reports it: its own id when it was the seller. */
       cancelledBy?: string;
@@ -222,7 +225,7 @@ export function readOrderState(body: unknown): OrderStateReply {
     sellerOrderId: id,
     sellerState: state,
     ...(fulfillmentState ? { fulfillmentState } : {}),
-    ...(quote && !("problem" in quote) ? { quote } : {}),
+    ...(quote && !("problem" in quote) ? { quote, rawQuote: order.quote } : {}),
     ...(cancelReasonId ? { cancelReasonId } : {}),
     ...(cancelledBy ? { cancelledBy } : {}),
     ...(at ? { at } : {}),
