@@ -1,9 +1,10 @@
+import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { env } from "../src/config/env.js";
 import { checkChoices, optionsFor } from "../src/modules/ondc/catalog.js";
-import { startOndcOrder } from "../src/modules/ondc/orders.service.js";
+import { dishOptions, startOndcOrder } from "../src/modules/ondc/orders.service.js";
 import { authedAgent } from "./helpers.js";
-import { customerWithSearch, fx, recorder, SELLER } from "./ondc-order-helpers.js";
+import { customerWithSearch, fx, recorder, reply, SELLER } from "./ondc-order-helpers.js";
 
 // Dishes with options (ONDC customisations), read from ONDC's mock seller's
 // real catalogue: a pizza whose crust opens sizes, whose size opens toppings.
@@ -102,5 +103,31 @@ describe("ordering a dish with options", () => {
     } finally {
       env.ONDC_SEARCH_ENABLED = false;
     }
+  });
+});
+
+// A seller can send a fresh catalogue during a search. Options used to be read
+// from any of its last five answers, so a dish whose options the seller had
+// removed still offered them from an older one, and the seller then refused
+// the order at select.
+describe("which catalogue a dish's options come from", () => {
+  type Provider = { id: string; items: { id: string; tags: { code: string }[] }[] };
+
+  it("takes the store's newest catalogue, even when it has dropped the options", async () => {
+    const c = await customerWithSearch();
+    const fresh = fx("on_search_pramaan");
+    const store = (fresh.message.catalog["bpp/providers"] as Provider[]).find((p) => p.id === "pramaan_provider_1")!;
+    const pizza = store.items.find((i) => i.id === "id_ancc5_0_0")!;
+    pizza.tags = pizza.tags.filter((t) => t.code !== "custom_group");
+    await reply("on_search", fresh, { txnId: c.searchId, messageId: crypto.randomUUID() }).expect(200);
+    expect(await dishOptions(c.userId, c.searchId, SELLER, "pramaan_provider_1", "id_ancc5_0_0")).toBeNull();
+  });
+
+  it("looks past a newer answer about the seller's other stores", async () => {
+    const c = await customerWithSearch();
+    const other = fx("on_search_pramaan");
+    other.message.catalog["bpp/providers"] = (other.message.catalog["bpp/providers"] as Provider[]).map((p) => ({ ...p, id: `${p.id}_other` }));
+    await reply("on_search", other, { txnId: c.searchId, messageId: crypto.randomUUID() }).expect(200);
+    expect((await dishOptions(c.userId, c.searchId, SELLER, "pramaan_provider_1", "id_ancc5_0_0"))?.starts).toEqual(["CG11"]);
   });
 });

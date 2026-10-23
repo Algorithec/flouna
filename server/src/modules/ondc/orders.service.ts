@@ -16,7 +16,7 @@ import {
   type CartLine,
 } from "./retail.js";
 import { ondcSearchResults } from "./search.service.js";
-import { checkChoices, optionsFor, type OptionTree } from "./catalog.js";
+import { checkChoices, listsProvider, optionsFor, type OptionTree } from "./catalog.js";
 import { owe, recordPayout, refundAfterCancel } from "./ondcMoney.js";
 import { recordTermsAcceptance, statesAcceptance } from "./termsAcceptance.js";
 import { recordSettlement } from "./settlement.service.js";
@@ -160,8 +160,10 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   // taken from the catalogue, not from the request. Each dish with options
   // gets its own line id, which ties the options to it on the wire.
   const lines: CartLine[] = [];
+  // Fetched once for the whole cart, not twice per dish.
+  const catalogues = await sellerCatalogues(userId, input.searchId, input.bppId);
   for (const l of input.lines) {
-    const tree = await dishOptions(userId, input.searchId, input.bppId, input.providerId, l.itemId);
+    const tree = optionsIn(catalogues, input.providerId, l.itemId);
     const chosen = (l.customizations ?? []).map((c) => c.itemId);
     if (!tree) {
       if (chosen.length) throw new ApiError(400, `${l.itemId} has no options to choose`);
@@ -585,6 +587,11 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
  * Null when the dish has none.
  */
 export async function dishOptions(userId: string, searchId: string, bppId: string, providerId: string, itemId: string): Promise<OptionTree | null> {
+  return optionsIn(await sellerCatalogues(userId, searchId, bppId), providerId, itemId);
+}
+
+/** A seller's answers to this customer's search, newest first, as parsed. */
+async function sellerCatalogues(userId: string, searchId: string, bppId: string): Promise<unknown[]> {
   const search = await prisma.ondcSearch.findUnique({ where: { id: searchId }, select: { userId: true } });
   if (!search || search.userId !== userId) throw new ApiError(404, "Search not found");
   const rows = await prisma.ondcTransaction.findMany({
@@ -593,13 +600,25 @@ export async function dishOptions(userId: string, searchId: string, bppId: strin
     select: { response: true },
     take: 5,
   });
+  const out: unknown[] = [];
   for (const row of rows) {
     try {
-      const tree = optionsFor(JSON.parse(row.response ?? "null"), providerId, itemId);
-      if (tree) return tree;
+      out.push(JSON.parse(row.response ?? "null"));
     } catch {
-      // A catalogue that does not parse has no options to offer.
+      // A catalogue that does not parse has nothing to offer.
     }
   }
-  return null;
+  return out;
+}
+
+/**
+ * A dish's options from the newest catalogue that carries its store. Older
+ * answers are read only past newer ones about other stores: once the
+ * store's latest catalogue lists the dish without options, or not at all,
+ * an older catalogue's options are out of date, and choosing them would be
+ * refused by the seller at select.
+ */
+function optionsIn(catalogues: unknown[], providerId: string, itemId: string): OptionTree | null {
+  const latest = catalogues.find((body) => listsProvider(body, providerId));
+  return latest === undefined ? null : optionsFor(latest, providerId, itemId);
 }

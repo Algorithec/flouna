@@ -235,6 +235,12 @@ function tagValues(tags: unknown, code: string, key: string): string[] {
 }
 
 /** The option tree for one dish in one seller's catalogue, or null if the dish has no options or is not there. */
+/** Whether a seller's catalogue carries this store at all. */
+export function listsProvider(body: unknown, providerId: string): boolean {
+  const catalog = obj(obj(obj(body).message).catalog);
+  return arr(catalog["bpp/providers"]).map(obj).some((p) => str(p.id) === providerId);
+}
+
 export function optionsFor(body: unknown, providerId: string, itemId: string): OptionTree | null {
   const catalog = obj(obj(obj(body).message).catalog);
   const provider = arr(catalog["bpp/providers"]).map(obj).find((p) => str(p.id) === providerId);
