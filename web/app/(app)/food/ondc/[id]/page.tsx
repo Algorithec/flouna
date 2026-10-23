@@ -4,10 +4,13 @@ import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Headset, Loader2, Store } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiClientError } from "@/lib/api";
 import { rupees } from "@/lib/money";
 import { useBackTo } from "@/lib/navHistory";
 import { useEscapeToClose } from "@/lib/useEscapeToClose";
+import { useFocusTrap } from "@/lib/useFocusTrap";
+import { safeHttps } from "@/lib/safeUrl";
+import { problemText } from "@/lib/ondcProblem";
 import { loadCashfreeSdk } from "@/lib/payments/useCheckout";
 import { Button } from "@/components/ui/Button";
 import { ErrorView, LoadingView } from "@/components/ui/StatusView";
@@ -27,6 +30,7 @@ type OrderView = {
   status: string;
   store: string;
   problem: string | null;
+  problemCode?: { code: string; params?: Record<string, string> } | null;
   totalPaise: number | null;
   quote: { totalPaise: number; lines: QuoteLine[] } | null;
   sellerState: string | null;
@@ -41,6 +45,8 @@ const WAITING = new Set(["selecting", "initialising", "paid", "confirming", "can
 /** A paid order that could not reach the store is not waiting: it needs the customer to place it again. */
 const isWaiting = (o: OrderView) => WAITING.has(o.status) && !(o.status === "paid" && o.problem);
 const POLL_MS = 2000;
+/** The longest wait between asks while a seller takes its time. */
+const MAX_POLL_MS = 30_000;
 const REASONS = ["006", "009", "010", "001", "003"] as const;
 // Labels run long in Kannada, Tamil and Telugu, so these pills grow with
 // their text instead of holding a fixed height it spills out of.
@@ -60,20 +66,30 @@ export default function OndcOrderPage({ params }: { params: Promise<{ id: string
   const goBack = useBackTo("/home");
   const [order, setOrder] = useState<OrderView | null>(null);
   const [missing, setMissing] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionFailed, setActionFailed] = useState(false);
   const [askCancel, setAskCancel] = useState(false);
   const [reason, setReason] = useState<(typeof REASONS)[number]>("006");
   useEscapeToClose(askCancel && !busy, () => setAskCancel(false));
+  const cancelDialog = useFocusTrap<HTMLDivElement>(askCancel);
   const verified = useRef(false);
 
   const load = useCallback(async () => {
     try {
       setOrder(await api<OrderView>(`/api/ondc/orders/${id}`));
-    } catch {
-      setMissing(true);
+      setLoadFailed(false);
+    } catch (err) {
+      // Only a 404 means there is no such order. A dropped connection or a
+      // server error used to say "not found" too, for good.
+      if (err instanceof ApiClientError && err.status === 404) setMissing(true);
+      else setLoadFailed(true);
     }
   }, [id]);
+  const retry = () => {
+    setLoadFailed(false);
+    void load();
+  };
 
   // Back from the gateway: whether it was paid is asked of the gateway, once.
   useEffect(() => {
@@ -83,9 +99,20 @@ export default function OndcOrderPage({ params }: { params: Promise<{ id: string
     (fromGateway ? api(`/api/ondc/orders/${id}/verify`, { method: "POST" }).catch(() => {}) : Promise.resolve()).finally(() => void load());
   }, [id, load, search]);
 
+  // Asked again after two seconds, then less often the longer the seller
+  // takes (up to every thirty), not every two seconds for as long as it
+  // takes. Each new step starts from two seconds again.
+  const pollDelay = useRef(POLL_MS);
+  const lastStatus = useRef<string | null>(null);
   useEffect(() => {
-    if (!order || !isWaiting(order)) return;
-    const timer = setTimeout(() => void load(), POLL_MS);
+    if (!order) return;
+    if (order.status !== lastStatus.current) {
+      lastStatus.current = order.status;
+      pollDelay.current = POLL_MS;
+    }
+    if (!isWaiting(order)) return;
+    const timer = setTimeout(() => void load(), pollDelay.current);
+    pollDelay.current = Math.min(pollDelay.current * 2, MAX_POLL_MS);
     return () => clearTimeout(timer);
   }, [order, load]);
 
@@ -126,7 +153,8 @@ export default function OndcOrderPage({ params }: { params: Promise<{ id: string
   }
 
   if (missing) return <ErrorView notFound title={t("oo.notFound")} />;
-  if (!order) return <LoadingView rows={4} />;
+  if (!order) return loadFailed ? <ErrorView title={t("ondc.loadFailed")} onRetry={retry} /> : <LoadingView rows={4} />;
+  const trackingUrl = safeHttps(order.tracking?.url);
 
   const waiting = isWaiting(order);
   const statusText = tr(`oo.s.${order.status}`, order.status);
@@ -159,7 +187,15 @@ export default function OndcOrderPage({ params }: { params: Promise<{ id: string
           {order.fulfillmentState && order.status !== "cancelled" && (
             <p className="mt-1 text-[13px] text-acct-muted">{tr(`oo.fs.${order.fulfillmentState}`, order.fulfillmentState)}</p>
           )}
-          {order.problem && !waiting && <p className="mt-2 text-[13px] leading-relaxed text-danger">{order.problem}</p>}
+          {order.problem && !waiting && <p className="mt-2 text-[13px] leading-relaxed text-danger">{problemText(t, order.problem, order.problemCode)}</p>}
+          {loadFailed && (
+            <p className="mt-2 text-[13px] text-danger">
+              {t("ondc.loadFailed")}{" "}
+              <button type="button" className="tap-target font-semibold underline" onClick={retry}>
+                {t("common.tryAgain")}
+              </button>
+            </p>
+          )}
           {order.refund && order.refund.paise !== 0 && (
             <p className="mt-2 text-[13px] font-semibold text-acct-ink">
               {tr(order.refund.status === "requested" ? "oo.refund.owed" : `oo.refund.${order.refund.status}`, "").replace("{amount}", rupees(order.refund.paise ?? 0))}
@@ -214,9 +250,9 @@ export default function OndcOrderPage({ params }: { params: Promise<{ id: string
                 <button type="button" className={`${SOFT} flex-1`} disabled={busy} onClick={() => void step("status")}>
                   {t("oo.checkStatus")}
                 </button>
-                {order.tracking ? (
+                {trackingUrl ? (
                   <a
-                    href={order.tracking.url}
+                    href={trackingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`${SOFT} flex-1`}
@@ -249,6 +285,7 @@ export default function OndcOrderPage({ params }: { params: Promise<{ id: string
       {askCancel && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => !busy && setAskCancel(false)}>
           <div
+            ref={cancelDialog}
             role="dialog"
             aria-modal="true"
             aria-labelledby="oo-cancel-title"

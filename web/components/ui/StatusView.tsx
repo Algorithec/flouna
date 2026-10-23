@@ -29,12 +29,15 @@ export function ErrorView({
   backHref = "/home",
   backLabel,
   notFound = false,
+  onRetry,
 }: {
   title?: string;
   message?: string;
   backHref?: string;
   backLabel?: string;
   notFound?: boolean;
+  /** For a failure that may pass (a dropped connection): offered before the way back. */
+  onRetry?: () => void;
 }) {
   const { t } = useI18n();
   const Icon = notFound ? SearchX : TriangleAlert;
@@ -52,9 +55,18 @@ export function ErrorView({
           {message}
         </p>
       )}
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-6 rounded-pill bg-accent px-6 py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          {t("common.tryAgain")}
+        </button>
+      )}
       <Link
         href={backHref}
-        className="mt-6 rounded-pill bg-ink-fill px-6 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-ink-fill-hover"
+        className={`${onRetry ? "mt-3" : "mt-6"} rounded-pill bg-ink-fill px-6 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-ink-fill-hover`}
       >
         {backLabel}
       </Link>

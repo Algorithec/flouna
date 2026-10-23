@@ -3,10 +3,13 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Headset, Loader2, MapPin, Navigation, Phone } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiClientError } from "@/lib/api";
 import { rupees } from "@/lib/money";
 import { useBackTo } from "@/lib/navHistory";
 import { useEscapeToClose } from "@/lib/useEscapeToClose";
+import { useFocusTrap } from "@/lib/useFocusTrap";
+import { safeHttps } from "@/lib/safeUrl";
+import { problemText } from "@/lib/ondcProblem";
 import { ErrorView, LoadingView } from "@/components/ui/StatusView";
 import { useI18n } from "@/components/i18n/I18nContext";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
@@ -23,6 +26,7 @@ type RideView = {
   id: string;
   status: string;
   problem: string | null;
+  problemCode?: { code: string; params?: Record<string, string> } | null;
   pickup: { address: string };
   drop: { address: string };
   vehicle: string | null;
@@ -47,11 +51,14 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
   const goBack = useBackTo("/rides");
   const [ride, setRide] = useState<RideView | null>(null);
   const [missing, setMissing] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [refreshed, setRefreshed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionFailed, setActionFailed] = useState<string | null>(null);
   const [askWhy, setAskWhy] = useState(false);
   const [reason, setReason] = useState<(typeof REASONS)[number]>("001");
   useEscapeToClose(askWhy && !busy, () => setAskWhy(false));
+  const whyDialog = useFocusTrap<HTMLDivElement>(askWhy);
 
   // Keys built from what the provider sent; a state with no wording yet shows the provider's own word.
   const tr = (key: string, fallback: string) => {
@@ -61,11 +68,24 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
 
   const load = useCallback(
     () =>
-      api<RideView>(`/api/ondc/rides/${id}`).then(setRide, () => {
-        setMissing(true);
-      }),
+      api<RideView>(`/api/ondc/rides/${id}`).then(
+        (r) => {
+          setRide(r);
+          setLoadFailed(false);
+        },
+        (err) => {
+          // Only a 404 means there is no such ride. A timeout or a server
+          // error used to say "not found" too, for good, with no way back.
+          if (err instanceof ApiClientError && err.status === 404) setMissing(true);
+          else setLoadFailed(true);
+        },
+      ),
     [id],
   );
+  const retry = () => {
+    setLoadFailed(false);
+    void load();
+  };
   useEffect(() => {
     void load();
   }, [load]);
@@ -82,7 +102,10 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
     setBusy(true);
     setActionFailed(null);
     try {
-      await api(`/api/ondc/rides/${id}/${path}`, { method: "POST", ...(json ? { json } : {}) });
+      const r = await api<{ refreshed?: boolean } | null>(`/api/ondc/rides/${id}/${path}`, { method: "POST", ...(json ? { json } : {}) });
+      // A lapsed fare was asked for again instead of booked: said, so the
+      // rider knows why to check it and confirm once more.
+      setRefreshed(Boolean(r?.refreshed));
       await load();
       return true;
     } catch (err) {
@@ -94,7 +117,11 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
   }
 
   if (missing) return <ErrorView notFound title={t("or.notFound")} backHref="/rides" />;
-  if (!ride) return <LoadingView rows={4} />;
+  if (!ride) return loadFailed ? <ErrorView title={t("ondc.loadFailed")} backHref="/rides" onRetry={retry} /> : <LoadingView rows={4} />;
+  // The provider's own live link if it sent one (https only), else the
+  // vehicle's position on a map. || rather than ??: an empty link falls through.
+  const mapHref = ride.tracking?.gps ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ride.tracking.gps.replace(/\s/g, ""))}` : null;
+  const trackHref = safeHttps(ride.tracking?.url) || mapHref;
 
   const waiting = WAITING.has(ride.status);
   const v = ride.vehicleInfo;
@@ -116,10 +143,24 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
             <p className="text-[17px] font-bold text-acct-ink">{tr(`or.s.${ride.status}`, ride.status)}</p>
           </div>
           {ride.rideState && ride.status === "booked" && <p className="mt-1 text-[13px] text-acct-muted">{tr(`or.rs.${ride.rideState}`, ride.rideState)}</p>}
-          {ride.problem && !waiting && <p className="mt-2 text-[13px] leading-relaxed text-danger">{ride.problem}</p>}
+          {ride.problem && !waiting && <p className="mt-2 text-[13px] leading-relaxed text-danger">{problemText(t, ride.problem, ride.problemCode)}</p>}
+          {refreshed && !waiting && <p className="mt-2 text-[13px] leading-relaxed text-acct-ink">{t("or.refreshed")}</p>}
+          {loadFailed && (
+            <p className="mt-2 text-[13px] text-danger">
+              {t("ondc.loadFailed")}{" "}
+              <button type="button" className="tap-target font-semibold underline" onClick={retry}>
+                {t("common.tryAgain")}
+              </button>
+            </p>
+          )}
           {ride.status === "cancel_quoted" && (
             <p className="mt-2 text-[14px] font-semibold text-acct-ink">
-              {ride.cancelFeePaise ? t("or.fee").replace("{amount}", rupees(ride.cancelFeePaise)) : t("or.feeFree")}
+              {/* No figure is not "free": the provider simply has not said. */}
+              {ride.cancelFeePaise == null
+                ? t("or.feeUnknown")
+                : ride.cancelFeePaise > 0
+                  ? t("or.fee").replace("{amount}", rupees(ride.cancelFeePaise))
+                  : t("or.feeFree")}
             </p>
           )}
           {waiting && <p className="mt-2 text-[12px] text-acct-muted">{t("or.stepNote")}</p>}
@@ -188,9 +229,9 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
                 <button type="button" className={`${SOFT} flex-1`} disabled={busy} onClick={() => void step("status")}>
                   {t("or.checkStatus")}
                 </button>
-                {ride.tracking?.url || ride.tracking?.gps ? (
+                {trackHref ? (
                   <a
-                    href={ride.tracking.url ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ride.tracking.gps!.replace(/\s/g, ""))}`}
+                    href={trackHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`${SOFT} flex-1`}
@@ -232,7 +273,7 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
 
       {askWhy && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => !busy && setAskWhy(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="or-why" className="w-full max-w-md rounded-t-[22px] bg-card p-5 sm:rounded-[22px]" onClick={(e) => e.stopPropagation()}>
+          <div ref={whyDialog} role="dialog" aria-modal="true" aria-labelledby="or-why" className="w-full max-w-md rounded-t-[22px] bg-card p-5 sm:rounded-[22px]" onClick={(e) => e.stopPropagation()}>
             <h2 id="or-why" className="text-[16px] font-bold text-acct-ink">{t("or.cancelWhy")}</h2>
             <div className="mt-3 space-y-1.5">
               {REASONS.map((r) => (

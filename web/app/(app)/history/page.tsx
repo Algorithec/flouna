@@ -320,7 +320,7 @@ export default function HistoryPage() {
                   </Link>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Link
-                      href={`/orders/${e.id}/help`}
+                      href={`/orders/${e.id}/help?source=ondc`}
                       className="tap-target flex items-center gap-1.5 rounded-pill border border-line bg-card px-3.5 py-1.5 text-[12px] font-semibold text-acct-ink transition-colors hover:bg-beige/40"
                     >
                       <Headset size={13} /> {t("history.needHelp")}

@@ -32,6 +32,8 @@ type Offer = {
 
 const POLL_MS = 2500;
 const VEHICLE_LABEL: Record<string, TranslationKey> = { AUTO_RICKSHAW: "veh.auto", CAB: "veh.cab", TWO_WHEELER: "veh.bike" };
+/** A vehicle type with no wording yet, made readable: "Sedan", not "SEDAN". */
+const readable = (v: string) => v.charAt(0) + v.slice(1).toLowerCase().replace(/_/g, " ");
 
 export function OndcRideOffers({ pickup, drop }: { pickup: Place; drop: Place }) {
   const { t } = useI18n();
@@ -120,7 +122,19 @@ export function OndcRideOffers({ pickup, drop }: { pickup: Place; drop: Place })
         </button>
       )}
       {rideId && searching && offers.length === 0 && <p className="mt-2 text-[12px] text-cocoa">{t("or.searching")}</p>}
-      {rideId && !searching && offers.length === 0 && <p className="mt-2 text-[12px] text-cocoa">{t("or.none")}</p>}
+      {rideId && !searching && offers.length === 0 && (
+        <>
+          <p className="mt-2 text-[12px] text-cocoa">{t("or.none")}</p>
+          {/* Not a dead end: a search that found nothing can be run again. */}
+          <button
+            type="button"
+            onClick={() => void search()}
+            className="tap-target mt-2 inline-flex min-h-10 w-full items-center justify-center rounded-pill border border-btn px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-beige/60"
+          >
+            {t("or.searchAgain")}
+          </button>
+        </>
+      )}
       {offers.length > 0 && (
         <ul className="mt-2 space-y-2">
           {offers.map((o) => {
@@ -134,7 +148,7 @@ export function OndcRideOffers({ pickup, drop }: { pickup: Place; drop: Place })
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-semibold text-ink">
-                    {label ? t(label) : o.vehicle}
+                    {label ? t(label) : readable(o.vehicle)}
                     {o.variant ? ` · ${o.variant}` : ""}
                   </span>
                   <span className="block truncate text-[11px] text-cocoa">{t("or.via").replace("{app}", o.providerName ?? o.appName)}</span>

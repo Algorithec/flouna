@@ -59,6 +59,17 @@ export function OndcSellers({ ondc }: { ondc: OndcSearchRef }) {
   const router = useRouter();
   const searchId = "searchId" in ondc ? ondc.searchId : null;
 
+  // A page the browser restores from its back-forward cache keeps its state:
+  // a store tapped before leaving stayed "starting", and every Order button
+  // with it, so coming back found them all disabled.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setStarting(null);
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
   // One dish from one store: the seller prices it for this address, and the
   // order screen follows it from there.
   async function chooseOptions(o: Offer, key: string) {
