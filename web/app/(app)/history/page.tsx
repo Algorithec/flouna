@@ -310,7 +310,7 @@ export default function HistoryPage() {
                       <KindIcon size={18} color={PROVIDER_DISC.ondc!.fg} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-bold text-ink">{e.title}</span>
+                      <span className="line-clamp-2 text-[15px] font-bold text-ink">{e.title}</span>
                       <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-cocoa">
                         <Calendar size={12} />
                         {new Date(e.createdAt).toLocaleDateString(localeTag, { day: "numeric", month: "short", year: "numeric" })}
