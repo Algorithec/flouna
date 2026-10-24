@@ -9,6 +9,7 @@ import { createAuthorizationHeader } from "../src/modules/ondc/signing.js";
 import { createCallbacksRouter } from "../src/modules/ondc/callbacks.routes.js";
 import { recordInbound } from "../src/modules/ondc/index.js";
 import { parseRideOnSearch } from "../src/modules/ondc/rideReplies.js";
+import { durationMs } from "../src/modules/ondc/ondcMoney.js";
 import {
   cityForGps,
   chooseRide,
@@ -300,5 +301,61 @@ describe("the ONDC ride routes", () => {
     } finally {
       env.ONDC_SEARCH_ENABLED = false;
     }
+  });
+});
+
+// From the review on #83: a provider's quote carries a lifetime, and a
+// provider that expects the app to collect the fare cannot be booked on the
+// terms it set.
+describe("lapsed fares, and who collects the fare", () => {
+  it("does not offer a ride whose provider expects the app to collect the fare", async () => {
+    const c = await rider();
+    const r = recorder();
+    const { rideId } = await startRideSearch(c.userId, { pickup: PICKUP, drop: DROP, city: "Bengaluru" }, r.deps);
+    const ride = await prisma.ondcRide.findUniqueOrThrow({ where: { id: rideId } });
+    const search = fx("on_search_0");
+    search.message.catalog.providers[0].payments[0].collected_by = "BAP";
+    await reply("on_search", search, { txnId: ride.txnId, messageId: crypto.randomUUID() }).expect(200);
+    expect((await rideOffers(c.userId, rideId)).offers).toEqual([]);
+    await expect(chooseRide(c.userId, rideId, { bppId: PROVIDER, providerId: "P1", itemId: "I1" }, r.deps)).rejects.toThrow(/not offered/);
+  });
+
+  it("asks for a fresh fare when the one from choosing has lapsed", async () => {
+    const s = await searched();
+    await chooseRide(s.c.userId, s.rideId, { bppId: PROVIDER, providerId: "P1", itemId: "I1" }, s.r.deps);
+    await reply("on_select", fx("on_select_0"), { txnId: s.txnId, messageId: s.r.last().envelope.context.message_id }).expect(200);
+    // "P200s" in the provider's quote: 200 seconds from when it arrived.
+    const quoted = await prisma.ondcRide.findUniqueOrThrow({ where: { id: s.rideId } });
+    expect(quoted.quoteExpiresAt!.getTime() - Date.now()).toBeGreaterThan(190_000);
+    await prisma.ondcRide.update({ where: { id: s.rideId }, data: { quoteExpiresAt: new Date(Date.now() - 1000) } });
+    expect(await initRide(s.c.userId, s.rideId, s.r.deps)).toMatchObject({ refreshed: true });
+    expect(s.r.last().action).toBe("select");
+    expect((await prisma.ondcRide.findUniqueOrThrow({ where: { id: s.rideId } })).status).toBe("selecting");
+  });
+
+  it("fetches lapsed final terms again instead of booking them", async () => {
+    const s = await searched();
+    await chooseRide(s.c.userId, s.rideId, { bppId: PROVIDER, providerId: "P1", itemId: "I1" }, s.r.deps);
+    await reply("on_select", fx("on_select_0"), { txnId: s.txnId, messageId: s.r.last().envelope.context.message_id }).expect(200);
+    await initRide(s.c.userId, s.rideId, s.r.deps);
+    await reply("on_init", fx("on_init_0"), { txnId: s.txnId, messageId: s.r.last().envelope.context.message_id }).expect(200);
+    await prisma.ondcRide.update({ where: { id: s.rideId }, data: { quoteExpiresAt: new Date(Date.now() - 1000) } });
+    expect(await confirmRide(s.c.userId, s.rideId, s.r.deps)).toMatchObject({ refreshed: true });
+    expect(s.r.last().action).toBe("init");
+    expect(s.r.sent.some((x) => x.action === "confirm")).toBe(false);
+    // The fresh terms arrive, and those can be booked.
+    await reply("on_init", fx("on_init_0"), { txnId: s.txnId, messageId: s.r.last().envelope.context.message_id }).expect(200);
+    await confirmRide(s.c.userId, s.rideId, s.r.deps);
+    expect(s.r.last().action).toBe("confirm");
+  });
+
+  it("reads quote lifetimes the way ONDC writes them", () => {
+    expect(durationMs("PT30S")).toBe(30_000);
+    expect(durationMs("P200S")).toBe(200_000);
+    expect(durationMs("P200s")).toBe(200_000);
+    expect(durationMs("PT5M")).toBe(300_000);
+    expect(durationMs("P3D")).toBe(3 * 86_400_000);
+    // A month, not a minute: the T is what makes it minutes.
+    expect(durationMs("P1M")).toBeNull();
   });
 });

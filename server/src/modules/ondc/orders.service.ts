@@ -16,12 +16,13 @@ import {
   type CartLine,
 } from "./retail.js";
 import { ondcSearchResults } from "./search.service.js";
-import { checkChoices, optionsFor, type OptionTree } from "./catalog.js";
+import { checkChoices, listsProvider, optionsFor, type OptionTree } from "./catalog.js";
 import { owe, recordPayout, refundAfterCancel } from "./ondcMoney.js";
 import { recordTermsAcceptance, statesAcceptance } from "./termsAcceptance.js";
 import { recordSettlement } from "./settlement.service.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
+import { billReducedProblem, outOfStockProblem, PROBLEM, problemCode, type ProblemCode } from "./problems.js";
 
 // Placing a food order with an ONDC seller.
 //
@@ -99,7 +100,7 @@ async function sendStep(
     },
   });
   if (!result.ack) {
-    const problem = "The seller's app did not accept the request. Try again in a moment.";
+    const problem = PROBLEM.sellerUnreachable;
     // Only if nothing has answered meanwhile: a fast reply has already moved it on.
     await prisma.ondcOrder.updateMany({ where: { id: order.id, awaitingMsgId: messageId, status: waiting }, data: { status: failedStatusFor(waiting), problem } });
   }
@@ -160,8 +161,10 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   // taken from the catalogue, not from the request. Each dish with options
   // gets its own line id, which ties the options to it on the wire.
   const lines: CartLine[] = [];
+  // Fetched once for the whole cart, not twice per dish.
+  const catalogues = await sellerCatalogues(userId, input.searchId, input.bppId);
   for (const l of input.lines) {
-    const tree = await dishOptions(userId, input.searchId, input.bppId, input.providerId, l.itemId);
+    const tree = optionsIn(catalogues, input.providerId, l.itemId);
     const chosen = (l.customizations ?? []).map((c) => c.itemId);
     if (!tree) {
       if (chosen.length) throw new ApiError(400, `${l.itemId} has no options to choose`);
@@ -179,6 +182,8 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
   if (address.lat == null || address.lng == null) throw new ApiError(400, "Your delivery address has no map location");
 
   const search = await prisma.ondcSearch.findUnique({ where: { id: input.searchId }, select: { city: true, termsUrl: true, termsEffective: true } });
+  // Removed between reading its results and here: said plainly, not a crash.
+  if (!search) throw new ApiError(400, "That search has expired. Search again.");
   const seller = fromSeller[0]!.seller;
   const gps = `${address.lat.toFixed(6)},${address.lng.toFixed(6)}`;
   const order = await prisma.ondcOrder.create({
@@ -191,13 +196,13 @@ export async function startOndcOrder(userId: string, input: StartInput, deps: Or
       providerId: seller.providerId,
       locationId: seller.locationId,
       storeName: seller.name,
-      city: search!.city,
+      city: search.city,
       lines: JSON.stringify(lines),
       addressId: address.id,
       gps,
       areaCode: address.pincode,
-      termsUrl: search!.termsUrl,
-      termsEffective: search!.termsEffective,
+      termsUrl: search.termsUrl,
+      termsEffective: search.termsEffective,
     },
   });
   const envelope = buildSelect({
@@ -237,6 +242,7 @@ export async function billingFor(order: OrderRow) {
 export async function initOndcOrder(userId: string, id: string, deps: OrderDeps = {}) {
   const order = await ownOrder(userId, id);
   if (order.status !== "quoted") throw new ApiError(409, `This order is ${order.status}, not waiting for your details`);
+  if (!order.fulfillmentId || !order.gps) throw new ApiError(409, "This order is missing the details needed to continue. Start it again.");
   const b = await billingFor(order);
   const envelope = buildInit({
     transactionId: order.txnId,
@@ -246,7 +252,7 @@ export async function initOndcOrder(userId: string, id: string, deps: OrderDeps 
     locationId: order.locationId,
     lines: JSON.parse(order.lines) as CartLine[],
     billing: { name: b.name, phone: b.phone, email: b.email, address: b.address, at: order.createdAt },
-    delivery: { fulfillmentId: order.fulfillmentId!, gps: order.gps!, address: b.address, phone: b.phone, email: b.email },
+    delivery: { fulfillmentId: order.fulfillmentId, gps: order.gps, address: b.address, phone: b.phone, email: b.email },
   });
   await sendStep(order, "init", envelope, "initialising", deps);
   return { orderId: order.id };
@@ -274,9 +280,14 @@ export async function markOndcOrderPaid(id: string, payment: { amountPaise: numb
 export async function confirmOndcOrder(userId: string, id: string, deps: OrderDeps = {}) {
   const order = await ownOrder(userId, id);
   if (order.status !== "paid") throw new ApiError(409, `This order is ${order.status}, not ready to place`);
+  // A paid order has all of these by the time it gets here. If one is ever
+  // missing, it is said, rather than crashing on the way to the seller.
+  if (!order.quote || !order.payment || order.totalPaise == null || !order.fulfillmentId || !order.gps) {
+    throw new ApiError(409, "This order is missing the details needed to place it");
+  }
   const b = await billingFor(order);
-  const quote = JSON.parse(order.quote!) as unknown;
-  const terms = JSON.parse(order.payment!) as PaymentTerms;
+  const quote = JSON.parse(order.quote) as unknown;
+  const terms = JSON.parse(order.payment) as PaymentTerms;
   const commercial = commercialTerms();
   if (!commercial.gstin) throw new ApiError(503, "Food ordering on ONDC is not set up on this deployment yet");
   const envelope = buildConfirm({
@@ -289,11 +300,11 @@ export async function confirmOndcOrder(userId: string, id: string, deps: OrderDe
     // Our own id for the order: the seller answers with its id, kept separately.
     orderId: order.id,
     billing: { name: b.name, phone: b.phone, email: b.email, address: b.address, at: order.createdAt },
-    delivery: { fulfillmentId: order.fulfillmentId!, gps: order.gps!, address: b.address, phone: b.phone, email: b.email, personName: b.personName, tat: order.tat ?? "PT60M" },
+    delivery: { fulfillmentId: order.fulfillmentId, gps: order.gps, address: b.address, phone: b.phone, email: b.email, personName: b.personName, tat: order.tat ?? "PT60M" },
     quote,
     payment: {
       collectedBy: terms.collectedBy,
-      amountPaise: order.totalPaise!,
+      amountPaise: order.totalPaise,
       gatewayTransactionId: order.paymentRef ?? undefined,
       paid: Boolean(order.paidAt),
       finderFeePercent: commercial.finderFeePercent,
@@ -401,9 +412,9 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
         status: r.outOfStock.length ? "unavailable" : "quoted",
         // Named as the store names them in its quote, not by its item ids.
         problem: r.outOfStock.length
-          ? `Out of stock: ${r.outOfStock.map((id) => r.quote.lines.find((l) => l.itemId === id && l.title)?.title ?? id).join(", ")}`
+          ? outOfStockProblem(r.outOfStock.map((id) => r.quote.lines.find((l) => l.itemId === id && l.title)?.title ?? id))
           : null,
-        quote: JSON.stringify((cb.body.message as { order: { quote: unknown } }).order.quote),
+        quote: JSON.stringify(r.raw.quote),
         totalPaise: r.quote.totalPaise,
         fulfillmentId: r.fulfillment.id,
         tat: r.fulfillment.tat ?? null,
@@ -451,7 +462,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
       data: {
         payment: JSON.stringify(terms),
         status: r.sellerState === "Cancelled" ? "failed" : "placed",
-        problem: r.sellerState === "Cancelled" ? "The seller did not accept the order" : null,
+        problem: r.sellerState === "Cancelled" ? PROBLEM.sellerRefused : null,
         sellerOrderId: r.sellerOrderId,
         sellerState: r.sellerState,
         fulfillmentState: r.fulfillmentState ?? null,
@@ -495,13 +506,13 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
     where: { id: order.id },
     data: {
       status,
-      ...(refusedCancel ? { problem: "The seller did not agree to cancel this order" } : {}),
+      ...(refusedCancel ? { problem: PROBLEM.cancelRefused } : {}),
       sellerState: r.sellerState,
       fulfillmentState: r.fulfillmentState ?? order.fulfillmentState,
       sellerUpdatedAt: r.at ?? order.sellerUpdatedAt,
       ...(r.cancelReasonId ? { cancelReasonId: r.cancelReasonId } : {}),
       ...(cb.action === "on_cancel" ? { awaitingMsgId: null } : {}),
-      ...(r.quote ? { totalPaise: r.quote.totalPaise, quote: JSON.stringify((cb.body.message as { order: { quote: unknown } }).order.quote) } : {}),
+      ...(r.quote ? { totalPaise: r.quote.totalPaise, quote: JSON.stringify(r.rawQuote) } : {}),
       ...(r.sellerState === "Completed" && !order.completedAt ? { completedAt: r.at ?? new Date() } : {}),
     },
   });
@@ -512,9 +523,7 @@ export async function applyRetailReply(cb: { action: string; body: Record<string
     // not supply an item, say). The customer is owed the difference. Several
     // such cuts can come on one order, each needing its own refund, so for
     // now this goes to a person with both amounts rather than move money.
-    await owe(order.id, {
-      review: `The seller reduced the bill from ${order.paidPaise / 100} to ${r.quote.totalPaise / 100} rupees; refund the difference`,
-    });
+    await owe(order.id, { review: billReducedProblem(order.paidPaise, r.quote.totalPaise) });
   }
   if (r.sellerState === "Completed") {
     const completedAt = order.completedAt ?? r.at ?? new Date();
@@ -532,6 +541,8 @@ export type OndcOrderView = {
   status: string;
   store: string;
   problem: string | null;
+  /** The problem as a code the app translates, when it is one it knows. */
+  problemCode: ProblemCode | null;
   totalPaise: number | null;
   quote: Quote | null;
   sellerOrderId: string | null;
@@ -544,6 +555,13 @@ export type OndcOrderView = {
   createdAt: string;
 };
 
+/** The refund the customer is told about: all of it once done, else what is on its way. */
+function refundShown(o: OrderRow) {
+  if (o.refundStatus === "done") return o.refundedPaise || o.refundPaise;
+  if ((o.refundStatus === "owed" || o.refundStatus === "requested") && o.refundDuePaise != null) return o.refundDuePaise - o.refundedPaise;
+  return o.refundPaise;
+}
+
 export async function ondcOrderView(userId: string, id: string): Promise<OndcOrderView> {
   const o = await ownOrder(userId, id);
   const q = o.quote ? readQuote(JSON.parse(o.quote)) : null;
@@ -552,6 +570,7 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
     status: o.status,
     store: o.storeName,
     problem: o.problem,
+    problemCode: problemCode(o.problem),
     totalPaise: o.totalPaise,
     quote: q && !("problem" in q) ? q : null,
     sellerOrderId: o.sellerOrderId,
@@ -559,7 +578,7 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
     fulfillmentState: o.fulfillmentState,
     paid: Boolean(o.paidAt),
     tracking: o.sellerOrderId ? await trackingFor(o) : null,
-    refund: o.refundStatus ? { status: o.refundStatus, paise: o.refundPaise } : null,
+    refund: o.refundStatus ? { status: o.refundStatus, paise: refundShown(o) } : null,
     createdAt: o.createdAt.toISOString(),
   };
 }
@@ -570,6 +589,11 @@ export async function ondcOrderView(userId: string, id: string): Promise<OndcOrd
  * Null when the dish has none.
  */
 export async function dishOptions(userId: string, searchId: string, bppId: string, providerId: string, itemId: string): Promise<OptionTree | null> {
+  return optionsIn(await sellerCatalogues(userId, searchId, bppId), providerId, itemId);
+}
+
+/** A seller's answers to this customer's search, newest first, as parsed. */
+async function sellerCatalogues(userId: string, searchId: string, bppId: string): Promise<unknown[]> {
   const search = await prisma.ondcSearch.findUnique({ where: { id: searchId }, select: { userId: true } });
   if (!search || search.userId !== userId) throw new ApiError(404, "Search not found");
   const rows = await prisma.ondcTransaction.findMany({
@@ -578,13 +602,25 @@ export async function dishOptions(userId: string, searchId: string, bppId: strin
     select: { response: true },
     take: 5,
   });
+  const out: unknown[] = [];
   for (const row of rows) {
     try {
-      const tree = optionsFor(JSON.parse(row.response ?? "null"), providerId, itemId);
-      if (tree) return tree;
+      out.push(JSON.parse(row.response ?? "null"));
     } catch {
-      // A catalogue that does not parse has no options to offer.
+      // A catalogue that does not parse has nothing to offer.
     }
   }
-  return null;
+  return out;
+}
+
+/**
+ * A dish's options from the newest catalogue that carries its store. Older
+ * answers are read only past newer ones about other stores: once the
+ * store's latest catalogue lists the dish without options, or not at all,
+ * an older catalogue's options are out of date, and choosing them would be
+ * refused by the seller at select.
+ */
+function optionsIn(catalogues: unknown[], providerId: string, itemId: string): OptionTree | null {
+  const latest = catalogues.find((body) => listsProvider(body, providerId));
+  return latest === undefined ? null : optionsFor(latest, providerId, itemId);
 }

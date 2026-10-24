@@ -37,6 +37,8 @@ const TRANSLATED = [
   "components/chat/OndcSellers.tsx",
   "components/chat/OndcOptionsSheet.tsx",
   "app/(app)/food/ondc/[id]/page.tsx",
+  "components/rides/OndcRideOffers.tsx",
+  "app/(app)/rides/ondc/[id]/page.tsx",
   "components/chat/ActionResult.tsx",
   "components/chat/inline/InlineRideBooking.tsx",
   "components/rides/TripSummary.tsx",

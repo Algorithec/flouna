@@ -35,6 +35,7 @@ import { ondcCallbacksRouter } from "./modules/ondc/index.js";
 import { ondcSearchRouter } from "./modules/ondc/search.routes.js";
 import { ondcOrdersRouter } from "./modules/ondc/orders.routes.js";
 import { ondcRidesRouter } from "./modules/ondc/rides.routes.js";
+import { ondcMineRouter } from "./modules/ondc/mine.routes.js";
 import { CALLBACK_ACTIONS, refused } from "./modules/ondc/callbacks.routes.js";
 import { parseAuthorizationHeader } from "./modules/ondc/signing.js";
 import { BUYER_ERRORS, nack } from "./modules/ondc/errors.js";
@@ -254,6 +255,7 @@ export function createApp() {
   app.use("/api/ondc/search", ondcSearchRouter);
   app.use("/api/ondc/orders", ondcOrdersRouter);
   app.use("/api/ondc/rides", ondcRidesRouter);
+  app.use("/api/ondc/mine", ondcMineRouter);
   app.use("/api/cart", cartRouter);
   app.use("/api/complaints", complaintsRouter);
   // ONDC network callbacks. Outside /api on purpose: no session, no cookies.

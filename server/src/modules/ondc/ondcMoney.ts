@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { cashfreeConfigured, createCashfreeRefund } from "../payments/cashfree.js";
 import { commercialTerms } from "./commercial.js";
 import type { PaymentTerms } from "./orderReplies.js";
+import { PROBLEM } from "./problems.js";
 
 // The money side of an ONDC order Flouna collected for: what goes back to the
 // customer, and what goes on to the seller app.
@@ -22,22 +23,35 @@ export const ondcOrderIdFrom = (gatewayId: string) => (gatewayId.startsWith("ond
 type Refund = { paise: number } | { review: string };
 
 /**
- * Records money owed back. Idempotent against duplicate seller callbacks,
- * but a concrete refund (cancellation) supersedes a pending review (bill
- * reduction) so that a cancel-after-reduction doesn't silently drop money.
+ * Records money owed back. `paise` is the total the customer should have
+ * back from this order, not a top up: a cancellation after a partial refund
+ * names the whole amount, and only what has not gone back yet is sent.
+ *
+ * It used to record one refund per order. Once that one had gone through, a
+ * later cancellation, or a second cut to the bill, was dropped, and the
+ * customer never got that money back.
  */
 export async function owe(ondcOrderId: string, refund: Refund) {
-  const data =
-    "paise" in refund
-      ? refund.paise > 0
-        ? { refundPaise: refund.paise, refundStatus: "owed" }
-        : { refundPaise: 0, refundStatus: "done" }
-      : { refundStatus: "review", problem: refund.review };
-  const fresh = await prisma.ondcOrder.updateMany({ where: { id: ondcOrderId, refundStatus: null, paidAt: { not: null } }, data });
-  if (fresh.count === 0 && "paise" in refund && refund.paise > 0) {
+  if ("paise" in refund) {
+    // What is due only grows, so a repeated or older callback with a smaller
+    // figure changes nothing.
+    if (refund.paise > 0) {
+      await prisma.ondcOrder.updateMany({
+        where: { id: ondcOrderId, paidAt: { not: null }, OR: [{ refundDuePaise: null }, { refundDuePaise: { lt: refund.paise } }] },
+        data: { refundDuePaise: refund.paise },
+      });
+    }
+    // Sent now unless a refund is already on its way: that one checks for
+    // more due when it finishes. A concrete amount supersedes a review.
     await prisma.ondcOrder.updateMany({
-      where: { id: ondcOrderId, refundStatus: "review", paidAt: { not: null } },
-      data,
+      where: { id: ondcOrderId, paidAt: { not: null }, OR: [{ refundStatus: null }, { refundStatus: { in: ["review", "done", "failed"] } }] },
+      data: { refundStatus: "owed" },
+    });
+  } else {
+    // A person decides the amount, also after an earlier refund finished.
+    await prisma.ondcOrder.updateMany({
+      where: { id: ondcOrderId, paidAt: { not: null }, OR: [{ refundStatus: null }, { refundStatus: { in: ["review", "done"] } }] },
+      data: { refundStatus: "review", problem: refund.review },
     });
   }
   await sendRefund(ondcOrderId);
@@ -46,40 +60,56 @@ export async function owe(ondcOrderId: string, refund: Refund) {
 /** What a cancelled, paid order owes back, from the seller's own last word on it. */
 export function refundAfterCancel(o: { paidPaise: number; cancelledBySeller: boolean; finalTotalPaise?: number }): Refund {
   if (o.cancelledBySeller) return { paise: o.paidPaise };
-  if (o.finalTotalPaise === undefined) return { review: "The seller cancelled without a final bill, so the refund needs checking" };
-  if (o.finalTotalPaise > o.paidPaise) return { review: "The seller's final bill is more than was paid" };
+  if (o.finalTotalPaise === undefined) return { review: PROBLEM.refundNoBill };
+  if (o.finalTotalPaise > o.paidPaise) return { review: PROBLEM.refundOverBill };
   return { paise: o.paidPaise - o.finalTotalPaise };
 }
 
 /**
- * Sends an owed refund to the gateway. The refund id is fixed per order, and
- * Cashfree refuses a second refund with the same id, so a retry or a race can
- * never move money twice.
+ * Sends what is owed and not yet refunded to the gateway. The refund id names
+ * the step (what had gone back before, and this amount): Cashfree refuses a
+ * second refund with the same id, so a retry or a race can never move money
+ * twice, while a later refund on the same order gets an id of its own.
  */
-export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof createCashfreeRefund } = {}) {
+export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof createCashfreeRefund } = {}): Promise<void> {
   const claimed = await prisma.ondcOrder.updateMany({ where: { id: ondcOrderId, refundStatus: "owed" }, data: { refundStatus: "requested" } });
   if (claimed.count === 0) return;
   const order = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: ondcOrderId } });
-  if (order.refundPaise == null || order.refundPaise <= 0) {
-    await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done", refundRef: "zero_refund" } });
+  // Due less refunded. A row from before refunds were counted carries only
+  // the amount of its one refund.
+  const amount = order.refundDuePaise != null ? order.refundDuePaise - order.refundedPaise : (order.refundPaise ?? 0);
+  if (amount <= 0) {
+    await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done" } });
     return;
   }
+  const finished = (ref: string) =>
+    prisma.ondcOrder.updateMany({
+      where: { id: order.id, refundStatus: "requested" },
+      data: { refundStatus: "done", refundRef: ref, refundPaise: amount, refundedPaise: { increment: amount } },
+    });
   // Demo payments took no money, so there is nothing to send back.
   if (order.paymentRef?.startsWith("demo_") || (!cashfreeConfigured && !deps.refund)) {
-    await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done", refundRef: "no_gateway" } });
-    return;
+    await finished("no_gateway");
+  } else {
+    try {
+      const r = await (deps.refund ?? createCashfreeRefund)({
+        orderId: gatewayOrderId(order.id),
+        refundId: `${gatewayOrderId(order.id)}_refund_${order.refundedPaise}_${amount}`,
+        amountRupees: amount / 100,
+        note: "Refund for an ONDC order",
+      });
+      await finished(String(r.cf_refund_id));
+    } catch (err) {
+      console.error("[ondc] refund failed for", order.id, err instanceof Error ? err.message : String(err));
+      await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "failed", refundPaise: amount } });
+      return;
+    }
   }
-  try {
-    const r = await (deps.refund ?? createCashfreeRefund)({
-      orderId: gatewayOrderId(order.id),
-      refundId: `${gatewayOrderId(order.id)}_refund_${order.refundPaise}`,
-      amountRupees: order.refundPaise / 100,
-      note: "Refund for an ONDC order",
-    });
-    await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done", refundRef: String(r.cf_refund_id) } });
-  } catch (err) {
-    console.error("[ondc] refund failed for", order.id, err instanceof Error ? err.message : String(err));
-    await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "failed" } });
+  // More may have come due while this one was on its way.
+  const after = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: order.id }, select: { refundDuePaise: true, refundedPaise: true } });
+  if (after.refundDuePaise != null && after.refundDuePaise > after.refundedPaise) {
+    const again = await prisma.ondcOrder.updateMany({ where: { id: order.id, refundStatus: "done" }, data: { refundStatus: "owed" } });
+    if (again.count === 1) await sendRefund(ondcOrderId, deps);
   }
 }
 
@@ -100,11 +130,17 @@ export function finderFeePaise(totalPaise: number, terms: { finderFee?: string; 
   return Math.round((totalPaise * clamped) / 100);
 }
 
-/** "P3D", "PT12H" to milliseconds; anything else to null. */
+/**
+ * "P3D", "PT12H", "PT30S" to milliseconds; anything else to null. "P200S",
+ * which ONDC's own examples write for 200 seconds, is read as that too. The
+ * T stays required for hours and minutes: without it "P1M" is a month.
+ */
 export function durationMs(iso: string | null | undefined): number | null {
-  const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(iso ?? "");
+  const loose = /^P(\d+)S$/i.exec(iso ?? "");
+  if (loose) return Number(loose[1]) * 1000;
+  const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(iso ?? "");
   if (!m || iso === "P" || iso === "PT") return null;
-  return ((Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0)) * 60 + Number(m[3] ?? 0)) * 60_000;
+  return (((Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0)) * 60 + Number(m[3] ?? 0)) * 60 + Number(m[4] ?? 0)) * 1000;
 }
 
 /**
@@ -175,7 +211,7 @@ export function refundsNeedingAttention(now = new Date()) {
       ],
     },
     orderBy: { updatedAt: "asc" },
-    select: { id: true, storeName: true, paidPaise: true, totalPaise: true, refundPaise: true, refundStatus: true, problem: true, sellerState: true, updatedAt: true },
+    select: { id: true, storeName: true, paidPaise: true, totalPaise: true, refundPaise: true, refundedPaise: true, refundStatus: true, problem: true, sellerState: true, updatedAt: true },
   });
 }
 
@@ -189,11 +225,12 @@ export async function resolveRefund(id: string, opts: { paise: number } | { retr
     const moved = await prisma.ondcOrder.updateMany({ where: { id, refundStatus: "failed" }, data: { refundStatus: "owed" } });
     if (moved.count === 0) return false;
   } else {
-    const order = await prisma.ondcOrder.findUnique({ where: { id }, select: { paidPaise: true } });
-    if (!order?.paidPaise || !Number.isSafeInteger(opts.paise) || opts.paise < 0 || opts.paise > order.paidPaise) return false;
+    const order = await prisma.ondcOrder.findUnique({ where: { id }, select: { paidPaise: true, refundedPaise: true } });
+    // No more than has not gone back already.
+    if (!order?.paidPaise || !Number.isSafeInteger(opts.paise) || opts.paise < 0 || opts.paise > order.paidPaise - order.refundedPaise) return false;
     const moved = await prisma.ondcOrder.updateMany({
-      where: { id, refundStatus: "review" },
-      data: opts.paise > 0 ? { refundStatus: "owed", refundPaise: opts.paise } : { refundStatus: "done", refundPaise: 0 },
+      where: { id, refundStatus: "review", refundedPaise: order.refundedPaise },
+      data: { refundStatus: "owed", refundDuePaise: order.refundedPaise + opts.paise },
     });
     if (moved.count === 0) return false;
   }

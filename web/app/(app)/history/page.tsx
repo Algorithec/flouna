@@ -42,6 +42,17 @@ type OrderSummary = {
   createdAt: string;
 };
 
+/** A food order placed with an ONDC seller, or a ride booked with an ONDC provider. */
+type OndcEntry = {
+  id: string;
+  kind: "food" | "ride";
+  title: string;
+  status: string;
+  amountPaise: number | null;
+  createdAt: string;
+  href: string;
+};
+
 const TABS = [
   { key: "", labelKey: "history.all", icon: LayoutGrid },
   { key: "ride", labelKey: "nav.rides", icon: Car },
@@ -74,6 +85,9 @@ function statusChip(status: string, t: (k: TranslationKey) => string) {
       return { label: t("status.cancelled"), icon: CircleX, cls: "text-danger" };
     case "pending_payment":
       return { label: t("status.pending_payment"), icon: Clock, cls: "text-warning" };
+    // An ONDC order the seller would not accept: paid and refunded, never placed.
+    case "failed":
+      return { label: t("history.notPlaced"), icon: CircleX, cls: "text-danger" };
     default:
       return { label: t("history.ongoing"), icon: Clock, cls: "text-acct-ink" };
   }
@@ -100,6 +114,15 @@ export default function HistoryPage() {
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [error, setError] = useState("");
   const [cancelling, setCancelling] = useState<OrderSummary | null>(null);
+  // ONDC orders and rides live apart from app orders, with their own screens.
+  // A failure here leaves the section out rather than failing the page.
+  const [ondc, setOndc] = useState<OndcEntry[]>([]);
+  useEffect(() => {
+    api<{ entries: OndcEntry[] }>("/api/ondc/mine")
+      .then((d) => setOndc(d.entries))
+      .catch(() => setOndc([]));
+  }, []);
+  const ondcShown = ondc.filter((e) => !tab || e.kind === tab);
 
   const [prevTab, setPrevTab] = useState(tab);
   if (prevTab !== tab) {
@@ -199,7 +222,7 @@ export default function HistoryPage() {
       <Stagger className="mt-5 flex flex-col gap-3">
         {orders === null && !error &&
           Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
-        {orders?.length === 0 && (
+        {orders?.length === 0 && ondcShown.length === 0 && (
           <p className="mt-1 text-[18px] font-extrabold text-ink">
             {t(tab === "ride" ? "history.noBookings" : "history.noOrders")}
           </p>
@@ -271,6 +294,47 @@ export default function HistoryPage() {
           );
         })}
       </Stagger>
+
+      {ondcShown.length > 0 && (
+        <section className="mt-6">
+          <h2 className="text-[15px] font-extrabold text-ink">{t("history.ondcTitle")}</h2>
+          <div className="mt-3 flex flex-col gap-3">
+            {ondcShown.map((e) => {
+              const chip = statusChip(e.status, t);
+              const ChipIcon = chip.icon;
+              const KindIcon = e.kind === "ride" ? Car : Utensils;
+              return (
+                <div key={e.id} className="rounded-[18px] bg-card p-4 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-card">
+                  <Link href={e.href} className="flex items-center gap-3">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-full" style={{ background: PROVIDER_DISC.ondc!.bg }}>
+                      <KindIcon size={18} color={PROVIDER_DISC.ondc!.fg} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-bold text-ink">{e.title}</span>
+                      <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-cocoa">
+                        <Calendar size={12} />
+                        {new Date(e.createdAt).toLocaleDateString(localeTag, { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </span>
+                    <ChevronRight size={16} className="shrink-0 text-cocoa/50" />
+                  </Link>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link
+                      href={`/orders/${e.id}/help?source=ondc`}
+                      className="tap-target flex items-center gap-1.5 rounded-pill border border-line bg-card px-3.5 py-1.5 text-[12px] font-semibold text-acct-ink transition-colors hover:bg-beige/40"
+                    >
+                      <Headset size={13} /> {t("history.needHelp")}
+                    </Link>
+                    <span className={cn("flex items-center gap-1.5 rounded-pill border border-line bg-card px-3.5 py-1.5 text-[12px] font-semibold", chip.cls)}>
+                      <ChipIcon size={13} /> {chip.label}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {cancelling && (
         <CancelOrderSheet

@@ -4,6 +4,7 @@ import { ApiError } from "../../middleware/error.js";
 import { cashfreeConfigured, createCashfreeOrder, getCashfreeOrder } from "../payments/cashfree.js";
 import { gatewayOrderId, ondcOrderIdFrom, owe } from "./ondcMoney.js";
 import { billingFor, confirmOndcOrder, markOndcOrderPaid, type OrderDeps } from "./orders.service.js";
+import { PROBLEM } from "./problems.js";
 
 // Paying for an ONDC order. Flouna collects ("BAP" in the seller's terms):
 // the customer pays the seller's final total through Cashfree, and once the
@@ -76,7 +77,7 @@ export async function settleOndcPayment(gatewayId: string, paidPaise: number, re
       console.error("[ondc] could not place paid order", order.id, err instanceof Error ? err.message : String(err));
       await prisma.ondcOrder.updateMany({
         where: { id: order.id, status: "paid", problem: null },
-        data: { problem: "Paid, but the store could not be reached yet. Place the order again." },
+        data: { problem: PROBLEM.paidNotPlaced },
       });
     });
     return { handled: true as const, outcome: "placed" as const };

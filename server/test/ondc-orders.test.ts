@@ -334,3 +334,17 @@ describe("which version of our static terms each seller app accepted (static ter
     await user.agent.get("/api/console/admin/ondc/terms-acceptances").expect(404);
   });
 });
+
+// A paid order has its quote, terms, total, fulfillment and location by the
+// time it is placed. If one is ever missing, placing it says so with a 409
+// rather than crashing on a non-null assertion on the way to the seller.
+describe("placing a paid order with something missing", () => {
+  it("refuses plainly instead of crashing", async () => {
+    const c = await customerWithSearch();
+    const r = recorder();
+    const { orderId } = await startPizza(c, r.deps);
+    await prisma.ondcOrder.update({ where: { id: orderId }, data: { status: "paid", paidAt: new Date(), quote: null } });
+    await expect(confirmOndcOrder(c.userId, orderId, r.deps)).rejects.toMatchObject({ status: 409, message: expect.stringMatching(/missing the details/) });
+    expect(r.sent.some((s) => s.action === "confirm")).toBe(false);
+  });
+});

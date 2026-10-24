@@ -24,7 +24,7 @@ import {
   ShieldAlert,
   TriangleAlert,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiClientError } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/components/i18n/I18nContext";
@@ -89,6 +89,7 @@ export default function OrderHelpPage() {
 
   const [step, setStep] = useState<Step>("problem");
   const [order, setOrder] = useState<OrderCard | null>(null);
+  const [orderFailed, setOrderFailed] = useState(false);
   const [problem, setProblem] = useState<string>("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -109,28 +110,43 @@ export default function OrderHelpPage() {
   // The order summary card at the top of the problem step.
   useEffect(() => {
     let cancelled = false;
-    api<{
-      order: {
-        title: string;
-        createdAt: string;
-        domain: string;
-        details: { items?: unknown[] };
-      };
-    }>(
-      `/api/orders/${orderId}`,
-    )
-      .then((d) => {
+    // An order placed through ONDC lives apart, and the history's link says
+    // so: asking for it as an app order first was a request that always
+    // failed. Its kind decides food or ride problems.
+    const fromOndc = () =>
+      api<{ kind: "food" | "ride"; title: string; createdAt: string; itemCount: number | null }>(`/api/ondc/mine/${orderId}`).then((d) => {
         if (cancelled) return;
-        setOrder({
-          title: d.order.title,
-          itemCount: Array.isArray(d.order.details.items)
-            ? d.order.details.items.length
-            : null,
-          createdAt: d.order.createdAt,
-          domain: d.order.domain,
+        setOrder({ title: d.title, itemCount: d.itemCount, createdAt: d.createdAt, domain: d.kind });
+      });
+    const fromApp = () =>
+      api<{
+        order: {
+          title: string;
+          createdAt: string;
+          domain: string;
+          details: { items?: unknown[] };
+        };
+      }>(`/api/orders/${orderId}`)
+        .then((d) => {
+          if (cancelled) return;
+          setOrder({
+            title: d.order.title,
+            itemCount: Array.isArray(d.order.details.items) ? d.order.details.items.length : null,
+            createdAt: d.order.createdAt,
+            domain: d.order.domain,
+          });
+        })
+        // Not an app order: it may still be an ONDC one. Only a 404 says so;
+        // a timeout is not a reason to look elsewhere.
+        .catch((err) => {
+          if (err instanceof ApiClientError && err.status === 404) return fromOndc();
+          throw err;
         });
-      })
-      .catch(() => {});
+    const ondcOnly = new URLSearchParams(window.location.search).get("source") === "ondc";
+    (ondcOnly ? fromOndc() : fromApp()).catch(() => {
+      // Said, rather than left as a card that never fills in.
+      if (!cancelled) setOrderFailed(true);
+    });
     return () => {
       cancelled = true;
     };
@@ -219,6 +235,7 @@ export default function OrderHelpPage() {
                 {order?.domain === "ride" ? t("cx.ride") : t("cx.order")} #
                 {orderRef(orderId)}
               </p>
+              {orderFailed && !order && <p className="mt-0.5 text-[13px] text-danger">{t("cx.orderLoadFailed")}</p>}
               {order && (
                 <>
                   <p className="mt-0.5 text-[13px] text-cocoa">

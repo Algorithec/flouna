@@ -67,6 +67,69 @@ export function ondcOrderRef(details: string | null | undefined): IgmOrderRef | 
   };
 }
 
+/**
+ * The ONDC reference for the order a complaint is about, wherever that order
+ * lives: an app order that carries its ONDC details, a food order placed
+ * with an ONDC seller (OndcOrder), or a ride booked with an ONDC provider
+ * (OndcRide). Only once the seller has accepted it, so there is a seller
+ * order id to name; before that there is nothing for the seller to look up.
+ */
+/** A food order's lines, or null if what is stored does not read as them: the complaint is held, not crashed. */
+function cartLines(json: string): { itemId: string; count: number }[] | null {
+  try {
+    const lines = JSON.parse(json) as unknown;
+    if (!Array.isArray(lines) || lines.length === 0) return null;
+    const ok = lines.every((l) => typeof (l as { itemId?: unknown }).itemId === "string" && Number.isInteger((l as { count?: unknown }).count));
+    return ok ? (lines as { itemId: string; count: number }[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function igmRefFor(orderId: string | null | undefined): Promise<IgmOrderRef | null> {
+  if (!orderId) return null;
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { details: true } });
+  if (order) return ondcOrderRef(order.details);
+  const food = await prisma.ondcOrder.findUnique({
+    where: { id: orderId },
+    select: { sellerOrderId: true, fulfillmentId: true, city: true, txnId: true, bppId: true, bppUri: true, providerId: true, lines: true },
+  });
+  if (food) {
+    // Every field the issue names has to be there, as for a ride: a seller's
+    // gateway may drop an issue with an empty one without a word.
+    if (!food.sellerOrderId || !food.fulfillmentId || !food.city || !food.txnId || !food.bppId || !food.bppUri || !food.providerId) return null;
+    const lines = cartLines(food.lines);
+    if (!lines) return null;
+    return {
+      domain: "ONDC:RET11",
+      city: food.city,
+      transactionId: food.txnId,
+      bpp: { id: food.bppId, uri: food.bppUri },
+      orderId: food.sellerOrderId,
+      providerId: food.providerId,
+      fulfillmentId: food.fulfillmentId,
+      items: lines.map((l) => ({ id: l.itemId, count: l.count })),
+    };
+  }
+  const ride = await prisma.ondcRide.findUnique({
+    where: { id: orderId },
+    select: { sellerOrderId: true, bppId: true, bppUri: true, providerId: true, fulfillmentId: true, itemId: true, city: true, txnId: true },
+  });
+  if (ride?.sellerOrderId && ride.bppId && ride.bppUri && ride.providerId && ride.fulfillmentId && ride.itemId) {
+    return {
+      domain: "ONDC:TRV10",
+      city: ride.city,
+      transactionId: ride.txnId,
+      bpp: { id: ride.bppId, uri: ride.bppUri },
+      orderId: ride.sellerOrderId,
+      providerId: ride.providerId,
+      fulfillmentId: ride.fulfillmentId,
+      items: [{ id: ride.itemId, count: 1 }],
+    };
+  }
+  return null;
+}
+
 type Send = (baseUrl: string, action: string, envelope: { context: Record<string, unknown>; message: unknown }, id: SigningIdentity) => Promise<SendResult>;
 
 export class NetworkIgmAdapter {
@@ -116,10 +179,7 @@ export class NetworkIgmAdapter {
       include: { user: { select: { id: true, name: true, email: true, phone: true } }, actions: { orderBy: { createdAt: "asc" }, take: 1 } },
     });
     if (!complaint) return { sent: false, reason: "Complaint not found" };
-    const order = complaint.orderId
-      ? await prisma.order.findUnique({ where: { id: complaint.orderId }, select: { details: true } })
-      : null;
-    const ref = ondcOrderRef(order?.details);
+    const ref = await igmRefFor(complaint.orderId);
     if (!ref) return this.held(complaint.id, "issue", "This order was not placed over ONDC, so there is no seller app to send it to");
     const reason = complaint.subCategory ?? complaint.category;
     if (!ISSUE_SUBCATEGORY[reason]) {
