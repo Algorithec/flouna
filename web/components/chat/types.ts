@@ -77,6 +77,8 @@ type FoodRec = {
   best: FoodQuote;
   alternatives: FoodQuote[];
   why: string;
+  /** `why`, fragment by fragment, for the reader's language. */
+  whyParts?: { code: string; params?: Record<string, string> }[];
   advice?: Advice;
   budgetNote?: string;
   personalNote?: string;
