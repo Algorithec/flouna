@@ -1,5 +1,5 @@
-import { FIXED_REPLIES } from "../replies.js";
 import type { Intent, LlmProvider } from "./types.js";
+import { FIXED_REPLIES } from "../replies.js";
 
 // Keyless intent extraction, and the floor the whole product stands on.
 //
