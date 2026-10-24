@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { Sparkles } from "lucide-react";
 import { rupees } from "@/lib/money";
-import { shopWhyText } from "@/lib/shopWhyText";
 import { DisagreeSheet } from "./DisagreeSheet";
 import { SearchedPlatforms } from "./PlatformMark";
+import { shopWhyText } from "@/lib/shopWhyText";
 import type { FoodQuote, RideQuote, ProductQuote } from "./types";
 
 // Shared reasoning surface from the Flouna result frames: the engine's
