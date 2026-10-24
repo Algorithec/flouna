@@ -1,6 +1,8 @@
 // Layer 3 of the LLM firewall: cheap input checks that run BEFORE any
 // model call — obvious junk never costs an API request.
 
+import { FIXED_REPLIES } from "./replies.js";
+
 const MAX_MESSAGE_LENGTH = 500;
 
 // Cheap heuristic pre-filter, NOT a security boundary. These patterns catch a
@@ -37,7 +39,7 @@ export const FIREWALL_REPLIES: Record<
   Exclude<FirewallVerdict, { ok: true }>["reason"],
   string
 > = {
-  empty: "Type what you'd like, food or a ride?",
-  too_long: "That's a bit long for me, try a short request like \"biryani under ₹300\".",
-  injection: "I can help you order food, book rides, or shop. What would you like?",
+  empty: FIXED_REPLIES.empty,
+  too_long: FIXED_REPLIES.tooLong,
+  injection: FIXED_REPLIES.outOfScope,
 };

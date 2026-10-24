@@ -439,13 +439,41 @@ export function journeyMinutes(q: Pick<RideQuote, "pickupEtaMinutes" | "rideMinu
  * (`by` is how far over it went) so nothing has to be passed in twice.
  */
 export function unmetRideNote(unmet: NearestMiss<RideQuote>): string {
+  return unmetRideSaid(unmet).text;
+}
+
+/**
+ * The same sentence, with a code and its figures for the app to put in the
+ * reader's language (`chat.r.<code>`). Built in one place so the English and
+ * the figures it states cannot drift apart.
+ */
+export function unmetRideSaid(unmet: NearestMiss<RideQuote>): {
+  text: string;
+  code: { code: "rideOverPrice" | "rideOverPickup" | "rideOverTrip"; params: Record<string, string> };
+} {
   const q = unmet.item;
   const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
+  const vehicle = q.displayName;
   if (unmet.rule === "max_price") {
-    return `No ride comes in under ${rupees(q.effectivePaise - unmet.by)} for this trip. The cheapest is ${rupees(q.effectivePaise)}, ${q.displayName}.`;
+    const limit = rupees(q.effectivePaise - unmet.by);
+    const closest = rupees(q.effectivePaise);
+    return {
+      text: `No ride comes in under ${limit} for this trip. The cheapest is ${closest}, ${vehicle}.`,
+      code: { code: "rideOverPrice", params: { limit, closest, vehicle } },
+    };
   }
   if (unmet.rule === "max_pickup") {
-    return `No ride can pick you up within ${q.pickupEtaMinutes - unmet.by} minutes right now. The soonest is ${q.displayName}, ${q.pickupEtaMinutes} minutes away.`;
+    const minutes = String(q.pickupEtaMinutes - unmet.by);
+    const closestMinutes = String(q.pickupEtaMinutes);
+    return {
+      text: `No ride can pick you up within ${minutes} minutes right now. The soonest is ${vehicle}, ${closestMinutes} minutes away.`,
+      code: { code: "rideOverPickup", params: { minutes, closestMinutes, vehicle } },
+    };
   }
-  return `No ride gets you there within ${journeyMinutes(q) - unmet.by} minutes. The quickest is ${q.displayName}, ${journeyMinutes(q)} minutes.`;
+  const minutes = String(journeyMinutes(q) - unmet.by);
+  const closestMinutes = String(journeyMinutes(q));
+  return {
+    text: `No ride gets you there within ${minutes} minutes. The quickest is ${vehicle}, ${closestMinutes} minutes.`,
+    code: { code: "rideOverTrip", params: { minutes, closestMinutes, vehicle } },
+  };
 }
