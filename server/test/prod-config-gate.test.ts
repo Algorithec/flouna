@@ -16,6 +16,7 @@ const SAFE_PROD = {
   CASHFREE_APP_ID: "app-id",
   CASHFREE_SECRET_KEY: "secret-key",
   CASHFREE_ENV: "production",
+  BREVO_API_KEY: "brevo-key",
   LLM_PROVIDER: "deepseek",
   VAPID_PUBLIC_KEY: "vapid-public",
 };
@@ -87,6 +88,16 @@ describe("production config gate", () => {
     }
   });
 
+  it("refuses to start with no way to send login codes", async () => {
+    const none = { BREVO_API_KEY: undefined, SMTP_HOST: undefined, SMTP_PORT: undefined };
+    const { exited, errors } = await loadEnv(none);
+    expect(exited).toBe(true);
+    expect(errors.join(" ")).toMatch(/no mail transport/i);
+    // Either transport is enough on its own.
+    const smtp = await loadEnv({ ...none, SMTP_HOST: "smtp-relay.brevo.com", SMTP_PORT: "587" });
+    expect(smtp.exited).toBe(false);
+  });
+
   it("still refuses a SQLite database, weak secrets and a plain-http origin", async () => {
     expect((await loadEnv({ DATABASE_URL: "file:./dev.db" })).exited).toBe(true);
     expect((await loadEnv({ JWT_ACCESS_SECRET: "short" })).exited).toBe(true);
@@ -141,6 +152,7 @@ describe("production config gate", () => {
       DATABASE_URL: "file:./dev.db",
       CASHFREE_APP_ID: undefined,
       CASHFREE_SECRET_KEY: undefined,
+      BREVO_API_KEY: undefined,
     });
     expect(exited).toBe(false);
   });

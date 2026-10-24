@@ -7,8 +7,7 @@ import {
   type Lang,
   type TranslationKey,
 } from "@/lib/i18n/dictionaries";
-
-const STORAGE_KEY = "flouna.lang";
+import { LANG_STORAGE_KEY as STORAGE_KEY } from "@/lib/i18n/lang";
 
 type I18nState = {
   lang: Lang;

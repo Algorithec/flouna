@@ -2,6 +2,9 @@
 // httpOnly cookies (credentials: "include") — tokens are never stored in JS.
 // NEXT_PUBLIC_API_URL="/" means same-origin: the host proxies /api/* to the
 // API service (see next.config.ts rewrites) so cookies stay first-party.
+import { dictionaries } from "@/lib/i18n/dictionaries";
+import { savedLang } from "@/lib/i18n/lang";
+
 const configured = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 const API_URL = configured === "/" ? "" : configured.replace(/\/$/, "");
 
@@ -15,6 +18,25 @@ export class ApiClientError extends Error {
   ) {
     super(message);
   }
+}
+
+// Statuses at which a body without the API's `error` field means the request
+// never reached the API: the host's "Application not found" while the service
+// is stopped (404), the proxy failing to connect (500), a gateway giving up
+// (502 to 504). Every error the API itself sends carries `error` (see the
+// server's middleware/error.ts), so a 404 can go on meaning "does not exist".
+const NOT_FROM_THE_API = new Set([404, 500, 502, 503, 504]);
+
+/** What screens show when no answer came back from Flouna at all. */
+function unreachable(): ApiClientError {
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  const key = offline ? "common.offline" : "common.unavailable";
+  return new ApiClientError(
+    503,
+    dictionaries[savedLang()][key] ?? dictionaries.en[key],
+    undefined,
+    offline ? "offline" : "unavailable",
+  );
 }
 
 // One refresh at a time — parallel 401s share the same attempt instead of
@@ -47,21 +69,36 @@ async function rawFetch(path: string, options: RequestInit & { json?: unknown })
   });
 }
 
+async function send(path: string, options: RequestInit & { json?: unknown }) {
+  try {
+    return await rawFetch(path, options);
+  } catch (err) {
+    // fetch rejects only when no response arrived: offline, a DNS failure, a
+    // dropped connection. Left alone, the browser's own words for that
+    // ("Failed to fetch") are what most screens print. A request the caller
+    // cancelled stays a cancellation.
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw unreachable();
+  }
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit & { json?: unknown } = {},
 ): Promise<T> {
-  let res = await rawFetch(path, options);
+  let res = await send(path, options);
 
   // Access token expired mid-session: refresh once and retry transparently.
   if (res.status === 401 && !path.startsWith("/api/auth/")) {
     if (await tryRefresh()) {
-      res = await rawFetch(path, options);
+      res = await send(path, options);
     }
   }
 
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
+    const fromTheApi = typeof (data as { error?: unknown } | null)?.error === "string";
+    if (!fromTheApi && NOT_FROM_THE_API.has(res.status)) throw unreachable();
     throw new ApiClientError(
       res.status,
       (data as { error?: string } | null)?.error ?? `Request failed (${res.status})`,

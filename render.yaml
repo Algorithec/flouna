@@ -51,6 +51,8 @@ services:
         sync: false # free key from aistudio.google.com
       - key: MAPTILER_KEY
         sync: false
+      - key: BREVO_API_KEY
+        sync: false # mail over HTTPS; production needs this or the SMTP_* set
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
