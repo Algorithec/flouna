@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { Sparkles } from "lucide-react";
 import { rupees } from "@/lib/money";
+import { shopWhyText } from "@/lib/shopWhyText";
 import { DisagreeSheet } from "./DisagreeSheet";
 import { SearchedPlatforms } from "./PlatformMark";
 import type { FoodQuote, RideQuote, ProductQuote } from "./types";
@@ -195,10 +196,12 @@ export function RideWhyBest({
 
 export function ShopWhyBest({
   why,
+  whyParts,
   best,
   alternatives,
 }: {
   why?: string | null;
+  whyParts?: { code: string; params?: Record<string, string> }[];
   best: ProductQuote;
   alternatives: ProductQuote[];
 }) {
@@ -220,7 +223,7 @@ export function ShopWhyBest({
 
   return (
     <ReasoningCard
-      summary={why}
+      summary={why ? shopWhyText(t, why, whyParts) : why}
       reasons={reasons}
       platforms={[best.platform, ...alternatives.map((a) => a.platform)]}
     />
