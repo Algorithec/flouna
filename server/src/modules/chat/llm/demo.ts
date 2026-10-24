@@ -1,3 +1,4 @@
+import { FIXED_REPLIES } from "../replies.js";
 import type { Intent, LlmProvider } from "./types.js";
 
 // Keyless intent extraction, and the floor the whole product stands on.
@@ -157,8 +158,7 @@ const GREETING_WORDS =
   // refusal misread as a greeting is still a wrong answer.
   /^(hi|hii+|hello|hey|good (morning|afternoon|evening)|thanks|thank you|namaste|what can you do|who are you|how do you work)\b/i;
 
-const OUT_OF_SCOPE_REPLY =
-  "I can help you order food, book rides, or shop. What would you like?";
+const OUT_OF_SCOPE_REPLY = FIXED_REPLIES.outOfScope;
 
 /** Words after a number that make it a duration, a distance or a count, never a price. */
 const NOT_MONEY = /^\s*(?:mins?|minutes?|hrs?|hours?|secs?|seconds?|days?|kms?|kilomet(?:er|re)s?|people|persons?|pax|pieces?|pcs?|plates?|items?|portions?|servings?|stars?)\b/i;
@@ -619,7 +619,7 @@ function classify(message: string): Intent {
     if (GREETING_WORDS.test(message.trim())) {
       return {
         domain: "greeting",
-        reply: "Hey! Ask me for food or a ride and I'll find you the best deal.",
+        reply: FIXED_REPLIES.greeting,
       };
     }
 
@@ -642,7 +642,7 @@ function classify(message: string): Intent {
     if (wantsRide && wantsFood) {
       return {
         domain: "combo",
-        reply: "On it, sorting out both your food and your ride.",
+        reply: FIXED_REPLIES.combo,
         food: extractFood(message),
         ride: extractRide(message),
       };
@@ -654,7 +654,7 @@ function classify(message: string): Intent {
     if (wantsShop && !wantsRide) {
       return {
         domain: "shop",
-        reply: "On it, comparing prices across stores for you.",
+        reply: FIXED_REPLIES.shop,
         shop: extractShop(message),
       };
     }
@@ -662,7 +662,7 @@ function classify(message: string): Intent {
     if (wantsRide) {
       return {
         domain: "ride",
-        reply: "On it, comparing ride options for you.",
+        reply: FIXED_REPLIES.ride,
         ride: extractRide(message),
       };
     }
@@ -670,7 +670,7 @@ function classify(message: string): Intent {
     if (wantsFood) {
       return {
         domain: "food",
-        reply: "Got it, finding the best deal for you.",
+        reply: FIXED_REPLIES.food,
         food: extractFood(message),
       };
     }
@@ -678,7 +678,7 @@ function classify(message: string): Intent {
     if (wantsShop) {
       return {
         domain: "shop",
-        reply: "On it, comparing prices across stores for you.",
+        reply: FIXED_REPLIES.shop,
         shop: extractShop(message),
       };
     }
