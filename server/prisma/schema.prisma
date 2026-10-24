@@ -1567,9 +1567,14 @@ model OndcOrder {
   // Money owed back to the customer: the paid amount less what the seller
   // finally charged. "owed" until sent to the gateway, "review" when the
   // amount needs a person to decide.
-  refundPaise      Int?
+  refundPaise      Int? // the latest refund sent, or the one that failed
   refundStatus     String? // owed | review | requested | done | failed
   refundRef        String?
+  // An order can need more than one refund (a cut to the bill, then a
+  // cancellation). Due is the total owed back so far and only grows; refunded
+  // is what has gone back. Only the difference is ever sent.
+  refundDuePaise   Int?
+  refundedPaise    Int       @default(0)
   completedAt      DateTime? // when the seller reported it delivered
   sellerOrderId    String?
   sellerState      String? // Created | Accepted | In-progress | Completed | Cancelled
@@ -1649,6 +1654,9 @@ model OndcRide {
   startOtp          String?
   sellerUpdatedAt   DateTime?
   problem           String?
+  // When the provider's latest quote lapses (its ttl, from when it arrived).
+  // A lapsed fare is asked for again rather than carried into a booking.
+  quoteExpiresAt    DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

@@ -15,6 +15,7 @@ import { Check } from "lucide-react";
 import { rupees } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import { useEscapeToClose } from "@/lib/useEscapeToClose";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { useI18n } from "@/components/i18n/I18nContext";
 
 export type OptionTree = {
@@ -68,6 +69,7 @@ export function OndcOptionsSheet({
   const { t } = useI18n();
   const [explicit, setExplicit] = useState<Record<string, string[]>>({});
   useEscapeToClose(!busy, onClose);
+  const sheet = useFocusTrap<HTMLDivElement>(true);
   const { open, chosen } = resolve(tree, explicit);
   const ids = open.flatMap((g) => chosen[g.id] ?? []);
   const valid = open.every((g) => (chosen[g.id]?.length ?? 0) >= g.min && (chosen[g.id]?.length ?? 0) <= g.max);
@@ -75,15 +77,27 @@ export function OndcOptionsSheet({
 
   const pick = (g: Group, id: string) => {
     const now = chosen[g.id] ?? [];
-    const next = g.max === 1 ? [id] : now.includes(id) ? now.filter((x) => x !== id) : now.length < g.max ? [...now, id] : now;
+    // An optional single choice can be taken back: tapping it again clears it.
+    // A required one stays chosen, as a radio does.
+    const next =
+      g.max === 1
+        ? now.includes(id) && g.min === 0
+          ? []
+          : [id]
+        : now.includes(id)
+          ? now.filter((x) => x !== id)
+          : now.length < g.max
+            ? [...now, id]
+            : now;
     setExplicit((e) => ({ ...e, [g.id]: next }));
   };
   const rule = (g: Group) =>
-    g.min === g.max ? (g.max === 1 ? t("on.optChoose1") : t("on.optRange").replace("{min}", String(g.min)).replace("{max}", String(g.max))) : g.min === 0 ? t("on.optUpTo").replace("{n}", String(g.max)) : t("on.optRange").replace("{min}", String(g.min)).replace("{max}", String(g.max));
+    g.min === g.max ? (g.max === 1 ? t("on.optChoose1") : t("on.optExact").replace("{n}", String(g.max))) : g.min === 0 ? t("on.optUpTo").replace("{n}", String(g.max)) : t("on.optRange").replace("{min}", String(g.min)).replace("{max}", String(g.max));
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => !busy && onClose()}>
       <div
+        ref={sheet}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ondc-options-title"

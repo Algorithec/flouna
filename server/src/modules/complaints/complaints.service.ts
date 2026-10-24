@@ -236,11 +236,14 @@ export async function createComplaint(input: {
 }) {
   if (input.orderId) {
     // Never let someone raise a complaint against an order that isn't theirs.
-    const order = await prisma.order.findFirst({
-      where: { id: input.orderId, userId: input.userId },
-      select: { id: true },
-    });
-    if (!order) throw new ApiError(404, "Order not found");
+    // The order may be an app order, a food order with an ONDC seller, or a
+    // ride with an ONDC provider; each is checked against its owner.
+    const where = { id: input.orderId, userId: input.userId };
+    const owned =
+      (await prisma.order.findFirst({ where, select: { id: true } })) ??
+      (await prisma.ondcOrder.findFirst({ where, select: { id: true } })) ??
+      (await prisma.ondcRide.findFirst({ where, select: { id: true } }));
+    if (!owned) throw new ApiError(404, "Order not found");
   }
 
   // The deadlines the support policy publishes for a grievance, stamped when
