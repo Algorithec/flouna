@@ -88,12 +88,20 @@ function cartLines(json: string): { itemId: string; count: number }[] | null {
 
 export async function igmRefFor(orderId: string | null | undefined): Promise<IgmOrderRef | null> {
   if (!orderId) return null;
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { details: true } });
+  // The three lookups do not depend on each other, so they run together; the
+  // order they are checked in below still decides which one counts.
+  const [order, food, ride] = await Promise.all([
+    prisma.order.findUnique({ where: { id: orderId }, select: { details: true } }),
+    prisma.ondcOrder.findUnique({
+      where: { id: orderId },
+      select: { sellerOrderId: true, fulfillmentId: true, city: true, txnId: true, bppId: true, bppUri: true, providerId: true, lines: true },
+    }),
+    prisma.ondcRide.findUnique({
+      where: { id: orderId },
+      select: { sellerOrderId: true, bppId: true, bppUri: true, providerId: true, fulfillmentId: true, itemId: true, city: true, txnId: true },
+    }),
+  ]);
   if (order) return ondcOrderRef(order.details);
-  const food = await prisma.ondcOrder.findUnique({
-    where: { id: orderId },
-    select: { sellerOrderId: true, fulfillmentId: true, city: true, txnId: true, bppId: true, bppUri: true, providerId: true, lines: true },
-  });
   if (food) {
     // Every field the issue names has to be there, as for a ride: a seller's
     // gateway may drop an issue with an empty one without a word.
@@ -111,10 +119,6 @@ export async function igmRefFor(orderId: string | null | undefined): Promise<Igm
       items: lines.map((l) => ({ id: l.itemId, count: l.count })),
     };
   }
-  const ride = await prisma.ondcRide.findUnique({
-    where: { id: orderId },
-    select: { sellerOrderId: true, bppId: true, bppUri: true, providerId: true, fulfillmentId: true, itemId: true, city: true, txnId: true },
-  });
   if (ride?.sellerOrderId && ride.bppId && ride.bppUri && ride.providerId && ride.fulfillmentId && ride.itemId) {
     return {
       domain: "ONDC:TRV10",

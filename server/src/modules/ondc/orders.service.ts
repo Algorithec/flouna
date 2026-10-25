@@ -557,6 +557,8 @@ export type OndcOrderView = {
 
 /** The refund the customer is told about: all of it once done, else what is on its way. */
 function refundShown(o: OrderRow) {
+  // `||`, not `??`: a row from before refunds were counted keeps refundedPaise
+  // at its default 0 and carries its one refund in refundPaise.
   if (o.refundStatus === "done") return o.refundedPaise || o.refundPaise;
   if ((o.refundStatus === "owed" || o.refundStatus === "requested") && o.refundDuePaise != null) return o.refundDuePaise - o.refundedPaise;
   return o.refundPaise;
