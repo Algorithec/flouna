@@ -25,6 +25,14 @@ describe("dish and ride words in Indian scripts", () => {
     // A Telugu plural, a sentence-final mark.
     expect(toEnglishTerms("బిర్యానీలు")).toBe("biryani");
     expect(toEnglishTerms("पिज्जा।")).toBe("pizza");
+    // Case endings joined to the noun, in each language that joins them.
+    expect(toEnglishTerms("पिझ्झाची")).toBe("pizza"); // Marathi
+    expect(toEnglishTerms("ಬಿರಿಯಾನಿಯನ್ನು")).toBe("biryani"); // Kannada
+    expect(toEnglishTerms("பீட்சாவை")).toBe("pizza"); // Tamil
+    expect(toEnglishTerms("బిర్యానీని")).toBe("biryani"); // Telugu
+    // The commoner long-vowel spelling, and plurals written as their own word.
+    expect(toEnglishTerms("ಸಮೋಸಾ")).toBe("samosa");
+    expect(toEnglishTerms("मोमोज़")).toBe("momo");
   });
 
   it("leaves a word alone that only begins with a dish's letters", () => {
@@ -32,6 +40,11 @@ describe("dish and ride words in Indian scripts", () => {
     expect(toEnglishTerms("వడ్డీ")).toBe("వడ్డీ");
     // Cucumber is not a dosa.
     expect(toEnglishTerms("దోసకాయ")).toBe("దోసకాయ");
+    // Found in review: crab, hailstones, automatic, roller, rider and biker
+    // each begin with a listed word and are none of them.
+    for (const word of ["केकड़ा", "వడగళ్ళు", "ऑटोमैटिक", "रोलर", "राइडर", "बाइकर"]) {
+      expect(toEnglishTerms(word), word).toBe(word);
+    }
     expect(toEnglishTerms("biryani under 200")).toBe("biryani under 200");
   });
 });
@@ -46,6 +59,14 @@ describe("food search in Indian scripts", () => {
       expect(res.body.quotes.length, typed).toBeGreaterThan(0);
       for (const q of res.body.quotes) expect(q.name.toLowerCase()).toContain("biryani");
     }
+  });
+
+  it("does not turn a search for crab into cake", async () => {
+    const { agent } = await authedAgent();
+    const res = await agent.get(`/api/food/search?q=${encodeURIComponent("केकड़ा")}`).expect(200);
+    // Nothing on the menu is crab, and the search says so rather than
+    // presenting cake as a match.
+    expect(res.body.substituted).toBe(true);
   });
 });
 

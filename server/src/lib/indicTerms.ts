@@ -22,12 +22,12 @@ const TERMS: Record<string, string[]> = {
   thali: ["थाली", "थाळी", "ಥಾಲಿ", "தாலி", "థాలీ", "తాలీ"],
   meals: ["मील्स", "ಮೀಲ್ಸ್", "மீல்ஸ்", "మీల్స్"],
   paneer: ["पनीर", "ಪನೀರ್", "பனீர்", "పనీర్"],
-  samosa: ["समोसा", "ಸಮೋಸ", "சமோசா", "సమోసా"],
+  samosa: ["समोसा", "समोसे", "ಸಮೋಸಾ", "ಸಮೋಸ", "சமோசா", "సమోసా"],
   idli: ["इडली", "ಇಡ್ಲಿ", "இட்லி", "ఇడ్లీ", "ఇడ్లి"],
   vada: ["वडा", "ವಡೆ", "ವಡಾ", "வடை", "వడ"],
-  paratha: ["पराठा", "परांठा", "ಪರೋಟ", "ಪರಾಠಾ", "பரோட்டா", "పరోటా", "పరాఠా"],
+  paratha: ["पराठा", "परांठा", "ಪರೋಟಾ", "ಪರೋಟ", "ಪರಾಠಾ", "பரோட்டா", "పరోటా", "పరాఠా"],
   roll: ["रोल", "ರೋಲ್", "ரோல்", "రోల్"],
-  momo: ["मोमो", "ಮೋಮೋ", "மோமோ", "మోమో"],
+  momo: ["मोमो", "मोमोज", "ಮೋಮೋ", "ಮೋಮೋಸ್", "மோமோ", "மோமோஸ்", "మోమో", "మోమోస్"],
   cake: ["केक", "ಕೇಕ್", "கேக்", "కేక్"],
   "ice cream": ["आइसक्रीम", "ಐಸ್ಕ್ರೀಮ್", "ஐஸ்கிரீம்", "ఐస్క్రీమ్"],
   rice: ["राइस", "चावल", "ರೈಸ್", "ரைஸ்", "రైస్"],
@@ -39,7 +39,7 @@ const TERMS: Record<string, string[]> = {
   chicken: ["चिकन", "ಚಿಕನ್", "சிக்கன்", "చికెన్"],
   mushroom: ["मशरूम", "ಮಶ್ರೂಮ್", "காளான்", "మష్రూమ్"],
   chocolate: ["चॉकलेट", "ಚಾಕೊಲೇಟ್", "சாக்லேட்", "చాక్లెట్"],
-  veg: ["वेज", "व्हेज", "शाकाहारी", "ವೆಜ್", "ಸಸ್ಯಾಹಾರಿ", "வெஜ்", "சைவ", "వెజ్", "శాకాహార"],
+  veg: ["वेज", "व्हेज", "शाकाहारी", "ವೆಜ್", "ಸಸ್ಯಾಹಾರಿ", "வெஜ்", "சைவ", "వెజ్", "శాకాహారం", "శాకాహారి", "శాకాహార"],
   breakfast: ["नाश्ता", "ಉಪಾಹಾರ", "டிபன்", "అల్పాహారం", "టిఫిన్"],
   lunch: ["लंच", "ಲಂಚ್", "லஞ்ச்", "లంచ్"],
   dinner: ["डिनर", "ಡಿನ್ನರ್", "டின்னர்", "డిన్నర్"],
@@ -59,21 +59,37 @@ function normalise(s: string): string {
   return s.normalize("NFC").replace(/[़‌‍]/g, "");
 }
 
-// Everyday words that begin with a listed word: cucumber is not a dosa.
-const NOT_TERMS = ["దోసకాయ"].map(normalise);
-
 // Longest first, so "बिरयानी" is tried before anything it begins with.
 const ALIASES: { alias: string; english: string }[] = Object.entries(TERMS)
   .flatMap(([english, aliases]) => aliases.map((a) => ({ alias: normalise(a), english })))
   .sort((a, b) => b.alias.length - a.alias.length);
 
-const COMBINING = /\p{M}/u;
+/**
+ * What may follow a listed word inside the same token: a plural or a case
+ * ending that these languages join to the noun. Anything else means the token
+ * only begins with the same letters, and it is left alone: "केकड़ा" (crab) is
+ * not cake, "ऑटोमैटिक" (automatic) is not an auto, "వడగళ్ళు" (hailstones) is
+ * not a vada. Hindi writes its case markers as separate words, so it needs
+ * none here.
+ */
+const SUFFIXES = new Set(
+  [
+    // Marathi
+    "ला", "ची", "चा", "चे", "च्या", "त", "ने", "साठी", "ही", "च",
+    // Kannada
+    "ಗಳು", "ಗಳನ್ನು", "ಯನ್ನು", "ವನ್ನು", "ನ್ನು", "ಗೆ", "ಕ್ಕೆ", "ಯಲ್ಲಿ", "ನಲ್ಲಿ", "ಯ", "ದ", "ನ",
+    // Tamil
+    "யை", "வை", "க்கு", "வுக்கு", "யுக்கு", "கள்", "களை", "யில்", "வில்",
+    // Telugu
+    "లు", "లను", "ని", "ను", "కి", "కు", "తో", "లో",
+  ].map(normalise),
+);
+const TRAILING_PUNCTUATION = /[।॥.,!?:;"'”’)]+$/u;
 
 /**
  * The message with each known dish or ride word in an Indian script replaced
- * by its English word. A word may carry a suffix ("బిర్యానీలు", "पिज्जा।"),
- * which goes with it, but the alias has to end where a syllable ends:
- * "వడ్డీ" (interest) begins with the letters of "వడ" and is not a vada.
+ * by its English word. The word may stand alone or carry one of the endings
+ * above ("బిర్యానీలు", "पिझ्झाची", "பீட்சாவை") and punctuation ("पिज्जा।").
  * Words in Latin script, and anything not listed, come back as they were.
  */
 export function toEnglishTerms(message: string): string {
@@ -81,13 +97,11 @@ export function toEnglishTerms(message: string): string {
     .split(/(\s+)/)
     .map((token) => {
       if (!/[ऀ-ൿ]/.test(token)) return token;
-      const word = normalise(token);
-      if (NOT_TERMS.some((w) => word.startsWith(w))) return token;
+      const word = normalise(token).replace(TRAILING_PUNCTUATION, "");
       for (const { alias, english } of ALIASES) {
         if (!word.startsWith(alias)) continue;
-        const next = word.slice(alias.length, alias.length + 1);
-        if (next && COMBINING.test(next)) continue;
-        return english;
+        const rest = word.slice(alias.length);
+        if (rest === "" || SUFFIXES.has(rest)) return english;
       }
       return token;
     })
