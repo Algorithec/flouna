@@ -67,7 +67,7 @@ devRouter.get("/providers", (_req, res) => {
       smtp: configured(env.SMTP_HOST),
       google_oauth: configured(env.GOOGLE_CLIENT_ID),
       cashfree: configured(env.CASHFREE_APP_ID),
-      maptiler: configured(env.MAPTILER_KEY),
+      google_maps: configured(env.GOOGLE_MAPS_API_KEY),
       geoapify: configured(env.GEOAPIFY_KEY),
       ors: configured(env.ORS_KEY),
       web_push: configured(env.VAPID_PUBLIC_KEY),
