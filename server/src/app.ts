@@ -108,7 +108,8 @@ export function createApp() {
   // parser, so on their own they would let anyone make us parse 5 MB at will.
   // The registry handshake (on_subscribe) is unsigned and not covered here.
   const ondcJsonBody = express.json({ limit: "5mb", verify: keepRawBody });
-  const ondcCallbackPaths = new Set(CALLBACK_ACTIONS.map((a) => `/ondc/${a}`));
+  // Both prefixes: see where the callbacks router is mounted below.
+  const ondcCallbackPaths = new Set(CALLBACK_ACTIONS.flatMap((a) => [`/ondc/${a}`, `/api/ondc/${a}`]));
   const isOndcCallback = (req: express.Request) =>
     req.method === "POST" && ondcCallbackPaths.has(req.path.replace(/\/+$/, ""));
   const ondcLimiter = rateLimit({
@@ -245,7 +246,12 @@ export function createApp() {
   // from the subscriber id (ondc.flouna.com), so this is where it looks.
   app.use(ondcRegistryRouter);
   // Seller apps answer our requests here (on_search, on_select, ...), signed.
-  app.use(ondcCallbacksRouter());
+  // Also under /api: the www.flouna.com subscription is registered with
+  // https://www.flouna.com/api/ondc, and the web app only passes /api/* on to
+  // us, so without this every callback to that subscriber answered 404.
+  const ondcCallbacks = ondcCallbacksRouter();
+  app.use(ondcCallbacks);
+  app.use("/api", ondcCallbacks);
   app.use("/api/auth", authRouter);
   // Privacy rights and cookie choices (privacy policy 6, cookie policy 1.3).
   app.use("/api/privacy", complianceRouter);
