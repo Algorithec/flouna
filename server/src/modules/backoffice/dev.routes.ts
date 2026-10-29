@@ -15,6 +15,7 @@ import { listFlags, setFlag } from "./flags.service.js";
 import { auditFromReq } from "./audit.service.js";
 import { ondcNetwork, systemAlerts } from "./systemStatus.service.js";
 import { listTransactions, getTransaction } from "./ondc.service.js";
+import { modelOps, ondcOps } from "./opsStatus.service.js";
 
 // Parsed, not coerced: see the note in admin.routes.ts. A negative `limit`
 // reached Prisma as a negative take, which reads backwards from a cursor there
@@ -148,9 +149,23 @@ devRouter.patch(
   },
 );
 
-// --- ONDC network status (simulated until registration) ---
-devRouter.get("/network", (_req, res) => {
-  res.json(ondcNetwork());
+// --- ONDC network: mode, plus configuration, callback traffic, the log queue
+// and where orders, rides and settlements stand ---
+devRouter.get("/network", async (_req, res, next) => {
+  try {
+    res.json({ ...ondcNetwork(), ops: await ondcOps() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- The model: which provider answers, fallbacks, and the watcher's comparison ---
+devRouter.get("/model", async (_req, res, next) => {
+  try {
+    res.json(await modelOps());
+  } catch (err) {
+    next(err);
+  }
 });
 
 // --- System alerts feed (real: derived from errors, refunds, tickets) ---
