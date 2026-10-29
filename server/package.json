@@ -56,5 +56,8 @@
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vitest": "^4.1.8"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2"
   }
 }
