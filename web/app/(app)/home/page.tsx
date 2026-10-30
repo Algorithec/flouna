@@ -41,6 +41,7 @@ import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
 import { type TILE_THEMES } from "@/components/ui/CategoryTile";
 import type { ChatMessage, FoodQuote } from "@/components/chat/types";
 import { cn } from "@/lib/cn";
+import { replyText } from "@/lib/replyText";
 import { useTemporaryChat } from "@/components/chat/TemporaryChatContext";
 
 type Usual = FoodQuote & { timesOrdered: number };
@@ -449,7 +450,7 @@ function ChatHome() {
                       "rounded-card border border-line bg-card p-3.5 shadow-soft",
                   )}
                 >
-                  <p className="text-[14px] leading-relaxed text-ink">{m.content}</p>
+                  <p className="text-[14px] leading-relaxed text-ink">{replyText(t, m.content, m.replyCode)}</p>
                   {m.action && (
                     <ActionResult action={m.action} onReply={send} live={i === messages.length - 1 && !thinking} />
                   )}

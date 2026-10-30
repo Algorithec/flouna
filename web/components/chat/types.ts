@@ -166,6 +166,8 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /** An assistant reply as a code for the reader's language, when it is one of the server's own. */
+  replyCode?: { code: string; params?: Record<string, string> } | null;
   /** When it was sent, ISO. Absent on restored history that never stored one. */
   at?: string;
   domain?: string;
