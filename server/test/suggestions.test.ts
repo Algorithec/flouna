@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { CHIP_CODES } from "../src/modules/users/users.routes.js";
 import { authedAgent } from "./helpers.js";
 
 // Pays for an order so it reaches a "confirmed" status the suggestion engine
@@ -24,6 +26,15 @@ describe("chat suggestions", () => {
       expect(s).toHaveProperty("label");
       expect(s).toHaveProperty("prompt");
       expect(s.label).not.toMatch(/^Reorder /);
+      // The label the app shows in the reader's language.
+      expect(CHIP_CODES).toContain(s.code.code);
+    }
+  });
+
+  it("has every chip label translated in all six of the app's languages", () => {
+    const dictionaries = readFileSync(new URL("../../web/lib/i18n/dictionaries.ts", import.meta.url), "utf8");
+    for (const code of CHIP_CODES) {
+      expect(dictionaries.split(`"chip.${code}":`).length - 1, code).toBe(6);
     }
   });
 
@@ -44,6 +55,8 @@ describe("chat suggestions", () => {
     );
     expect(reorder).toBeTruthy();
     expect(reorder.prompt).toMatch(/again$/);
+    // The dish name goes into the translated label as it is.
+    expect(reorder.code).toEqual({ code: "reorder", params: { name: "Masala Dosa" } });
     // Names the dish, so home can leave it out when the usual shortcut shows it.
     expect(reorder.dishId).toBe("masala-dosa");
   });

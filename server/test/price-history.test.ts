@@ -49,6 +49,16 @@ describe("price-history advisor", () => {
     expect(result!.action).toBe("wait");
     expect(result!.source).toBe("history");
     expect(result!.expectedSavingPaise).toBeGreaterThan(9000);
+    expect(result!.code).toEqual({ code: "historyWaitFood", params: { rupees: "100", minutes: "60" } });
+  });
+
+  it("asks a rider to book, not order, when waiting would pay", async () => {
+    const key = "history-auto-1";
+    await seed("ride", key, 18, [25000, 25100, 24900]);
+    await seed("ride", key, 20, [15000, 15100, 14900]); // two hours on, ₹100 less
+    const result = await predictFromHistory("ride", key, at(18));
+    expect(result!.message).toMatch(/Book now, or wait and save\?$/);
+    expect(result!.code).toEqual({ code: "historyWaitRide", params: { rupees: "100", minutes: "120" } });
   });
 
   it("says order now when the current hour is already cheapest", async () => {
@@ -59,6 +69,7 @@ describe("price-history advisor", () => {
     const result = await predictFromHistory("food", key, at(13));
     expect(result).not.toBeNull();
     expect(result!.action).toBe("order_now");
+    expect(result!.code).toEqual({ code: "historyNow" });
   });
 
   it("ignores trivial differences under ₹10", async () => {

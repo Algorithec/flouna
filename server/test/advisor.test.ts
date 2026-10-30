@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  ADVICE_CODES,
   adviseFoodByRules as adviseFood,
   adviseRideByRules as adviseRide,
 } from "../src/modules/advisor/advisor.service.js";
@@ -52,5 +54,35 @@ describe("ride advisor", () => {
     const advice = adviseRide(at(17, 30)); // 3.5h of surge left
     expect(advice.action).toBe("order_now");
     expect(advice.message).toContain("peak");
+  });
+});
+
+// The English sentence is what the server writes. The app shows the reader's
+// language from the code, so a sentence without one stays English for everyone.
+describe("advice in the reader's language", () => {
+  it("carries a code on every answer, with the figures a wait needs", () => {
+    for (let hour = 0; hour < 24; hour++) {
+      for (const minute of [0, 30]) {
+        for (const advice of [adviseFood(at(hour, minute)), adviseRide(at(hour, minute))]) {
+          expect(advice.code, advice.message).toBeDefined();
+          if (advice.action === "wait") {
+            expect(advice.code!.params).toEqual({ rupees: expect.any(String), minutes: String(advice.waitMinutes) });
+          }
+        }
+      }
+    }
+  });
+
+  it("names the offer and the wait", () => {
+    expect(adviseFood(at(13)).code).toEqual({ code: "foodLiveLunch" });
+    expect(adviseFood(at(19)).code).toEqual({ code: "foodSoonDinner", params: { rupees: "100", minutes: "60" } });
+    expect(adviseRide(at(20, 30)).code).toEqual({ code: "rideEasing", params: { rupees: "50", minutes: "30" } });
+  });
+
+  it("has every code translated in all six of the app's languages", () => {
+    const dictionaries = readFileSync(new URL("../../web/lib/i18n/dictionaries.ts", import.meta.url), "utf8");
+    for (const code of ADVICE_CODES) {
+      expect(dictionaries.split(`"adv.m.${code}":`).length - 1, code).toBe(6);
+    }
   });
 });
