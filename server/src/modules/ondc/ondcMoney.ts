@@ -65,51 +65,59 @@ export function refundAfterCancel(o: { paidPaise: number; cancelledBySeller: boo
   return { paise: o.paidPaise - o.finalTotalPaise };
 }
 
+/** Takes an owed refund for sending. Only one caller can hold an order at a time. */
+async function claimRefund(ondcOrderId: string): Promise<boolean> {
+  const claimed = await prisma.ondcOrder.updateMany({ where: { id: ondcOrderId, refundStatus: "owed" }, data: { refundStatus: "requested" } });
+  return claimed.count === 1;
+}
+
 /**
  * Sends what is owed and not yet refunded to the gateway. The refund id names
  * the step (what had gone back before, and this amount): Cashfree refuses a
  * second refund with the same id, so a retry or a race can never move money
  * twice, while a later refund on the same order gets an id of its own.
+ *
+ * One step per pass. A pass hands the order back as owed only when more came
+ * due while its step was with the gateway, so the loop ends as soon as nothing
+ * more is owed, a step fails, or another caller has taken the order.
  */
 export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof createCashfreeRefund } = {}): Promise<void> {
-  const claimed = await prisma.ondcOrder.updateMany({ where: { id: ondcOrderId, refundStatus: "owed" }, data: { refundStatus: "requested" } });
-  if (claimed.count === 0) return;
-  const order = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: ondcOrderId } });
-  // Due less refunded. A row from before refunds were counted carries only
-  // the amount of its one refund.
-  const amount = order.refundDuePaise != null ? order.refundDuePaise - order.refundedPaise : (order.refundPaise ?? 0);
-  if (amount <= 0) {
-    await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done" } });
-    return;
-  }
-  const finished = (ref: string) =>
-    prisma.ondcOrder.updateMany({
-      where: { id: order.id, refundStatus: "requested" },
-      data: { refundStatus: "done", refundRef: ref, refundPaise: amount, refundedPaise: { increment: amount } },
-    });
-  // Demo payments took no money, so there is nothing to send back.
-  if (order.paymentRef?.startsWith("demo_") || (!cashfreeConfigured && !deps.refund)) {
-    await finished("no_gateway");
-  } else {
-    try {
-      const r = await (deps.refund ?? createCashfreeRefund)({
-        orderId: gatewayOrderId(order.id),
-        refundId: `${gatewayOrderId(order.id)}_refund_${order.refundedPaise}_${amount}`,
-        amountRupees: amount / 100,
-        note: "Refund for an ONDC order",
-      });
-      await finished(String(r.cf_refund_id));
-    } catch (err) {
-      console.error("[ondc] refund failed for", order.id, err instanceof Error ? err.message : String(err));
-      await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "failed", refundPaise: amount } });
+  while (await claimRefund(ondcOrderId)) {
+    const order = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: ondcOrderId } });
+    // Due less refunded. A row from before refunds were counted carries only
+    // the amount of its one refund.
+    const amount = order.refundDuePaise != null ? order.refundDuePaise - order.refundedPaise : (order.refundPaise ?? 0);
+    if (amount <= 0) {
+      await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "done" } });
       return;
     }
-  }
-  // More may have come due while this one was on its way.
-  const after = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: order.id }, select: { refundDuePaise: true, refundedPaise: true } });
-  if (after.refundDuePaise != null && after.refundDuePaise > after.refundedPaise) {
-    const again = await prisma.ondcOrder.updateMany({ where: { id: order.id, refundStatus: "done" }, data: { refundStatus: "owed" } });
-    if (again.count === 1) await sendRefund(ondcOrderId, deps);
+    const finished = (ref: string) =>
+      prisma.ondcOrder.updateMany({
+        where: { id: order.id, refundStatus: "requested" },
+        data: { refundStatus: "done", refundRef: ref, refundPaise: amount, refundedPaise: { increment: amount } },
+      });
+    // Demo payments took no money, so there is nothing to send back.
+    if (order.paymentRef?.startsWith("demo_") || (!cashfreeConfigured && !deps.refund)) {
+      await finished("no_gateway");
+    } else {
+      try {
+        const r = await (deps.refund ?? createCashfreeRefund)({
+          orderId: gatewayOrderId(order.id),
+          refundId: `${gatewayOrderId(order.id)}_refund_${order.refundedPaise}_${amount}`,
+          amountRupees: amount / 100,
+          note: "Refund for an ONDC order",
+        });
+        await finished(String(r.cf_refund_id));
+      } catch (err) {
+        console.error("[ondc] refund failed for", order.id, err instanceof Error ? err.message : String(err));
+        await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "failed", refundPaise: amount } });
+        return;
+      }
+    }
+    // More may have come due while this one was on its way.
+    const after = await prisma.ondcOrder.findUniqueOrThrow({ where: { id: order.id }, select: { refundDuePaise: true, refundedPaise: true } });
+    if (after.refundDuePaise == null || after.refundDuePaise <= after.refundedPaise) return;
+    await prisma.ondcOrder.updateMany({ where: { id: order.id, refundStatus: "done" }, data: { refundStatus: "owed" } });
   }
 }
 

@@ -21,6 +21,8 @@ describe("ONDC commercial terms", () => {
     expect(t.staticTerms).toBeNull();
     expect(t.gstin).toBeNull();
     expect(t.unconfirmed.join(" ")).toMatch(/ONDC_BAP_GSTIN/);
+    // Ride searches still name a terms link; the bare domain answers 404 there.
+    expect(t.staticTermsUrl).toBe("https://www.flouna.com/ondc/terms");
   });
 
   it("takes the founder's choices once set, and stops flagging them", () => {
