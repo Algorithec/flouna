@@ -20,7 +20,7 @@ import {
 import type { LatLng } from "./RideMap";
 
 // The ride map on Google: the same pins, names, providers and route as the
-// MapLibre version, drawn by Google so a Google route sits on a Google map.
+// simplified map, drawn by Google so a Google route sits on a Google map.
 
 /** Shifts a marker's content so it sits below its point instead of above. */
 function below(el: HTMLElement, gap = 4): HTMLElement {
@@ -81,7 +81,7 @@ export function GoogleRideMap({
         redrawRef.current();
       })
       .catch(() => {
-        // The wrapper sees the same failure and swaps to MapLibre.
+        // The wrapper sees the same failure and swaps to the simplified map.
       });
     return () => {
       cancelled = true;

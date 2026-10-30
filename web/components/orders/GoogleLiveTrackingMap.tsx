@@ -16,7 +16,7 @@ import { bikeSvg, carSvg, fractionAt, sliceRoute } from "./trackingShared";
 import type { LatLng } from "./LiveTrackingMap";
 
 // Live tracking on Google: the whole route faint, the part already covered
-// solid, and the vehicle at the head of it. Same maths as the MapLibre map.
+// solid, and the vehicle at the head of it. Same maths as the simplified map.
 
 type RouteInfo = {
   distanceKm: number;
@@ -81,7 +81,7 @@ export function GoogleLiveTrackingMap({
         setReady(true);
       })
       .catch(() => {
-        // The wrapper sees the same failure and swaps to MapLibre.
+        // The wrapper sees the same failure and swaps to the simplified map.
       });
     return () => {
       cancelled = true;
@@ -155,7 +155,7 @@ export function GoogleLiveTrackingMap({
       const el = document.createElement("div");
       el.className = "driver-pin";
       el.innerHTML = vehicle === "bike" ? bikeSvg() : carSvg();
-      // Centred on the point, like the MapLibre marker.
+      // Centred on the point.
       el.style.transform = "translateY(50%)";
       driverRef.current = new maps.marker.AdvancedMarkerElement({
         map,
