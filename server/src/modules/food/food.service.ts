@@ -61,10 +61,30 @@ export type FoodQuote = {
   etaMinutes: number;
 };
 
+/**
+ * Each fragment the reason for a pick is built from, as a code the app
+ * translates (`why.f.<code>`). The fragments carry their own leading
+ * punctuation, so the app joins them as they come.
+ */
+export const FOOD_WHY_CODES = [
+  "topRated",
+  "alsoCheapest",
+  "fastest",
+  "bestPrice",
+  "saveVsNext",
+  "bestOverall",
+  "cheaperThanNext",
+  "bestValue",
+  "higherRated",
+] as const;
+export type WhyPart = { code: (typeof FOOD_WHY_CODES)[number]; params?: Record<string, string> };
+
 export type FoodRecommendation = {
   best: FoodQuote;
   alternatives: FoodQuote[];
   why: string;
+  /** `why`, fragment by fragment, for the reader's language. */
+  whyParts: WhyPart[];
   pickReason: PickReason;
   /** How this pick was reached — consumed by the decision log, not the UI. */
   trace: DecisionTrace;
@@ -395,24 +415,37 @@ export function recommendFood(
     ? Math.max(0, sameDishElsewhere.effectivePaise - best.effectivePaise)
     : 0;
 
-  let why: string;
+  // The English and the codes are built together, fragment by fragment, so
+  // the translated reason says exactly what the English one does.
+  const whyParts: WhyPart[] = [];
+  let why = "";
+  const say = (english: string, code: WhyPart["code"], params?: Record<string, string>) => {
+    why += english;
+    whyParts.push(params ? { code, params } : { code });
+  };
+  const rating = String(best.rating);
+  const minutes = String(best.etaMinutes);
+  const rupees = String(Math.round(saving / 100));
   if (priority === "rating") {
-    why = `Top-rated pick, ${best.rating}★ at ${best.restaurant}`;
+    say(`Top-rated pick, ${rating}★ at ${best.restaurant}`, "topRated", { rating, restaurant: best.restaurant });
     if (best.dishId === cheapest.dishId && best.platform === cheapest.platform)
-      why += ", and it's the best price too";
+      say(", and it's the best price too", "alsoCheapest");
   } else if (priority === "speed") {
-    why = `Fastest good option, arrives in ${best.etaMinutes} min, rated ${best.rating}★`;
+    say(`Fastest good option, arrives in ${minutes} min, rated ${rating}★`, "fastest", { minutes, rating });
   } else if (priority === "price") {
-    why = `Best effective price after offers`;
-    if (saving > 0) why += `, you save ₹${Math.round(saving / 100)} vs the next option`;
+    say("Best effective price after offers", "bestPrice");
+    if (saving > 0) say(`, you save ₹${rupees} vs the next option`, "saveVsNext", { rupees });
   } else {
     // balanced: explain the trade-off it optimised
-    why = `Best overall, ${best.rating}★, ${best.etaMinutes} min`;
-    if (saving > 0) why += `, and ₹${Math.round(saving / 100)} cheaper than the next`;
-    else why += `, best value right now`;
+    say(`Best overall, ${rating}★, ${minutes} min`, "bestOverall", { rating, minutes });
+    if (saving > 0) say(`, and ₹${rupees} cheaper than the next`, "cheaperThanNext", { rupees });
+    else say(", best value right now", "bestValue");
   }
   if (topRated.rating > best.rating && priority !== "rating") {
-    why += `. Want the highest rated? ${topRated.restaurant} is ${topRated.rating}★`;
+    say(`. Want the highest rated? ${topRated.restaurant} is ${topRated.rating}★`, "higherRated", {
+      restaurant: topRated.restaurant,
+      rating: String(topRated.rating),
+    });
   }
 
   // Measured against the price the customer named, which is what the banner
@@ -429,6 +462,7 @@ export function recommendFood(
     best,
     alternatives,
     why,
+    whyParts,
     substituted,
     overBudgetPaise,
     pickReason: reasonForPriority(priority),
