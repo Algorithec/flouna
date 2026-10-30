@@ -8,7 +8,8 @@ import { buildRideCancel, buildRideConfirm, buildRideInit, buildRideSearch, buil
 import { parseRideOnSearch, readRideOnInit, readRideOnSelect, readRideState, readRideTrack, type RideOffer, type RidePaymentTerms } from "./rideReplies.js";
 import { stdCodeFor } from "./search.service.js";
 import type { SigningIdentity } from "./signing.js";
-import { GATEWAY_URL, sendSigned, type SendResult } from "./transport.js";
+import { sendSigned, type SendResult } from "./transport.js";
+import { searchUrl } from "./workbench.js";
 import { fareChangedProblem, PROBLEM, problemCode } from "./problems.js";
 
 // Booking a ride with an ONDC ride provider (TRV10 2.0.1).
@@ -175,7 +176,7 @@ export async function startRideSearch(userId: string, input: { pickup: PlaceInpu
     staticTermsUrl: terms.staticTermsUrl,
     delayInterestPercent: terms.delayInterestPercent,
   });
-  const ok = await sendStep(ride, "search", envelope, null, deps, GATEWAY_URL[env.ONDC_REGISTRY_ENV]);
+  const ok = await sendStep(ride, "search", envelope, null, deps, await searchUrl(userId, "ONDC:TRV10"));
   if (!ok) {
     await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "failed", problem: PROBLEM.searchRefused } });
   }
