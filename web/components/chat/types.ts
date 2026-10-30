@@ -116,6 +116,8 @@ type ShopRec = {
   best: ProductQuote;
   alternatives: ProductQuote[];
   why: string;
+  /** `why`, fragment by fragment, for the reader's language. */
+  whyParts?: { code: string; params?: Record<string, string> }[];
   personalNote?: string;
   pickReason?: PickReason;
 };
