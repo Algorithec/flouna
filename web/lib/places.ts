@@ -65,7 +65,8 @@ export async function resolvePlace(
     return { name: s.name, area: s.area, lat: s.lat, lng: s.lng };
   }
   if (!s.placeId) return null;
-  const params = new URLSearchParams({ id: s.placeId });
+  // The name goes along so the lookup only pays Google for coordinates.
+  const params = new URLSearchParams({ id: s.placeId, name: s.name });
   if (session) params.set("session", session);
   try {
     const d = await api<{ place: ResolvedPlace }>(`/api/rides/place?${params}`);
