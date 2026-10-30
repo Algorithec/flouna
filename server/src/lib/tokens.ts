@@ -11,6 +11,11 @@ import type { Role } from "./rbac.js";
 // alone — without the email OTP — cannot reach the back-office.
 export type AccessPayload = { sub: string; role: Role; step?: boolean };
 
+// One algorithm, named on both sides. Left to the library, verify accepts any
+// HMAC algorithm the header asks for, so the header, which the client sends,
+// would be choosing how its own signature is checked.
+const ALGORITHM = "HS256" as const;
+
 export function signAccessToken(
   userId: string,
   role: Role = "user",
@@ -20,6 +25,7 @@ export function signAccessToken(
     { sub: userId, role, ...(stepUp ? { step: true } : {}) } satisfies AccessPayload,
     env.JWT_ACCESS_SECRET,
     {
+      algorithm: ALGORITHM,
       expiresIn: env.ACCESS_TOKEN_TTL as jwt.SignOptions["expiresIn"],
     },
   );
@@ -27,7 +33,7 @@ export function signAccessToken(
 
 export function verifyAccessToken(token: string): AccessPayload | null {
   try {
-    return jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessPayload;
+    return jwt.verify(token, env.JWT_ACCESS_SECRET, { algorithms: [ALGORITHM] }) as AccessPayload;
   } catch {
     return null;
   }
