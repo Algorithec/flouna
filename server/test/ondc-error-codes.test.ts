@@ -107,6 +107,32 @@ describe("ONDC error codes", () => {
     expect(res.body.error.code).toBe("20001");
   });
 
+  // The www.flouna.com subscriptions are registered with
+  // https://www.flouna.com/api/ondc, which the web app proxies to /api/ondc.
+  it("every callback answers under /api/ondc exactly as under /ondc", async () => {
+    const { CALLBACK_ACTIONS } = await import("../src/modules/ondc/callbacks.routes.js");
+    for (const a of CALLBACK_ACTIONS) {
+      for (const prefix of ["/ondc", "/api/ondc"]) {
+        const res = await request(fullApp).post(`${prefix}/${a}`).set("Content-Type", "application/json").send("{}");
+        expect([prefix, a, res.status]).toEqual([prefix, a, 401]);
+        expect(res.body.error.code).toBe("20001");
+      }
+    }
+  });
+
+  it("a signed callback under /api/ondc reaches the signature check", async () => {
+    const b = body();
+    const res = await request(fullApp).post("/api/ondc/on_confirm").set("Content-Type", "application/json").set("Authorization", sign(b)).send(b);
+    expect(res.status).not.toBe(404);
+    expect(res.body.message.ack.status).toBe("NACK");
+  });
+
+  it("the app's own /api/ondc routes are not taken for callbacks", async () => {
+    const res = await request(fullApp).get("/api/ondc/mine");
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBeUndefined();
+  });
+
   it("no refusal anywhere uses a gateway code", async () => {
     const src = (await import("node:fs")).readFileSync;
     for (const f of ["src/modules/ondc/callbacks.routes.ts", "src/app.ts"]) {
