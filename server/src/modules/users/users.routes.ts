@@ -773,9 +773,29 @@ usersRouter.get("/usual", async (req, res, next) => {
 // defaults. `icon` is a string key the web maps to an icon component (React
 // components can't cross the JSON boundary).
 
+/**
+ * Every chip label as a code the app translates (`chip.<code>`). The prompt a
+ * chip sends stays English: the chat reads it, and does not yet read dish names
+ * written in Indian scripts.
+ */
+export const CHIP_CODES = [
+  "breakfast",
+  "lunch",
+  "dinner",
+  "lateNight",
+  "pizza",
+  "ride",
+  "laptop",
+  "cab",
+  "thali",
+  "reorder",
+  "rideTo",
+] as const;
+type ChipCode = { code: (typeof CHIP_CODES)[number]; params?: Record<string, string> };
+
 // `dishId` marks a reorder chip, so the home screen can leave it out when its
 // "your usual" shortcut already offers the same dish.
-type Suggestion = { label: string; prompt: string; icon: string; theme: string; dishId?: string };
+type Suggestion = { label: string; code: ChipCode; prompt: string; icon: string; theme: string; dishId?: string };
 
 // Time-of-day food nudge — what most people are deciding right now.
 function mealSuggestion(now = new Date()): Suggestion {
@@ -783,21 +803,21 @@ function mealSuggestion(now = new Date()): Suggestion {
   // eight in the evening.
   const h = istHour(now);
   if (h < 11)
-    return { label: "Breakfast picks", prompt: "Find me a quick breakfast under ₹150", icon: "coffee", theme: "amber" };
+    return { label: "Breakfast picks", code: { code: "breakfast" }, prompt: "Find me a quick breakfast under ₹150", icon: "coffee", theme: "amber" };
   if (h < 16)
-    return { label: "Lunch under ₹200", prompt: "Best lunch near me under ₹200", icon: "utensils", theme: "orange" };
+    return { label: "Lunch under ₹200", code: { code: "lunch" }, prompt: "Best lunch near me under ₹200", icon: "utensils", theme: "orange" };
   if (h < 21)
-    return { label: "Dinner ideas", prompt: "What's good for dinner tonight?", icon: "utensils", theme: "orange" };
-  return { label: "Late-night bites", prompt: "Late-night food open now", icon: "moon", theme: "purple" };
+    return { label: "Dinner ideas", code: { code: "dinner" }, prompt: "What's good for dinner tonight?", icon: "utensils", theme: "orange" };
+  return { label: "Late-night bites", code: { code: "lateNight" }, prompt: "Late-night food open now", icon: "moon", theme: "purple" };
 }
 
 // Pool of generic chips for filling empty slots (new users / sparse history).
 const DEFAULT_SUGGESTIONS: Suggestion[] = [
-  { label: "Order pizza", prompt: "Order a pizza under ₹300", icon: "pizza", theme: "orange" },
-  { label: "Book a ride", prompt: "Book a ride to ", icon: "mapPin", theme: "blue" },
-  { label: "Shop a laptop", prompt: "Find me a gaming laptop under ₹70000", icon: "shoppingBag", theme: "purple" },
-  { label: "Cheapest cab", prompt: "Find the cheapest cab right now", icon: "car", theme: "blue" },
-  { label: "Veg thali", prompt: "Best veg thali near me", icon: "utensils", theme: "green" },
+  { label: "Order pizza", code: { code: "pizza" }, prompt: "Order a pizza under ₹300", icon: "pizza", theme: "orange" },
+  { label: "Book a ride", code: { code: "ride" }, prompt: "Book a ride to ", icon: "mapPin", theme: "blue" },
+  { label: "Shop a laptop", code: { code: "laptop" }, prompt: "Find me a gaming laptop under ₹70000", icon: "shoppingBag", theme: "purple" },
+  { label: "Cheapest cab", code: { code: "cab" }, prompt: "Find the cheapest cab right now", icon: "car", theme: "blue" },
+  { label: "Veg thali", code: { code: "thali" }, prompt: "Best veg thali near me", icon: "utensils", theme: "green" },
 ];
 
 usersRouter.get("/suggestions", async (req, res, next) => {
@@ -850,6 +870,7 @@ usersRouter.get("/suggestions", async (req, res, next) => {
       const [dishId, { name }] = topDish;
       add({
         label: `Reorder ${name}`,
+        code: { code: "reorder", params: { name } },
         prompt: `Order ${name} again`,
         icon: "rotate",
         theme: "orange",
@@ -862,6 +883,7 @@ usersRouter.get("/suggestions", async (req, res, next) => {
     if (topDrop && topDrop[1] >= 2) {
       add({
         label: `Ride to ${topDrop[0]}`,
+        code: { code: "rideTo", params: { place: topDrop[0] } },
         prompt: `Book a ride to ${topDrop[0]}`,
         icon: "mapPin",
         theme: "blue",
