@@ -1,0 +1,11 @@
+# Build output and machine-specific paths
+.gradle/
+build/
+app/build/
+local.properties
+
+# The upload key and its passwords. Never commit them: whoever holds the key
+# can publish updates to the app.
+*.jks
+*.keystore
+keystore.properties
