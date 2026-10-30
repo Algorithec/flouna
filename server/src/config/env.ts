@@ -141,6 +141,12 @@ const envSchema = z.object({
   // The unique key id ONDC issued with the signing key above. Together they
   // identify us on every signed message and registry lookup.
   ONDC_UNIQUE_KEY_ID: z.string().optional(),
+  // ONDC registers each domain with its own key pair. The two above sign food
+  // (ONDC:RET11) and everything that is not a ride; these sign ride messages
+  // (ONDC:TRV10) when set, as the TRV10 entry in the registry expects. Set
+  // together. See ondc/identity.ts.
+  ONDC_UNIQUE_KEY_ID_TRV10: z.string().optional(),
+  ONDC_SIGNING_PRIVATE_KEY_TRV10: z.string().optional(),
   // Network Observability tokens from the ONDC portal, one per business
   // profile. Unset, nothing is logged to ONDC for that profile.
   ONDC_NO_TOKEN_RETAIL: z.string().optional(),
@@ -250,6 +256,9 @@ if (isProd) {
     ondcTerms = commercialTerms(process.env);
   } catch (err) {
     problems.push((err as Error).message);
+  }
+  if (Boolean(env.ONDC_UNIQUE_KEY_ID_TRV10) !== Boolean(env.ONDC_SIGNING_PRIVATE_KEY_TRV10)) {
+    problems.push("ONDC_UNIQUE_KEY_ID_TRV10 and ONDC_SIGNING_PRIVATE_KEY_TRV10 are set together: one without the other signs ride messages with a key ONDC does not have");
   }
   if (env.PROVIDER_MODE === "ondc" && !env.ONDC_SUBSCRIBER_ID) {
     problems.push("PROVIDER_MODE=ondc but ONDC_SUBSCRIBER_ID is unset, the adapter cannot sign requests");
