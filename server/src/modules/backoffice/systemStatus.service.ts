@@ -86,12 +86,12 @@ export async function systemAlerts(): Promise<{ alerts: SystemAlert[]; counts: {
   // ONDC orders a seller has not answered. A paid one is critical: the
   // customer's money is held with no order placed.
   const waiting = await ordersWaitingOnSeller();
-  const paidStuck = waiting.filter((w) => w.status === "confirming" && w.paidPaise != null);
+  const paidStuck = waiting.filter((w) => (w.status === "confirming" || w.status === "paid") && w.paidPaise != null);
   if (paidStuck.length > 0) {
     alerts.push({
       severity: "critical",
       source: "ondc",
-      message: `${paidStuck.length} paid ONDC order${paidStuck.length > 1 ? "s have" : " has"} waited over 10 minutes for the seller to confirm. Check with the seller, then place it again or refund.`,
+      message: `${paidStuck.length} paid ONDC order${paidStuck.length > 1 ? "s are" : " is"} not placed with the seller after 10 minutes. Check with the seller, then place it again or refund.`,
       at: new Date(),
     });
   }

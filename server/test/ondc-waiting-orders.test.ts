@@ -60,11 +60,30 @@ describe("orders waiting on a seller", () => {
     expect(waiting[1]).toMatchObject({ status: "selecting", paidPaise: null });
   });
 
-  it("raises a paid order nobody confirmed as critical in the alerts feed", async () => {
+  it("lists a paid order that never reached the seller, sent or not", async () => {
+    const neverSent = await order({ status: "paid", awaiting: false, paid: true, minutesAgo: 15 });
+    const refused = await order({ status: "paid", paid: true, minutesAgo: 11 });
+    const justPaid = await order({ status: "paid", paid: true, minutesAgo: 2 });
+    const ours = new Set([neverSent, refused, justPaid]);
+    const waiting = (await ordersWaitingOnSeller()).filter((w) => ours.has(w.id));
+    expect(waiting.map((w) => [w.id, w.status, w.paidPaise])).toEqual([
+      [neverSent, "paid", 47500],
+      [refused, "paid", 47500],
+    ]);
+  });
+
+  it("raises paid orders not placed, confirming or never sent, as critical in the alerts feed", async () => {
+    const stuckCount = async () => {
+      const { alerts } = await systemAlerts();
+      const critical = alerts.find((a) => a.source === "ondc" && a.severity === "critical");
+      if (critical) expect(critical.message).toMatch(/paid ONDC orders? (is|are) not placed with the seller after 10 minutes/);
+      return Number(critical?.message.match(/^(\d+) /)?.[1] ?? 0);
+    };
+    const before = await stuckCount();
     await order({ status: "confirming", paid: true, minutesAgo: 15 });
-    const { alerts } = await systemAlerts();
-    const critical = alerts.find((a) => a.source === "ondc" && a.severity === "critical");
-    expect(critical?.message).toMatch(/paid ONDC orders? (has|have) waited over 10 minutes for the seller to confirm/);
+    expect(await stuckCount()).toBe(before + 1);
+    await order({ status: "paid", awaiting: false, paid: true, minutesAgo: 15 });
+    expect(await stuckCount()).toBe(before + 2);
   });
 
   it("shows them on the ONDC operations page", async () => {

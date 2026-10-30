@@ -52,6 +52,7 @@ type Network = {
 const WAITING_FOR: Record<string, string> = {
   selecting: "a quote",
   initialising: "final terms",
+  paid: "the order to reach it (paid, not placed)",
   confirming: "confirmation",
   cancelling: "a cancellation answer",
 };

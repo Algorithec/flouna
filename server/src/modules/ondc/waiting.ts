@@ -13,10 +13,18 @@ import { prisma } from "../../lib/prisma.js";
 // a confirm the seller did act on but never answered is a real order, and
 // refunding it on a timer would give the food away.
 
-/** How long each step may wait for the seller before somebody should look. */
+/**
+ * How long each step may wait for the seller before somebody should look.
+ *
+ * "paid" is not a wait for an answer: a paid order is sent to the seller at
+ * once and moves on to confirming. One still paid after ten minutes never
+ * reached the seller (it refused the confirm, or could not be reached), and
+ * the customer is only offered to place it again, so it is listed too.
+ */
 export const WAIT_LIMIT_MS = {
   selecting: 5 * 60_000,
   initialising: 5 * 60_000,
+  paid: 10 * 60_000,
   confirming: 10 * 60_000,
   cancelling: 30 * 60_000,
 } as const;
@@ -36,8 +44,8 @@ export async function ordersWaitingOnSeller(now = new Date()): Promise<WaitingOr
   const shortest = Math.min(...Object.values(WAIT_LIMIT_MS));
   const rows = await prisma.ondcOrder.findMany({
     where: {
-      status: { in: Object.keys(WAIT_LIMIT_MS) },
-      awaitingMsgId: { not: null },
+      // A paid order is listed whether or not its confirm was ever sent.
+      OR: [{ status: { in: Object.keys(WAIT_LIMIT_MS).filter((k) => k !== "paid") }, awaitingMsgId: { not: null } }, { status: "paid" }],
       // updatedAt moves when the step is sent, and again on any answer.
       updatedAt: { lt: new Date(now.getTime() - shortest) },
     },
