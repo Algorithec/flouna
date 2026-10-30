@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 import { StatCard, PageTitle } from "@/components/console/ConsoleShell";
 import { ConsolePage, Card, Empty, rupeesCompact } from "@/components/console/ui";
 import { LineChartC, BarChartC } from "@/components/console/charts";
@@ -18,8 +18,6 @@ type Growth = {
     gmvLastWeekPaise: number;
   };
 };
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 // "2026-07-02" → "2 Jul" for compact chart axes.
 function shortDay(iso: string): string {

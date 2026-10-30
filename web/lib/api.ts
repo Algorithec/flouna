@@ -6,7 +6,9 @@ import { dictionaries } from "@/lib/i18n/dictionaries";
 import { savedLang } from "@/lib/i18n/lang";
 
 const configured = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-const API_URL = configured === "/" ? "" : configured.replace(/\/$/, "");
+/** Where API requests go: "" for same origin, else a full origin. For the few
+    requests that cannot use api(), such as a file download. */
+export const API_URL = configured === "/" ? "" : configured.replace(/\/$/, "");
 
 export class ApiClientError extends Error {
   constructor(
