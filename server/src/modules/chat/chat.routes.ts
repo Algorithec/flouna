@@ -615,7 +615,8 @@ chatRouter.post(
             sessionId: session.id,
             role: "assistant",
             content: acted.reply,
-            intent: JSON.stringify({ domain: "action", action: acted.action }),
+            // `reading` is training data (trainingExport.ts) and never leaves the server.
+            intent: JSON.stringify({ domain: "action", action: acted.action, reading: payload.intent }),
             provider: payload.served?.provider ?? null,
             providerDepth: payload.served?.depth ?? null,
           },
@@ -638,6 +639,9 @@ chatRouter.post(
           intent: JSON.stringify({
             domain: payload.intent.domain,
             recommendation: payload.recommendation ?? null,
+            // What the model read the message as, kept as training data for our
+            // own engine (trainingExport.ts). Never sent back to the browser.
+            reading: payload.intent,
           }),
           provider: payload.served?.provider ?? null,
           providerDepth: payload.served?.depth ?? null,
@@ -778,6 +782,16 @@ chatRouter.delete("/sessions/:id", async (req, res, next) => {
   }
 });
 
+/** A stored message's JSON as the browser may see it: without the model's reading. */
+function shownPart(intent: string): Record<string, unknown> {
+  try {
+    const { reading: _reading, ...shown } = JSON.parse(intent) as Record<string, unknown>;
+    return shown;
+  } catch {
+    return {};
+  }
+}
+
 chatRouter.get("/sessions/:id", async (req, res, next) => {
   try {
     const session = await prisma.chatSession.findFirst({
@@ -804,7 +818,7 @@ chatRouter.get("/sessions/:id", async (req, res, next) => {
           // timestamp, and so does the live one the moment the URL gains a
           // ?chat= and the client swaps its local list for this response.
           at: m.createdAt.toISOString(),
-          ...(m.intent ? (() => { try { return JSON.parse(m.intent); } catch { return {}; } })() : {}),
+          ...(m.intent ? shownPart(m.intent) : {}),
         })),
       },
     });
