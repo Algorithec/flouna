@@ -6,6 +6,7 @@ import { requireAuth } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
 import { ApiError } from "../../middleware/error.js";
 import { checkMessage, FIREWALL_REPLIES } from "./firewall.js";
+import { codeForReply, foodNotFound, shopNotFound, type ReplyCode, type Said } from "./replies.js";
 import { llm, demoFallback } from "./llm/index.js";
 import { FallbackProvider } from "./llm/fallback.js";
 import type { Intent } from "./llm/types.js";
@@ -16,7 +17,7 @@ import {
   type FoodQuote,
 } from "../food/food.service.js";
 import type { NearestMiss } from "../advisor/constraints.js";
-import { quoteRidesTraced, unmetRideNote } from "../rides/rides.service.js";
+import { quoteRidesTraced, unmetRideNote, unmetRideSaid } from "../rides/rides.service.js";
 import { withCommunityRatings, allCommunityRatings } from "../ratings/ratings.service.js";
 import { recommendProduct } from "../shop/shop.service.js";
 import { adviseFood, adviseRide } from "../advisor/advisor.service.js";
@@ -51,12 +52,23 @@ const rupees = (paise: number) => `₹${Math.round(paise / 100)}`;
  * option is offered as information. It is not recommended: offering it as the
  * pick would undo the limit the customer set.
  */
-function unmetFoodReply(item: string, unmet: NearestMiss<FoodQuote>): string {
+function unmetFoodReply(item: string, unmet: NearestMiss<FoodQuote>): Said {
   const q = unmet.item;
+  const { name, restaurant } = q;
   if (unmet.rule === "max_price") {
-    return `Nothing for "${item}" comes in under ${rupees(q.effectivePaise - unmet.by)} right now. The closest is ${rupees(q.effectivePaise)} for ${q.name} at ${q.restaurant}.`;
+    const limit = rupees(q.effectivePaise - unmet.by);
+    const closest = rupees(q.effectivePaise);
+    return {
+      reply: `Nothing for "${item}" comes in under ${limit} right now. The closest is ${closest} for ${name} at ${restaurant}.`,
+      replyCode: { code: "foodOverPrice", params: { item, limit, closest, name, restaurant } },
+    };
   }
-  return `Nothing for "${item}" arrives within ${q.etaMinutes - unmet.by} minutes right now. The quickest is ${q.etaMinutes} minutes, ${q.name} at ${q.restaurant}.`;
+  const minutes = String(q.etaMinutes - unmet.by);
+  const closestMinutes = String(q.etaMinutes);
+  return {
+    reply: `Nothing for "${item}" arrives within ${minutes} minutes right now. The quickest is ${closestMinutes} minutes, ${name} at ${restaurant}.`,
+    replyCode: { code: "foodOverTime", params: { item, minutes, closestMinutes, name, restaurant } },
+  };
 }
 
 export const chatRouter = Router();
@@ -74,6 +86,8 @@ const chatLimit = rateLimit({
 
 type AssistantPayload = {
   reply: string;
+  /** The reply as a code for the reader's language, when it is one of ours. */
+  replyCode?: ReplyCode;
   intent: Intent;
   recommendation?: unknown;
   /** Which model produced the intent, for the training corpus. */
@@ -262,7 +276,7 @@ async function buildAssistantPayload(
           : null,
         // Why the food half is empty, when the reason is the customer's own
         // limit rather than an unmatched dish.
-        ...(foodUnmet ? { foodNote: unmetFoodReply(intent.food.item, foodUnmet) } : {}),
+        ...(foodUnmet ? { foodNote: unmetFoodReply(intent.food.item, foodUnmet).reply } : {}),
         ride: {
           ...(comboRideDecisionId ? { decisionId: comboRideDecisionId } : {}),
           drop: intent.ride.drop,
@@ -362,13 +376,9 @@ async function buildAssistantPayload(
     // "there is no biryani".
     const { unmet } = searchFoodTraced(searchOpts);
     if (unmet) {
-      return { reply: unmetFoodReply(intent.food.item, unmet), intent, served };
+      return { ...unmetFoodReply(intent.food.item, unmet), intent, served };
     }
-    return {
-      reply: `I couldn't find "${intent.food.item}" near you right now, try biryani, pizza, dosa, or a thali?`,
-      intent,
-      served,
-    };
+    return { ...foodNotFound(intent.food.item), intent, served };
   }
 
   if (intent.domain === "ride" && intent.ride) {
@@ -392,11 +402,8 @@ async function buildAssistantPayload(
       constraints: { maxPickupMinutes: intent.ride.maxPickupMinutes ?? null },
     });
     if (baseQuotes.length === 0 && unmet) {
-      return {
-        reply: unmetRideNote(unmet),
-        intent,
-        served,
-      };
+      const said = unmetRideSaid(unmet);
+      return { reply: said.text, replyCode: said.code, intent, served };
     }
     const quotes = await withCommunityRatings("ride", baseQuotes, (q) => q.provider);
     if (quotes[0]) recordObservation("ride", quotes[0].vehicle, quotes[0].effectivePaise);
@@ -474,11 +481,7 @@ async function buildAssistantPayload(
         },
       };
     }
-    return {
-      reply: `I couldn't find "${intent.shop.item}" right now, try a laptop, earbuds, shoes, or a smartwatch?`,
-      intent,
-      served,
-    };
+    return { ...shopNotFound(intent.shop.item), intent, served };
   }
 
   return { reply: intent.reply, intent };
@@ -540,6 +543,7 @@ chatRouter.post(
             id: `tmp-${Date.now()}`,
             role: "assistant",
             content: payload.reply,
+            replyCode: payload.replyCode ?? codeForReply(payload.reply) ?? null,
             domain: payload.intent.domain,
             recommendation: payload.recommendation ?? null,
           },
@@ -630,6 +634,9 @@ chatRouter.post(
       // What was shown becomes what "that" and "the second one" refer to.
       await saveState(session.id, rememberRecommendation(memory, payload.recommendation, message.trim()), { readAt: memoryReadAt });
 
+      // Kept with the message, so a chat reopened later is still in the
+      // reader's language.
+      const replyCode = payload.replyCode ?? codeForReply(payload.reply) ?? null;
       const assistantMessage = await prisma.chatMessage.create({
         data: {
           sessionId: session.id,
@@ -638,6 +645,7 @@ chatRouter.post(
           intent: JSON.stringify({
             domain: payload.intent.domain,
             recommendation: payload.recommendation ?? null,
+            replyCode,
           }),
           provider: payload.served?.provider ?? null,
           providerDepth: payload.served?.depth ?? null,
@@ -650,6 +658,7 @@ chatRouter.post(
           id: assistantMessage.id,
           role: "assistant",
           content: payload.reply,
+          replyCode,
           at: assistantMessage.createdAt.toISOString(),
           domain: payload.intent.domain,
           recommendation: payload.recommendation ?? null,

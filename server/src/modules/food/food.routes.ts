@@ -16,6 +16,7 @@ import { adviseFood } from "../advisor/advisor.service.js";
 import { recordObservation } from "../advisor/priceHistory.service.js";
 import { prisma } from "../../lib/prisma.js";
 import { istDayKey } from "../../lib/istTime.js";
+import { toEnglishTerms } from "../../lib/indicTerms.js";
 import { repairTypos } from "../chat/llm/demo.js";
 
 export const foodRouter = Router();
@@ -68,7 +69,10 @@ foodRouter.get("/search", async (req, res, next) => {
     // because a phone capitalises the first letter of a search box and the
     // repair leaves capitalised words alone as names.
     const typed = parsed.q.toLowerCase();
-    const query = repairTypos(typed);
+    // A dish typed in an Indian script is read as the catalogue's word for it.
+    // That is not a correction, so only a typo repair is reported back below.
+    const english = toEnglishTerms(typed);
+    const query = repairTypos(english);
     const { quotes, substituted } = searchFoodTraced({
       query,
       budgetPaise: parsed.budget ? parsed.budget * 100 : null,
@@ -83,7 +87,7 @@ foodRouter.get("/search", async (req, res, next) => {
       // Nothing matched and the menu was shown instead. The screen used to
       // list it under "Results" as if it had been asked for.
       substituted,
-      ...(query !== typed ? { searchedFor: query } : {}),
+      ...(query !== english ? { searchedFor: query } : {}),
     });
   } catch (err) {
     next(err);

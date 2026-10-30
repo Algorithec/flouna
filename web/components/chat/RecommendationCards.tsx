@@ -174,7 +174,7 @@ export function FoodRecommendation({
         </p>
       )}
 
-      <WhyBest best={rec.best} alternatives={rec.alternatives} why={rec.why} />
+      <WhyBest best={rec.best} alternatives={rec.alternatives} why={rec.why} whyParts={rec.whyParts} />
 
       <ProvidersHeader count={1 + allAlts.length} />
 
@@ -536,7 +536,7 @@ export function ShopRecommendation({
     <ResultStack>
       <PickBadge reason={rec.pickReason} />
       <PersonalNote note={rec.personalNote} />
-      <ShopWhyBest why={rec.why} best={rec.best} alternatives={rec.alternatives} />
+      <ShopWhyBest why={rec.why} whyParts={rec.whyParts} best={rec.best} alternatives={rec.alternatives} />
       <ProvidersHeader count={1 + allAlts.length} />
       <ShopHeroCard q={rec.best} />
       {alts.length > 0 && (

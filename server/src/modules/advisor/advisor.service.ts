@@ -6,9 +6,37 @@ import { predictFromHistory } from "./priceHistory.service.js";
 import type { DecisionContext } from "./context.service.js";
 import { istHour, istStartOfDay } from "../../lib/istTime.js";
 
+/**
+ * Every sentence the advisor can say, as a code the app translates (`adv.m.<code>`
+ * in its dictionaries). `minutes` arrives as a number of minutes and the app
+ * writes it in the reader's units.
+ */
+export const ADVICE_CODES = [
+  "foodLiveLunch",
+  "foodLiveSnack",
+  "foodLiveDinner",
+  "foodSoonLunch",
+  "foodSoonSnack",
+  "foodSoonDinner",
+  "foodNone",
+  "rideEasing",
+  "ridePeak",
+  "rideOffPeak",
+  "historyWaitFood",
+  "historyWaitRide",
+  "historyNow",
+  "foodHeavyRain",
+  "foodRain",
+  "rideHeavyRain",
+  "rideRain",
+] as const;
+export type AdviceCode = { code: (typeof ADVICE_CODES)[number]; params?: Record<string, string> };
+
 export type Advice = {
   action: "order_now" | "wait";
+  // In English; `code` is the same sentence for the app to put in the reader's language.
   message: string;
+  code?: AdviceCode;
   // "history" once we have enough observed data, else "rules"
   source?: "history" | "rules";
   // present only for "wait"
@@ -17,10 +45,13 @@ export type Advice = {
   // A short context note layered on top (e.g. weather) — additive, never
   // overrides the timing call.
   contextNote?: string;
+  noteCode?: AdviceCode;
 };
 
 type FoodWindow = {
   label: string;
+  live: AdviceCode["code"];
+  soon: AdviceCode["code"];
   startHour: number; // inclusive
   endHour: number; // exclusive
   savingPaise: number;
@@ -28,9 +59,9 @@ type FoodWindow = {
 
 // Typical platform promo windows (IST).
 const FOOD_WINDOWS: FoodWindow[] = [
-  { label: "lunch-hour deal", startHour: 12, endHour: 15, savingPaise: 4000 },
-  { label: "evening snack offer", startHour: 16, endHour: 18, savingPaise: 2500 },
-  { label: "dinner-time offer", startHour: 20, endHour: 23, savingPaise: 10000 },
+  { label: "lunch-hour deal", live: "foodLiveLunch", soon: "foodSoonLunch", startHour: 12, endHour: 15, savingPaise: 4000 },
+  { label: "evening snack offer", live: "foodLiveSnack", soon: "foodSoonSnack", startHour: 16, endHour: 18, savingPaise: 2500 },
+  { label: "dinner-time offer", live: "foodLiveDinner", soon: "foodSoonDinner", startHour: 20, endHour: 23, savingPaise: 10000 },
 ];
 
 const MAX_WORTH_WAITING_MINUTES = 120;
@@ -56,6 +87,7 @@ export function adviseFoodByRules(now: Date = new Date()): Advice {
     return {
       action: "order_now",
       message: `Good timing, the ${active.label} is live right now. Prices are at their best.`,
+      code: { code: active.live },
     };
   }
 
@@ -72,6 +104,7 @@ export function adviseFoodByRules(now: Date = new Date()): Advice {
     return {
       action: "wait",
       message: `Flat ₹${rupees} off expected with the ${upcoming.window.label} in about ${formatWait(upcoming.inMinutes)}. Order now, or wait and save?`,
+      code: { code: upcoming.window.soon, params: { rupees: String(rupees), minutes: String(upcoming.inMinutes) } },
       expectedSavingPaise: upcoming.window.savingPaise,
       waitMinutes: upcoming.inMinutes,
     };
@@ -80,6 +113,7 @@ export function adviseFoodByRules(now: Date = new Date()): Advice {
   return {
     action: "order_now",
     message: "No better offer window coming up soon, now is a fine time to order.",
+    code: { code: "foodNone" },
   };
 }
 
@@ -100,6 +134,7 @@ export function adviseRideByRules(now: Date = new Date()): Advice {
       return {
         action: "wait",
         message: `Peak-hour pricing is easing in about ${formatWait(minutesLeft)}, fares may drop around ₹${rupees}.`,
+        code: { code: "rideEasing", params: { rupees: String(rupees), minutes: String(minutesLeft) } },
         expectedSavingPaise: surge.dropPaise,
         waitMinutes: minutesLeft,
       };
@@ -108,12 +143,14 @@ export function adviseRideByRules(now: Date = new Date()): Advice {
       action: "order_now",
       message:
         "It's peak commute time, fares are elevated everywhere, and waiting won't help for a while. Booking now is reasonable.",
+      code: { code: "ridePeak" },
     };
   }
 
   return {
     action: "order_now",
     message: "Off-peak right now, fares are at their lowest. Good time to book.",
+    code: { code: "rideOffPeak" },
   };
 }
 
@@ -124,26 +161,28 @@ function formatWait(minutes: number): string {
   return m === 0 ? `${h} hr` : `${h} hr ${m} min`;
 }
 
+type Note = { contextNote: string; noteCode: AdviceCode };
+
 // Weather context layered onto food advice: when it's wet, in-app delivery is
 // the comfortable call and delivery times run a little longer.
-function foodContextNote(ctx?: DecisionContext): string | undefined {
+function foodContextNote(ctx?: DecisionContext): Note | undefined {
   if (!ctx) return undefined;
   const w = ctx.weather;
   if (w.condition === "heavy_rain")
-    return "It's pouring out, delivery may run a bit slow, but you stay dry by ordering in.";
+    return { contextNote: "It's pouring out, delivery may run a bit slow, but you stay dry by ordering in.", noteCode: { code: "foodHeavyRain" } };
   if (w.condition === "rain" || (w.rainChance ?? 0) >= 0.5)
-    return "Rain about, a good time to order in rather than head out.";
+    return { contextNote: "Rain about, a good time to order in rather than head out.", noteCode: { code: "foodRain" } };
   return undefined;
 }
 
 // Weather context layered onto ride advice: rain drives demand and surge.
-function rideContextNote(ctx?: DecisionContext): string | undefined {
+function rideContextNote(ctx?: DecisionContext): Note | undefined {
   if (!ctx) return undefined;
   const w = ctx.weather;
   if (w.condition === "heavy_rain")
-    return "Heavy rain, rides are in high demand and fares are surging. Book early if you must travel.";
+    return { contextNote: "Heavy rain, rides are in high demand and fares are surging. Book early if you must travel.", noteCode: { code: "rideHeavyRain" } };
   if (w.condition === "rain" || (w.rainChance ?? 0) >= 0.5)
-    return "Rain expected, fares tend to rise and cabs get scarce. Booking sooner is safer.";
+    return { contextNote: "Rain expected, fares tend to rise and cabs get scarce. Booking sooner is safer.", noteCode: { code: "rideRain" } };
   return undefined;
 }
 
@@ -159,9 +198,9 @@ export async function adviseFood(
   const note = foodContextNote(ctx);
   if (dishKey) {
     const learned = await predictFromHistory("food", dishKey, now);
-    if (learned) return note ? { ...learned, contextNote: note } : learned;
+    if (learned) return { ...learned, ...note };
   }
-  return { ...adviseFoodByRules(now), source: "rules", ...(note ? { contextNote: note } : {}) };
+  return { ...adviseFoodByRules(now), source: "rules", ...note };
 }
 
 export async function adviseRide(
@@ -172,7 +211,7 @@ export async function adviseRide(
   const note = rideContextNote(ctx);
   if (vehicleKey) {
     const learned = await predictFromHistory("ride", vehicleKey, now);
-    if (learned) return note ? { ...learned, contextNote: note } : learned;
+    if (learned) return { ...learned, ...note };
   }
-  return { ...adviseRideByRules(now), source: "rules", ...(note ? { contextNote: note } : {}) };
+  return { ...adviseRideByRules(now), source: "rules", ...note };
 }
