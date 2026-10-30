@@ -1,3 +1,4 @@
+import { toEnglishTerms } from "../../../lib/indicTerms.js";
 import type { Intent, LlmProvider } from "./types.js";
 import { FIXED_REPLIES } from "../replies.js";
 
@@ -604,8 +605,17 @@ function readByRules(original: string, reasons: DoubtReason[]): Intent {
     // prime minister became a curry. Correcting a message that already
     // classified can only ever spoil it, so the repair sits behind the
     // refusal, where the worst case is that it changes nothing.
-    const repaired = repairTypos(original);
-    if (repaired === original) return first;
+    //
+    // Dish and ride words written in an Indian script come first: "पिज़्ज़ा"
+    // and "క్యాబ్" are words the rules know, spelled in a script they do not
+    // read. The message keeps its "other-language" doubt either way.
+    const english = toEnglishTerms(original);
+    if (english !== original) {
+      const read = classify(english);
+      if (read.domain !== "out_of_scope") return read;
+    }
+    const repaired = repairTypos(english);
+    if (repaired === english) return first;
     const second = classify(repaired);
     if (second.domain === "out_of_scope") return first;
     reasons.push("typo-repaired");
