@@ -4,6 +4,10 @@
      site's assetlinks.json names this app's signing key. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Android 13 and later show no notification until the app is allowed to.
+         The library asks when the site first asks for notifications. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -66,11 +70,20 @@
                 android:resource="@xml/filepaths" />
         </provider>
 
-        <!-- Lets the site's notifications show as this app's. -->
+        <!-- Asks for the notification permission on the site's behalf. -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.NotificationPermissionRequestActivity"
+            android:exported="false" />
+
+        <!-- Lets the site's notifications show as this app's, with a white
+             silhouette of the mark, which is how Android draws them. -->
         <service
             android:name="com.google.androidbrowserhelper.trusted.DelegationService"
             android:enabled="true"
             android:exported="true">
+            <meta-data
+                android:name="android.support.customtabs.trusted.SMALL_ICON"
+                android:resource="@drawable/ic_notification" />
             <intent-filter>
                 <action android:name="android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE" />
                 <category android:name="android.intent.category.DEFAULT" />
