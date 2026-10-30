@@ -8,6 +8,7 @@ import { buildSearch } from "./retail.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
 import { isOndcTester, searchUrl } from "./workbench.js";
+import { ondcIdentity } from "./identity.js";
 
 // Searching the ONDC network for food.
 //
@@ -63,9 +64,7 @@ export function stdCodeFor(city: string): string | null {
 type Send = (url: string, action: string, envelope: { context: Record<string, unknown>; message: unknown }, id: SigningIdentity) => Promise<SendResult>;
 
 function identity(): SigningIdentity | null {
-  return env.ONDC_SUBSCRIBER_ID && env.ONDC_UNIQUE_KEY_ID && env.ONDC_SIGNING_PRIVATE_KEY
-    ? { subscriberId: env.ONDC_SUBSCRIBER_ID, uniqueKeyId: env.ONDC_UNIQUE_KEY_ID, signingPrivateKey: env.ONDC_SIGNING_PRIVATE_KEY }
-    : null;
+  return ondcIdentity("ONDC:RET11");
 }
 
 export type StartOutcome = { searchId: string } | { unavailable: string };

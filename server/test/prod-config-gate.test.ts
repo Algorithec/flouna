@@ -142,6 +142,14 @@ describe("production config gate", () => {
     expect(undated.errors.join(" ")).toMatch(/ONDC_STATIC_TERMS_EFFECTIVE_DATE/);
   });
 
+  it("refuses half of the ride signing pair, which would sign rides with a key ONDC does not have", async () => {
+    const half = await loadEnv({ ONDC_UNIQUE_KEY_ID_TRV10: "0b46d048-ride" });
+    expect(half.exited).toBe(true);
+    expect(half.errors.join(" ")).toMatch(/ONDC_UNIQUE_KEY_ID_TRV10 and ONDC_SIGNING_PRIVATE_KEY_TRV10 are set together/);
+    const both = await loadEnv({ ONDC_UNIQUE_KEY_ID_TRV10: "0b46d048-ride", ONDC_SIGNING_PRIVATE_KEY_TRV10: "ride-private" });
+    expect(both.exited).toBe(false);
+  });
+
   it("warns without refusing when a feature is merely switched off", async () => {
     const { exited, warns } = await loadEnv({ LLM_PROVIDER: "demo" });
     expect(exited).toBe(false);
