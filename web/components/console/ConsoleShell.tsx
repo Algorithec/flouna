@@ -34,6 +34,7 @@ import {
   ShieldAlert,
   Gavel,
   Landmark,
+  Cpu,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useEscapeToClose } from "@/lib/useEscapeToClose";
@@ -64,7 +65,7 @@ const NAV: NavSection[] = [
       { href: "/console/admin/vendors", label: "Vendors / MSMEs", icon: Store, need: "admin" },
       { href: "/console/super", label: "Revenue & commissions", icon: Coins, need: "super_admin" },
       { href: "/console/super/refunds", label: "Refunds", icon: RotateCcw, need: "super_admin" },
-      { href: "/console/dev/network", label: "ONDC network", icon: Network, need: "developer" },
+      { href: "/console/dev/network", label: "ONDC operations", icon: Network, need: "developer" },
       { href: "/console/dev/transactions", label: "ONDC transactions", icon: ScrollText, need: "developer" },
     ],
   },
@@ -72,6 +73,7 @@ const NAV: NavSection[] = [
     section: "Intelligence",
     items: [
       { href: "/console/admin/decisions", label: "Decision logs", icon: Brain, need: "admin" },
+      { href: "/console/dev/model", label: "Model operations", icon: Cpu, need: "developer" },
       { href: "/console/admin/coupons", label: "Coupon engine", icon: Tags, need: "admin" },
       { href: "/console/admin/price-alerts", label: "Price alerts", icon: TrendingDown, need: "admin" },
     ],
