@@ -174,7 +174,7 @@ export function FoodRecommendation({
         </p>
       )}
 
-      <WhyBest best={rec.best} alternatives={rec.alternatives} why={rec.why} />
+      <WhyBest best={rec.best} alternatives={rec.alternatives} why={rec.why} whyParts={rec.whyParts} />
 
       <ProvidersHeader count={1 + allAlts.length} />
 

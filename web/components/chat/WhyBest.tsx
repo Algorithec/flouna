@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { Sparkles } from "lucide-react";
 import { rupees } from "@/lib/money";
+import { whyText } from "@/lib/whyText";
 import { DisagreeSheet } from "./DisagreeSheet";
 import { SearchedPlatforms } from "./PlatformMark";
 import { shopWhyText } from "@/lib/shopWhyText";
@@ -122,10 +123,12 @@ export function WhyBest({
   best,
   alternatives,
   why,
+  whyParts,
 }: {
   best: FoodQuote;
   alternatives: FoodQuote[];
   why?: string | null;
+  whyParts?: { code: string; params?: Record<string, string> }[];
 }) {
   const { t } = useI18n();
   const [disagreeing, setDisagreeing] = useState(false);
@@ -133,7 +136,7 @@ export function WhyBest({
   return (
     <>
       <ReasoningCard
-        summary={why}
+        summary={why ? whyText(t, why, whyParts) : why}
         reasons={foodReasons(best, alternatives, t)}
         platforms={[best.platform, ...alternatives.map((a) => a.platform)]}
         onDisagree={() => setDisagreeing(true)}
