@@ -83,7 +83,9 @@ export function commercialTerms(e: Env = process.env): CommercialTerms {
     unconfirmed.push("No ONDC settlement account is set, so sellers and ride providers have nowhere to pay the finder fee");
   }
 
-  const staticTermsUrl = checkedHttpsUrl(e.ONDC_STATIC_TERMS_URL?.trim() || "https://flouna.com/ondc/terms", "ONDC_STATIC_TERMS_URL");
+  // www, not the bare domain: flouna.com only redirects its home page, so
+  // https://flouna.com/ondc/terms answers 404.
+  const staticTermsUrl = checkedHttpsUrl(e.ONDC_STATIC_TERMS_URL?.trim() || "https://www.flouna.com/ondc/terms", "ONDC_STATIC_TERMS_URL");
   if (!e.ONDC_STATIC_TERMS_URL) {
     unconfirmed.push(`ONDC_STATIC_TERMS_URL is unset, so ride searches point at ${staticTermsUrl}, which must be published first`);
   }
