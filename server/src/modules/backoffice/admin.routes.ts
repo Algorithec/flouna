@@ -129,7 +129,7 @@ for (const [name, build] of Object.entries(REPORT_EXPORTS)) {
       const csv = await build(req);
       await auditFromReq(req, { action: `export.${name}`, targetType: "system", summary: `Exported the ${name} report` });
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename=${name}.csv`);
+      res.setHeader("Content-Disposition", `attachment; filename="${name}.csv"`);
       res.setHeader("Cache-Control", "no-store");
       // The byte order mark tells Excel the file is UTF-8, so a city or vendor
       // name outside ASCII opens as written.

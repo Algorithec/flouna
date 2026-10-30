@@ -128,7 +128,7 @@ describe("report exports", () => {
     const res = await agent.get("/api/console/admin/reports/cities.csv?state=Maharashtra&sort=city").expect(200);
     expect(res.headers["content-type"]).toMatch(/^text\/csv/);
     expect(res.headers["cache-control"]).toBe("no-store");
-    expect(res.headers["content-disposition"]).toBe("attachment; filename=cities.csv");
+    expect(res.headers["content-disposition"]).toBe(`attachment; filename="cities.csv"`);
     const lines = res.text.replace(/^﻿/, "").trim().split("\n");
     expect(res.text.startsWith("﻿")).toBe(true); // Excel reads it as UTF-8
     expect(lines[0]).toBe("Rank,City,State,Tier,Orders,GMV (INR),Saved (INR),Coverage");
