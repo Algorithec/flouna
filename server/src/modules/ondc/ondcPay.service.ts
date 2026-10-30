@@ -65,12 +65,23 @@ export async function settleOndcPayment(gatewayId: string, paidPaise: number, re
   if (order.paidAt) return { handled: true as const, outcome: "already_paid" as const };
 
   if (order.status === "ready_to_pay" && paidPaise === order.totalPaise) {
+    let marked = true;
     try {
       await markOndcOrderPaid(order.id, { amountPaise: paidPaise, reference });
-    } catch {
-      // Lost a race with a second delivery of the same payment.
-      return { handled: true as const, outcome: "already_paid" as const };
+    } catch (err) {
+      // Anything but a refusal (the database is down, say) is thrown, so the
+      // webhook fails and the gateway sends it again. Swallowing it answered
+      // the gateway OK and left a payment nobody recorded.
+      if (!(err instanceof ApiError && err.status === 409)) throw err;
+      // Refused: the order changed between reading it and marking it paid.
+      // Either a second delivery of this payment got there first, or the
+      // order moved on (cancelled, expired) and this money cannot buy it, in
+      // which case it is refunded below rather than kept for nothing.
+      const now = await prisma.ondcOrder.findUnique({ where: { id: order.id } });
+      if (!now || now.paidAt) return { handled: true as const, outcome: "already_paid" as const };
+      marked = false;
     }
+    if (!marked) return refundPayment(order.id, paidPaise, reference, "The order changed before the payment arrived, so it was refunded");
     await confirmOndcOrder(order.userId, order.id, deps).catch(async (err: unknown) => {
       // Paid and recorded; placing it can be retried from the app, which
       // offers that only when the order says why it is stuck.
@@ -85,18 +96,22 @@ export async function settleOndcPayment(gatewayId: string, paidPaise: number, re
 
   // Paid, but not for this order as it stands: the total changed, or it is no
   // longer waiting for payment. The money goes back in full.
+  return refundPayment(
+    order.id,
+    paidPaise,
+    reference,
+    paidPaise === order.totalPaise ? "The order changed before the payment arrived, so it was refunded" : "The amount paid did not match the order, so it was refunded",
+  );
+}
+
+/** Records money that cannot buy the order, and owes all of it back. Once per payment. */
+async function refundPayment(id: string, paidPaise: number, reference: string, problem: string) {
   const took = await prisma.ondcOrder.updateMany({
-    where: { id: order.id, paidAt: null },
-    data: {
-      paidAt: new Date(),
-      paidPaise,
-      paymentRef: reference,
-      status: "failed",
-      problem: paidPaise === order.totalPaise ? "The order changed before the payment arrived, so it was refunded" : "The amount paid did not match the order, so it was refunded",
-    },
+    where: { id, paidAt: null },
+    data: { paidAt: new Date(), paidPaise, paymentRef: reference, status: "failed", problem },
   });
-  if (took.count === 1) await owe(order.id, { paise: paidPaise });
-  return { handled: true as const, outcome: "refunded" as const };
+  if (took.count === 1) await owe(id, { paise: paidPaise });
+  return { handled: true as const, outcome: (took.count === 1 ? "refunded" : "already_paid") as "refunded" | "already_paid" };
 }
 
 /** The customer is back from the gateway: ask the gateway, not the browser, whether they paid. */
