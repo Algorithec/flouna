@@ -33,7 +33,7 @@ import { ThinkingSteps } from "@/components/chat/ThinkingSteps";
 import { PredictionBanner } from "@/components/chat/PredictionBanner";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { useTheme } from "@/components/theme/ThemeContext";
-import { LANGUAGES, type Lang } from "@/lib/i18n/dictionaries";
+import { LANGUAGES, type Lang, type TranslationKey } from "@/lib/i18n/dictionaries";
 import { notifyCartChanged } from "@/lib/cart";
 import { ActionResult } from "@/components/chat/ActionResult";
 import { RIDE_COMMAND_EVENT } from "@/components/chat/inline/InlineRideBooking";
@@ -41,6 +41,7 @@ import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
 import { type TILE_THEMES } from "@/components/ui/CategoryTile";
 import type { ChatMessage, FoodQuote } from "@/components/chat/types";
 import { cn } from "@/lib/cn";
+import { replyText } from "@/lib/replyText";
 import { useTemporaryChat } from "@/components/chat/TemporaryChatContext";
 
 type Usual = FoodQuote & { timesOrdered: number };
@@ -49,11 +50,24 @@ type Usual = FoodQuote & { timesOrdered: number };
 // real components/themes here (they can't cross the JSON boundary).
 type Suggestion = {
   label: string;
+  // The label as a code for the reader's language (`chip.<code>`).
+  code?: { code: string; params?: Record<string, string> };
   prompt: string;
   icon: string;
   theme: keyof typeof TILE_THEMES;
   dishId?: string; // set on a reorder chip
 };
+
+// A chip's label in the reader's language, or the server's own label for a
+// code the app does not know. The prompt a chip sends stays English: the chat
+// reads that, and does not yet read dish names written in Indian scripts.
+function chipLabel(t: (key: TranslationKey) => string, s: Suggestion): string {
+  if (!s.code) return s.label;
+  const key = `chip.${s.code.code}` as TranslationKey;
+  const said = t(key);
+  if (said === key) return s.label;
+  return Object.entries(s.code.params ?? {}).reduce((text, [k, v]) => text.replaceAll(`{${k}}`, v), said);
+}
 
 const ICONS: Record<string, LucideIcon> = {
   pizza: Pizza,
@@ -68,9 +82,9 @@ const ICONS: Record<string, LucideIcon> = {
 
 // Shown instantly while the personalized set loads (and if the request fails).
 const FALLBACK_SUGGESTIONS: Suggestion[] = [
-  { label: "Order pizza", prompt: "Order a pizza under ₹300", icon: "pizza", theme: "orange" },
-  { label: "Book a ride", prompt: "Book a ride to ", icon: "mapPin", theme: "blue" },
-  { label: "Shop a laptop", prompt: "Find me a gaming laptop under ₹70000", icon: "shoppingBag", theme: "purple" },
+  { label: "Order pizza", code: { code: "pizza" }, prompt: "Order a pizza under ₹300", icon: "pizza", theme: "orange" },
+  { label: "Book a ride", code: { code: "ride" }, prompt: "Book a ride to ", icon: "mapPin", theme: "blue" },
+  { label: "Shop a laptop", code: { code: "laptop" }, prompt: "Find me a gaming laptop under ₹70000", icon: "shoppingBag", theme: "purple" },
 ];
 
 // Does this ask actually involve comparing options? Greetings, thanks and
@@ -371,7 +385,7 @@ function ChatHome() {
                     className="flex items-center gap-2 rounded-pill bg-chip px-5 py-3 text-[15px] font-medium text-chip-ink transition-colors hover:opacity-90"
                   >
                     <Icon size={16} className="text-chip-ink" />
-                    {s.label}
+                    {chipLabel(t, s)}
                   </button>
                 </StaggerItem>
               );
@@ -436,7 +450,7 @@ function ChatHome() {
                       "rounded-card border border-line bg-card p-3.5 shadow-soft",
                   )}
                 >
-                  <p className="text-[14px] leading-relaxed text-ink">{m.content}</p>
+                  <p className="text-[14px] leading-relaxed text-ink">{replyText(t, m.content, m.replyCode)}</p>
                   {m.action && (
                     <ActionResult action={m.action} onReply={send} live={i === messages.length - 1 && !thinking} />
                   )}

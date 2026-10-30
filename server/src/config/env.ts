@@ -95,7 +95,6 @@ const envSchema = z.object({
   CASHFREE_RETURN_ORIGIN: z.string().url().optional(),
 
   // Maps
-  MAPTILER_KEY: z.string().optional(),
   GEOAPIFY_KEY: z.string().optional(),
   ORS_KEY: z.string().optional(),
   // Google Maps Platform, server side: Routes and Places. Restrict this key

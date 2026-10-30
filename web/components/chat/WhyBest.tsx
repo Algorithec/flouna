@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useI18n } from "@/components/i18n/I18nContext";
 import { Sparkles } from "lucide-react";
 import { rupees } from "@/lib/money";
+import { whyText } from "@/lib/whyText";
 import { DisagreeSheet } from "./DisagreeSheet";
 import { SearchedPlatforms } from "./PlatformMark";
+import { shopWhyText } from "@/lib/shopWhyText";
 import type { FoodQuote, RideQuote, ProductQuote } from "./types";
 
 // Shared reasoning surface from the Flouna result frames: the engine's
@@ -121,10 +123,12 @@ export function WhyBest({
   best,
   alternatives,
   why,
+  whyParts,
 }: {
   best: FoodQuote;
   alternatives: FoodQuote[];
   why?: string | null;
+  whyParts?: { code: string; params?: Record<string, string> }[];
 }) {
   const { t } = useI18n();
   const [disagreeing, setDisagreeing] = useState(false);
@@ -132,7 +136,7 @@ export function WhyBest({
   return (
     <>
       <ReasoningCard
-        summary={why}
+        summary={why ? whyText(t, why, whyParts) : why}
         reasons={foodReasons(best, alternatives, t)}
         platforms={[best.platform, ...alternatives.map((a) => a.platform)]}
         onDisagree={() => setDisagreeing(true)}
@@ -195,10 +199,12 @@ export function RideWhyBest({
 
 export function ShopWhyBest({
   why,
+  whyParts,
   best,
   alternatives,
 }: {
   why?: string | null;
+  whyParts?: { code: string; params?: Record<string, string> }[];
   best: ProductQuote;
   alternatives: ProductQuote[];
 }) {
@@ -220,7 +226,7 @@ export function ShopWhyBest({
 
   return (
     <ReasoningCard
-      summary={why}
+      summary={why ? shopWhyText(t, why, whyParts) : why}
       reasons={reasons}
       platforms={[best.platform, ...alternatives.map((a) => a.platform)]}
     />

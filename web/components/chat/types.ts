@@ -1,3 +1,5 @@
+import type { Advice } from "@/components/ui/AdviceBanner";
+
 export type FoodQuote = {
   dishId: string;
   name: string;
@@ -52,13 +54,8 @@ export type ProductQuote = {
   inStock: boolean;
 };
 
-export type Advice = {
-  action: "order_now" | "wait";
-  message: string;
-  expectedSavingPaise?: number;
-  waitMinutes?: number;
-  contextNote?: string;
-};
+// The banner's own type, so the codes it translates are declared here too.
+export type { Advice };
 
 export type PickReason = "top_rated" | "best_price" | "fastest" | "best_overall";
 
@@ -77,6 +74,8 @@ type FoodRec = {
   best: FoodQuote;
   alternatives: FoodQuote[];
   why: string;
+  /** `why`, fragment by fragment, for the reader's language. */
+  whyParts?: { code: string; params?: Record<string, string> }[];
   advice?: Advice;
   budgetNote?: string;
   personalNote?: string;
@@ -117,6 +116,8 @@ type ShopRec = {
   best: ProductQuote;
   alternatives: ProductQuote[];
   why: string;
+  /** `why`, fragment by fragment, for the reader's language. */
+  whyParts?: { code: string; params?: Record<string, string> }[];
   personalNote?: string;
   pickReason?: PickReason;
 };
@@ -165,6 +166,8 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /** An assistant reply as a code for the reader's language, when it is one of the server's own. */
+  replyCode?: { code: string; params?: Record<string, string> } | null;
   /** When it was sent, ISO. Absent on restored history that never stored one. */
   at?: string;
   domain?: string;
