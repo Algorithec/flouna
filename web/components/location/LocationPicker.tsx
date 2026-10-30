@@ -2,17 +2,13 @@
 
 import { useI18n } from "@/components/i18n/I18nContext";
 import { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
 import { LocateFixed, Loader2, MapPin } from "lucide-react";
+import { BasicMap } from "@/components/maps/BasicMap";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { baseMapOptions, loadGoogleMaps, useMapEngine } from "@/lib/maps/googleMaps";
 
-const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
-const STYLE_URL = MAPTILER_KEY
-  ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`
-  : "https://demotiles.maplibre.org/style.json";
+const HYDERABAD = { lat: 17.385, lng: 78.4867 };
 
 export type ResolvedAddress = {
   line1: string;
@@ -54,6 +50,11 @@ export function LocationPicker({
   const [locating, setLocating] = useState(false);
   const [label, setLabel] = useState(t("lp.move"));
   const [error, setError] = useState("");
+  // What the simplified map shows; only used when Google is not available.
+  const [basicView, setBasicView] = useState(() => ({
+    center: initial ?? HYDERABAD,
+    spanKm: initial ? 1.5 : 8,
+  }));
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -100,11 +101,30 @@ export function LocationPicker({
 
   useEffect(() => {
     // Google loads first when a key is set; nothing is drawn until it decides.
-    if (engine === "loading" || !containerRef.current) return;
-    const start = initial ?? { lat: 17.385, lng: 78.4867 }; // Hyderabad
+    if (engine === "loading") return;
+    const start = initial ?? HYDERABAD;
     const zoom = initial ? 16 : 12;
     let cancelled = false;
     let teardown: () => void = () => {};
+
+    // The simplified map: a tap moves the pin to the tapped point.
+    if (engine === "basic") {
+      moveToRef.current = (lat, lng) => {
+        setBasicView({ center: { lat, lng }, spanKm: 1.5 });
+        void resolve(lat, lng);
+      };
+      // Named after the effect, so no state is set while it runs.
+      if (initial) {
+        void Promise.resolve().then(() => {
+          if (!cancelled) void resolve(initial.lat, initial.lng);
+        });
+      }
+      return () => {
+        cancelled = true;
+        moveToRef.current = null;
+      };
+    }
+    if (!containerRef.current) return;
 
     if (engine === "google") {
       void loadGoogleMaps()
@@ -113,7 +133,7 @@ export function LocationPicker({
           const map = new maps.Map(containerRef.current, baseMapOptions(maps, start, zoom));
           // "idle" is Google's moveend, except that it also fires once the
           // map first settles. That first one only names the pin when a start
-          // was given, as the MapLibre map does.
+          // was given.
           let first = true;
           const listener = map.addListener("idle", () => {
             const skip = first && !initial;
@@ -129,7 +149,7 @@ export function LocationPicker({
           teardown = () => listener.remove();
         })
         .catch(() => {
-          // The engine hook sees the same failure and swaps to MapLibre.
+          // The engine hook sees the same failure and swaps to the simplified map.
         });
       return () => {
         cancelled = true;
@@ -137,31 +157,6 @@ export function LocationPicker({
         moveToRef.current = null;
       };
     }
-
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: STYLE_URL,
-      center: [start.lng, start.lat],
-      zoom,
-      attributionControl: { compact: true },
-    });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    // Only resolve once the map settles, so dragging doesn't spam the geocoder.
-    map.on("moveend", () => {
-      const c = map.getCenter();
-      void resolve(c.lat, c.lng);
-    });
-    moveToRef.current = (lat, lng) =>
-      map.flyTo({ center: [lng, lat], zoom: 17, duration: 800 });
-    // Name the starting pin once the map is ready (an event callback, so this
-    // never sets state synchronously during the effect).
-    if (initial) {
-      map.once("idle", () => void resolve(initial.lat, initial.lng));
-    }
-    return () => {
-      map.remove();
-      moveToRef.current = null;
-    };
     // Built once per engine — `initial` is a starting position, not a live binding.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine]);
@@ -194,7 +189,16 @@ export function LocationPicker({
         className="relative overflow-hidden rounded-card border border-line"
         style={{ height }}
       >
-        <div ref={containerRef} className="size-full" />
+        {engine === "basic" ? (
+          <BasicMap
+            markers={[]}
+            center={basicView.center}
+            spanKm={basicView.spanKm}
+            onPick={(p) => moveToRef.current?.(p.lat, p.lng)}
+          />
+        ) : (
+          <div ref={containerRef} className="size-full" />
+        )}
 
         {/* Fixed centre pin — the map moves under it. Slightly above centre so
             the point sits at the tip, not the middle of the icon. */}
