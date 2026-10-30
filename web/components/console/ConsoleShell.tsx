@@ -34,6 +34,7 @@ import {
   ShieldAlert,
   Gavel,
   Landmark,
+  Percent,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useEscapeToClose } from "@/lib/useEscapeToClose";
@@ -61,6 +62,7 @@ const NAV: NavSection[] = [
     items: [
       { href: "/console/admin/orders", label: "Orders", icon: Receipt, need: "admin" },
       { href: "/console/admin/ondc-money", label: "ONDC money", icon: Landmark, need: "admin" },
+      { href: "/console/admin/commission", label: "Commission", icon: Percent, need: "admin" },
       { href: "/console/admin/vendors", label: "Vendors / MSMEs", icon: Store, need: "admin" },
       { href: "/console/super", label: "Revenue & commissions", icon: Coins, need: "super_admin" },
       { href: "/console/super/refunds", label: "Refunds", icon: RotateCcw, need: "super_admin" },
