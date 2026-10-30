@@ -24,10 +24,32 @@ export type ProductQuote = {
   inStock: boolean;
 };
 
+/**
+ * Each fragment the reason for a product pick is built from, as a code the app
+ * translates (`why.s.<code>`). The fragments carry their own leading
+ * punctuation, so the app joins them as they come.
+ */
+export const SHOP_WHY_CODES = [
+  "topRated",
+  "fastestDay",
+  "fastestDays",
+  "lowestPrice",
+  "saveVsNext",
+  "bestOverall",
+  "cheaperThanNext",
+  "bestValue",
+  "higherRated",
+  "soonerDay",
+  "soonerDays",
+] as const;
+export type ShopWhyPart = { code: (typeof SHOP_WHY_CODES)[number]; params?: Record<string, string> };
+
 export type ProductRecommendation = {
   best: ProductQuote;
   alternatives: ProductQuote[];
   why: string;
+  /** `why`, fragment by fragment, for the reader's language. */
+  whyParts: ShopWhyPart[];
   pickReason: PickReason;
 };
 
@@ -142,24 +164,41 @@ export function recommendProduct(
 
   const saving = Math.max(0, cheapest.effectivePaise - best.effectivePaise);
 
-  let why: string;
+  // The English and the codes are built together, fragment by fragment, so
+  // the translated reason says exactly what the English one does.
+  const whyParts: ShopWhyPart[] = [];
+  let why = "";
+  const say = (english: string, code: ShopWhyPart["code"], params?: Record<string, string>) => {
+    why += english;
+    whyParts.push(params ? { code, params } : { code });
+  };
+  const rating = String(best.rating);
+  const days = String(best.deliveryDays);
+  const rupees = String(Math.round(saving / 100));
   if (priority === "rating") {
-    why = `Top-rated pick, ${best.rating}★ (${best.reviews.toLocaleString("en-IN")} reviews)`;
+    const reviews = best.reviews.toLocaleString("en-IN");
+    say(`Top-rated pick, ${rating}★ (${reviews} reviews)`, "topRated", { rating, reviews });
   } else if (priority === "speed") {
-    why = `Fastest delivery, ${best.deliveryDays} day${best.deliveryDays > 1 ? "s" : ""}, rated ${best.rating}★`;
+    if (best.deliveryDays > 1) say(`Fastest delivery, ${days} days, rated ${rating}★`, "fastestDays", { days, rating });
+    else say(`Fastest delivery, ${days} day, rated ${rating}★`, "fastestDay", { days, rating });
   } else if (priority === "price") {
-    why = `Lowest effective price after offers`;
-    if (saving > 0) why += `, you save ₹${Math.round(saving / 100)} vs the next option`;
+    say("Lowest effective price after offers", "lowestPrice");
+    if (saving > 0) say(`, you save ₹${rupees} vs the next option`, "saveVsNext", { rupees });
   } else {
-    why = `Best overall, ${best.rating}★, ${best.deliveryDays}-day delivery`;
-    if (saving > 0) why += `, and ₹${Math.round(saving / 100)} cheaper than the next`;
-    else why += `, best value across sellers`;
+    say(`Best overall, ${rating}★, ${days}-day delivery`, "bestOverall", { rating, days });
+    if (saving > 0) say(`, and ₹${rupees} cheaper than the next`, "cheaperThanNext", { rupees });
+    else say(", best value across sellers", "bestValue");
   }
   if (topRated.rating > best.rating && priority !== "rating") {
-    why += `. Highest rated: ${topRated.brand} at ${topRated.rating}★`;
+    say(`. Highest rated: ${topRated.brand} at ${topRated.rating}★`, "higherRated", {
+      brand: topRated.brand,
+      rating: String(topRated.rating),
+    });
   } else if (fastest.deliveryDays < best.deliveryDays && priority !== "speed") {
-    why += `. Need it sooner? Another seller delivers in ${fastest.deliveryDays} day${fastest.deliveryDays > 1 ? "s" : ""}`;
+    const sooner = String(fastest.deliveryDays);
+    if (fastest.deliveryDays > 1) say(`. Need it sooner? Another seller delivers in ${sooner} days`, "soonerDays", { days: sooner });
+    else say(`. Need it sooner? Another seller delivers in ${sooner} day`, "soonerDay", { days: sooner });
   }
 
-  return { best, alternatives, why, pickReason: reasonForPriority(priority) };
+  return { best, alternatives, why, whyParts, pickReason: reasonForPriority(priority) };
 }

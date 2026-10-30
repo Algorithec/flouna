@@ -7,6 +7,7 @@ import { rupees } from "@/lib/money";
 import { whyText } from "@/lib/whyText";
 import { DisagreeSheet } from "./DisagreeSheet";
 import { SearchedPlatforms } from "./PlatformMark";
+import { shopWhyText } from "@/lib/shopWhyText";
 import type { FoodQuote, RideQuote, ProductQuote } from "./types";
 
 // Shared reasoning surface from the Flouna result frames: the engine's
@@ -198,10 +199,12 @@ export function RideWhyBest({
 
 export function ShopWhyBest({
   why,
+  whyParts,
   best,
   alternatives,
 }: {
   why?: string | null;
+  whyParts?: { code: string; params?: Record<string, string> }[];
   best: ProductQuote;
   alternatives: ProductQuote[];
 }) {
@@ -223,7 +226,7 @@ export function ShopWhyBest({
 
   return (
     <ReasoningCard
-      summary={why}
+      summary={why ? shopWhyText(t, why, whyParts) : why}
       reasons={reasons}
       platforms={[best.platform, ...alternatives.map((a) => a.platform)]}
     />

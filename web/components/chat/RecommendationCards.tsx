@@ -536,7 +536,7 @@ export function ShopRecommendation({
     <ResultStack>
       <PickBadge reason={rec.pickReason} />
       <PersonalNote note={rec.personalNote} />
-      <ShopWhyBest why={rec.why} best={rec.best} alternatives={rec.alternatives} />
+      <ShopWhyBest why={rec.why} whyParts={rec.whyParts} best={rec.best} alternatives={rec.alternatives} />
       <ProvidersHeader count={1 + allAlts.length} />
       <ShopHeroCard q={rec.best} />
       {alts.length > 0 && (
