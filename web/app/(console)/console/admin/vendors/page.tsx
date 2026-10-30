@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { StatCard } from "@/components/console/ConsoleShell";
 import { ConsolePage, Card, Table, Badge, Empty, rupees } from "@/components/console/ui";
+import { ReportActions } from "@/components/console/ReportActions";
 
 type Vendor = {
   name: string;
@@ -31,11 +32,14 @@ export default function VendorsPage() {
 
   return (
     <ConsolePage accept={["admin", "super_admin"]}>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-(--c-ink)">Vendors / MSMEs</h1>
-        <p className="mt-1 text-[13px] text-(--c-muted)">
-          Derived from real paid orders, vendors actually transacting through Flouna.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-(--c-ink)">Vendors / MSMEs</h1>
+          <p className="mt-1 text-[13px] text-(--c-muted)">
+            Derived from real paid orders, vendors actually transacting through Flouna.
+          </p>
+        </div>
+        <ReportActions csvPath="/api/console/admin/reports/vendors.csv" name="vendors" />
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
