@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // the app is shown from a dev server. Compile and runtime errors are still
   // surfaced; only the route indicator is hidden.
   devIndicators: false,
+  // The static terms we file with ONDC. Each version keeps its own file, since
+  // a seller app accepts a particular version; this link always opens the
+  // current one. Not permanent, or browsers would keep an old version.
+  async redirects() {
+    return [{ source: "/ondc/terms", destination: "/ondc/static-terms-v1.0.1.pdf", permanent: false }];
+  },
   // In hosted environments the web app proxies /api/* to the API service so
   // auth cookies stay first-party on this origin (same-origin requirement).
   // Set API_PROXY_TARGET to the API base URL (no trailing slash) and leave
