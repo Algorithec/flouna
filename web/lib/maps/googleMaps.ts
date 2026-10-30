@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from "react";
 
-// Google Maps, loaded once, with MapLibre as the fallback.
+// Google Maps, loaded once, with a simplified map as the fallback.
 //
 // Every map in the app runs on Google when NEXT_PUBLIC_GOOGLE_MAPS_KEY is set,
-// and on MapLibre otherwise. Google's terms forbid drawing its routes or
+// and on the simplified map (components/maps/BasicMap) otherwise. Google's terms forbid drawing its routes or
 // places on another provider's map, so once the server uses Google the web
 // has to as well.
 //
 // The fallback also covers Google failing after the key is set: a blocked
 // script, a timeout, or the key being refused (wrong site, API off, billing).
-// A map that shows Google's grey error box is worse than the MapLibre map we
-// already had, so on any of those the app quietly uses that one instead.
+// A map that shows Google's grey error box is worse than the simplified map,
+// so on any of those the app quietly uses that one instead.
 
 const KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 // Custom HTML markers need a map id. Google's demo id works for development;
@@ -138,22 +138,22 @@ export function loadGoogleMaps(): Promise<GMaps> {
   return loading;
 }
 
-export type MapEngine = "google" | "maplibre" | "loading";
+export type MapEngine = "google" | "basic" | "loading";
 
 /**
  * Which map to draw. "loading" only ever appears when a key is set, so a
- * MapLibre map is never drawn and then swapped out underneath the user.
+ * simplified map is never drawn and then swapped out underneath the user.
  */
 export function useMapEngine(): MapEngine {
-  const [engine, setEngine] = useState<MapEngine>(KEY && !refused ? "loading" : "maplibre");
+  const [engine, setEngine] = useState<MapEngine>(KEY && !refused ? "loading" : "basic");
   useEffect(() => {
     if (!KEY || refused) return;
     let alive = true;
-    const onRefused = () => alive && setEngine("maplibre");
+    const onRefused = () => alive && setEngine("basic");
     refusalListeners.add(onRefused);
     loadGoogleMaps()
       .then(() => alive && !refused && setEngine("google"))
-      .catch(() => alive && setEngine("maplibre"));
+      .catch(() => alive && setEngine("basic"));
     return () => {
       alive = false;
       refusalListeners.delete(onRefused);
