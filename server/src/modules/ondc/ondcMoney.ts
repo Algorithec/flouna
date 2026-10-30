@@ -147,33 +147,45 @@ async function holdSellerMoneyAfterRefund(ondcOrderId: string, refundedPaise: nu
 
   // Each row is re-read if it changed under us, for instance an operator
   // marking the payout paid at the same moment, so the note is never lost.
+  let payoutNoted = false;
+  let payoutSeen = false;
   for (let attempt = 0; attempt < 3; attempt++) {
     const payout = await prisma.ondcPayout.findUnique({ where: { ondcOrderId } });
     if (!payout) break;
+    payoutSeen = true;
     const waiting = payout.status === "due" || payout.status === "held";
     const done = await prisma.ondcPayout.updateMany({
       where: { id: payout.id, status: payout.status, note: payout.note },
       data: waiting ? { status: "held", note: withNote(payout.note, reduce) } : { note: withNote(payout.note, recover) },
     });
     if (!done.count) continue;
+    payoutNoted = true;
     if (!waiting) console.error("[ondc] refund after the seller was paid by hand, order", ondcOrderId);
     break;
   }
+  // The row kept changing under every attempt. Said loudly, since a payout
+  // without this note would be paid in full.
+  if (payoutSeen && !payoutNoted) console.error(`[ondc] could not note a Rs ${rupees(refundedPaise)} refund on the seller payout for order ${ondcOrderId}: check it before paying`);
 
   // Only where Flouna collected: when the seller collected, the seller
   // refunds the customer itself and owes us only the fee.
+  let settlementNoted = false;
+  let settlementSeen = false;
   for (let attempt = 0; attempt < 3; attempt++) {
     const settlement = await prisma.ondcSettlement.findUnique({ where: { ondcOrderId } });
     if (!settlement || settlement.role !== "collector") break;
+    settlementSeen = true;
     const waiting = settlement.status === "due" || settlement.status === "held";
     const done = await prisma.ondcSettlement.updateMany({
       where: { id: settlement.id, status: settlement.status, note: settlement.note },
       data: waiting ? { status: "held", note: withNote(settlement.note, reduce) } : { note: withNote(settlement.note, recover) },
     });
     if (!done.count) continue;
+    settlementNoted = true;
     if (!waiting) console.error("[ondc] refund after the seller was settled, order", ondcOrderId);
     break;
   }
+  if (settlementSeen && !settlementNoted) console.error(`[ondc] could not note a Rs ${rupees(refundedPaise)} refund on the settlement for order ${ondcOrderId}: check it before settling`);
 }
 
 /**

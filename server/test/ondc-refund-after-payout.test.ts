@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "../src/lib/prisma.js";
 import { markPayoutPaid, owe, recordPayout } from "../src/modules/ondc/ondcMoney.js";
 import { recordSettlement } from "../src/modules/ondc/settlement.service.js";
@@ -54,12 +54,18 @@ async function completedOrder(collectedBy: "BAP" | "BPP" = "BAP") {
 const payoutOf = (id: string) => prisma.ondcPayout.findUniqueOrThrow({ where: { ondcOrderId: id } });
 const settlementOf = (id: string) => prisma.ondcSettlement.findUniqueOrThrow({ where: { ondcOrderId: id } });
 
+afterEach(() => vi.restoreAllMocks());
+
 describe("a refund after the order completed", () => {
   it("holds the seller's unpaid payout and settlement, saying how much to take off", async () => {
     const id = await completedOrder();
     expect((await payoutOf(id)).status).toBe("due");
+    const errors = vi.spyOn(console, "error");
 
     await owe(id, { paise: 10000 });
+
+    // Noted on the first try, so nothing is reported as missed.
+    expect(errors.mock.calls.map((c) => c.join(" ")).filter((m) => m.includes("could not note"))).toEqual([]);
 
     const order = await prisma.ondcOrder.findUniqueOrThrow({ where: { id } });
     expect(order.refundStatus).toBe("done");
@@ -132,5 +138,18 @@ describe("a refund after the order completed", () => {
     // The second refund sends only what was not refunded yet: 150 rupees.
     expect(payout.note).toContain("Rs 100.00");
     expect(payout.note).toContain("Rs 150.00");
+  });
+
+  it("says so loudly when the rows keep changing and no note can be written", async () => {
+    const id = await completedOrder();
+    vi.spyOn(prisma.ondcPayout, "updateMany").mockResolvedValue({ count: 0 });
+    vi.spyOn(prisma.ondcSettlement, "updateMany").mockResolvedValue({ count: 0 });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await owe(id, { paise: 3000 });
+
+    const said = errors.mock.calls.map((c) => c.join(" "));
+    expect(said).toContain(`[ondc] could not note a Rs 30.00 refund on the seller payout for order ${id}: check it before paying`);
+    expect(said).toContain(`[ondc] could not note a Rs 30.00 refund on the settlement for order ${id}: check it before settling`);
   });
 });
