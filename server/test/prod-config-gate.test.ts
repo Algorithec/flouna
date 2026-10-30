@@ -80,6 +80,17 @@ describe("production config gate", () => {
     expect(errors.join(" ")).toMatch(/would be refused/);
   });
 
+  it("refuses a workbench address that is not ONDC's, and the workbench on the production registry", async () => {
+    expect((await loadEnv({ ONDC_WORKBENCH_URL: "https://workbench.ondc.tech/api-service" })).exited).toBe(false);
+    const elsewhere = await loadEnv({ ONDC_WORKBENCH_URL: "https://workbench.ondc.tech.example.com/api-service" });
+    expect(elsewhere.exited).toBe(true);
+    expect(elsewhere.errors.join(" ")).toMatch(/ONDC_WORKBENCH_URL must be an https address/);
+    expect((await loadEnv({ ONDC_WORKBENCH_URL: "http://workbench.ondc.tech/api-service" })).exited).toBe(true);
+    const live = await loadEnv({ ONDC_WORKBENCH_URL: "https://workbench.ondc.tech/api-service", ONDC_REGISTRY_ENV: "prod" });
+    expect(live.exited).toBe(true);
+    expect(live.errors.join(" ")).toMatch(/pre-production tool/);
+  });
+
   it("refuses to start without payment credentials — checkout would dead-end", async () => {
     for (const missing of ["CASHFREE_APP_ID", "CASHFREE_SECRET_KEY"]) {
       const { exited, errors } = await loadEnv({ [missing]: undefined });
