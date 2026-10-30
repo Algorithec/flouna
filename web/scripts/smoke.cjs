@@ -230,9 +230,9 @@ let browser = null;
     await page.goto(`${WEB}/home`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
     await ask(page, "book a cab to Hitech City");
-    // Google Maps when its key is set, MapLibre otherwise.
-    await page.waitForSelector(".maplibregl-map, .gm-style", { timeout: 15000 }).catch(() => {});
-    check("map appears in the thread", (await page.locator(".maplibregl-map, .gm-style").count()) > 0);
+    // Google Maps when its key is set, the simplified map otherwise.
+    await page.waitForSelector('[data-map="basic"], .gm-style', { timeout: 15000 }).catch(() => {});
+    check("map appears in the thread", (await page.locator('[data-map="basic"], .gm-style').count()) > 0);
 
     await page.getByRole("button", { name: /Pickup/ }).first().click();
     await page.waitForTimeout(400);

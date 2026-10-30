@@ -1,5 +1,5 @@
 // What the ride map draws, whichever engine draws it: the same elements on
-// Google and on MapLibre, so the two can never disagree about what a rider sees.
+// Google and on the simplified map, so the two can never disagree about what a rider sees.
 
 /**
  * A named place, as a pill. Two identical pins tell a rider nothing about
