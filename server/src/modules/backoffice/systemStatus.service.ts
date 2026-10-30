@@ -6,6 +6,7 @@
 
 import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
+import { ordersWaitingOnSeller } from "../ondc/waiting.js";
 
 // Per-domain ONDC network status. In simulation mode every domain we support is
 // "simulated" (honest); when PROVIDER_MODE flips to "ondc" these become live
@@ -78,6 +79,28 @@ export async function systemAlerts(): Promise<{ alerts: SystemAlert[]; counts: {
       severity: "warning",
       source: "support",
       message: `${urgentTickets} high-priority ticket${urgentTickets > 1 ? "s" : ""} open.`,
+      at: new Date(),
+    });
+  }
+
+  // ONDC orders a seller has not answered. A paid one is critical: the
+  // customer's money is held with no order placed.
+  const waiting = await ordersWaitingOnSeller();
+  const paidStuck = waiting.filter((w) => w.status === "confirming" && w.paidPaise != null);
+  if (paidStuck.length > 0) {
+    alerts.push({
+      severity: "critical",
+      source: "ondc",
+      message: `${paidStuck.length} paid ONDC order${paidStuck.length > 1 ? "s have" : " has"} waited over 10 minutes for the seller to confirm. Check with the seller, then place it again or refund.`,
+      at: new Date(),
+    });
+  }
+  const otherStuck = waiting.length - paidStuck.length;
+  if (otherStuck > 0) {
+    alerts.push({
+      severity: "warning",
+      source: "ondc",
+      message: `${otherStuck} ONDC order${otherStuck > 1 ? "s are" : " is"} waiting on a seller that has not answered.`,
       at: new Date(),
     });
   }

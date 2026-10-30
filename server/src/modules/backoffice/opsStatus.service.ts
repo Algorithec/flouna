@@ -3,6 +3,7 @@ import { env } from "../../config/env.js";
 import { llm, watcherProvider } from "../chat/llm/index.js";
 import { CALLBACK_ACTIONS } from "../ondc/callbacks.routes.js";
 import { commercialTerms } from "../ondc/commercial.js";
+import { ordersWaitingOnSeller } from "../ondc/waiting.js";
 
 // What the developer console shows about the two things that run on their
 // own: the model reading chat messages, and the ONDC network connection.
@@ -120,7 +121,7 @@ export async function ondcOps(now = new Date()) {
     termsProblem = err instanceof Error ? err.message : String(err);
   }
 
-  const [traffic, simulated, lastDay, pending, failing, sentToday, lastFailure, orders, rides, settlements] =
+  const [traffic, simulated, lastDay, pending, failing, sentToday, lastFailure, orders, rides, settlements, waiting] =
     await Promise.all([
       prisma.ondcTransaction.groupBy({
         by: ["action", "status"],
@@ -140,6 +141,7 @@ export async function ondcOps(now = new Date()) {
       prisma.ondcOrder.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.ondcRide.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.ondcSettlement.groupBy({ by: ["status"], _count: { _all: true } }),
+      ordersWaitingOnSeller(now),
     ]);
 
   const actions = new Map<string, { action: string; ack: number; nack: number; error: number }>();
@@ -187,6 +189,8 @@ export async function ondcOps(now = new Date()) {
         : null,
     },
     orders: counts(orders),
+    // Orders a seller has not answered past their step's limit, longest first.
+    waiting,
     rides: counts(rides),
     settlements: counts(settlements),
   };

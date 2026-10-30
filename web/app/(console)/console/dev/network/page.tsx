@@ -43,9 +43,17 @@ type Network = {
       lastFailure: { domain: string; type: string; attempts: number; lastError: string | null; createdAt: string } | null;
     };
     orders: Counts;
+    waiting: { id: string; status: string; store: string; bppId: string; waitingMinutes: number; paidPaise: number | null }[];
     rides: Counts;
     settlements: Counts;
   };
+};
+
+const WAITING_FOR: Record<string, string> = {
+  selecting: "a quote",
+  initialising: "final terms",
+  confirming: "confirmation",
+  cancelling: "a cancellation answer",
 };
 
 function setBadge(ok: boolean, yes = "Set", no = "Not set") {
@@ -211,6 +219,28 @@ export default function NetworkPage() {
 
             <Card title="ONDC food orders">
               <CountList rows={ops.orders} empty="No ONDC orders yet." />
+            </Card>
+            <Card title={`Waiting on a seller (${ops.waiting.length})`}>
+              {ops.waiting.length === 0 ? (
+                <Empty>No order is waiting on a seller past its limit.</Empty>
+              ) : (
+                <Table head={["Order", "Waiting for", "For", "Paid"]}>
+                  {ops.waiting.map((w) => (
+                    <tr key={w.id}>
+                      <td className="px-4 py-2">
+                        <p className="font-medium text-(--c-ink)">{w.store}</p>
+                        <p className="font-mono text-[11px] text-(--c-muted)">{w.bppId}</p>
+                        <p className="font-mono text-[11px] text-(--c-muted)">{w.id}</p>
+                      </td>
+                      <td className="px-4 py-2">{WAITING_FOR[w.status] ?? w.status}</td>
+                      <td className="px-4 py-2">{`${w.waitingMinutes} min`}</td>
+                      <td className="px-4 py-2">
+                        {w.paidPaise != null ? <Badge tone="red">{`Rs ${(w.paidPaise / 100).toFixed(2)} held`}</Badge> : <Badge tone="slate">Not paid</Badge>}
+                      </td>
+                    </tr>
+                  ))}
+                </Table>
+              )}
             </Card>
             <Card title="ONDC rides">
               <CountList rows={ops.rides} empty="No ONDC rides yet." />
