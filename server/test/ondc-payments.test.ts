@@ -5,7 +5,7 @@ import { env } from "../src/config/env.js";
 import { prisma } from "../src/lib/prisma.js";
 import { cancelOndcOrder, initOndcOrder, ondcOrderView } from "../src/modules/ondc/orders.service.js";
 import { settleOndcPayment, startOndcPayment, verifyOndcPayment } from "../src/modules/ondc/ondcPay.service.js";
-import { durationMs, markPayoutPaid, refundAfterCancel, refundsNeedingAttention, resolveRefund } from "../src/modules/ondc/ondcMoney.js";
+import { durationMs, markPayoutPaid, owe, refundAfterCancel, refundsNeedingAttention, resolveRefund } from "../src/modules/ondc/ondcMoney.js";
 import { app } from "./helpers.js";
 import { customerWithSearch, fx, recorder, reply, SELLER, startPizza } from "./ondc-order-helpers.js";
 
@@ -292,6 +292,22 @@ describe("refunds that come in more than one step", () => {
     expect(await resolveRefund(o.orderId, { paise: 9500 })).toBe(true);
     expect(gateway.createCashfreeRefund).toHaveBeenCalledTimes(2);
     expect(gateway.createCashfreeRefund).toHaveBeenLastCalledWith(expect.objectContaining({ refundId: `${o.gid}_refund_9500_38000`, amountRupees: 380 }));
+    expect((await ondcOrderView(o.c.userId, o.orderId)).refund).toEqual({ status: "done", paise: 47500 });
+  });
+
+  it("keeps sending, one step at a time, for as long as more comes due", async () => {
+    const o = await paidAndPlaced();
+    const sent = { cf_refund_id: "rf", refund_id: "x", refund_status: "SUCCESS", refund_amount: 0 };
+    // More falls due twice while refunds are still with the gateway.
+    gateway.createCashfreeRefund
+      .mockImplementationOnce(async () => (await owe(o.orderId, { paise: 20000 }), sent))
+      .mockImplementationOnce(async () => (await owe(o.orderId, { paise: 47500 }), sent));
+    await owe(o.orderId, { paise: 9500 });
+    expect(gateway.createCashfreeRefund.mock.calls.map(([r]) => r.refundId)).toEqual([
+      `${o.gid}_refund_0_9500`,
+      `${o.gid}_refund_9500_10500`,
+      `${o.gid}_refund_20000_27500`,
+    ]);
     expect((await ondcOrderView(o.c.userId, o.orderId)).refund).toEqual({ status: "done", paise: 47500 });
   });
 });
