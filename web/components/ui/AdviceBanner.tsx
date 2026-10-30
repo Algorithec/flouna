@@ -1,14 +1,20 @@
 import { Clock3, TrendingDown, CloudRain } from "lucide-react";
 import { useI18n } from "@/components/i18n/I18nContext";
+import { adviceText } from "@/lib/adviceText";
 import { cn } from "@/lib/cn";
 import { rupeesApprox } from "@/lib/money";
 
+type AdviceCode = { code: string; params?: Record<string, string> };
+
 export type Advice = {
   action: "order_now" | "wait";
+  // In English; the codes carry the same sentences for the reader's language.
   message: string;
+  code?: AdviceCode;
   expectedSavingPaise?: number;
   waitMinutes?: number;
   contextNote?: string;
+  noteCode?: AdviceCode;
 };
 
 // The timing advisor's verdict: order now, or hold off.
@@ -105,13 +111,13 @@ export function AdviceBanner({
           </div>
 
           <p className="mt-1 text-[13px] leading-relaxed text-ink">
-            {advice.message}
+            {adviceText(t, advice.message, advice.code)}
           </p>
 
           {advice.contextNote && (
             <p className="mt-1.5 flex items-start gap-1.5 text-[12px] leading-relaxed text-cocoa">
               <CloudRain size={13} className="mt-0.5 shrink-0 text-accent" />
-              {advice.contextNote}
+              {adviceText(t, advice.contextNote, advice.noteCode)}
             </p>
           )}
         </div>
