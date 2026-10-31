@@ -98,7 +98,7 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
       });
     // Demo payments took no money, so there is nothing to send back.
     if (order.paymentRef?.startsWith("demo_") || (!cashfreeConfigured && !deps.refund)) {
-      await finished("no_gateway");
+      if ((await finished("no_gateway")).count) await holdSellerMoneyAfterRefund(order.id, amount);
     } else {
       try {
         const r = await (deps.refund ?? createCashfreeRefund)({
@@ -107,7 +107,7 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
           amountRupees: amount / 100,
           note: "Refund for an ONDC order",
         });
-        await finished(String(r.cf_refund_id));
+        if ((await finished(String(r.cf_refund_id))).count) await holdSellerMoneyAfterRefund(order.id, amount);
       } catch (err) {
         console.error("[ondc] refund failed for", order.id, err instanceof Error ? err.message : String(err));
         await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "failed", refundPaise: amount } });
@@ -119,6 +119,73 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
     if (after.refundDuePaise == null || after.refundDuePaise <= after.refundedPaise) return;
     await prisma.ondcOrder.updateMany({ where: { id: order.id, refundStatus: "done" }, data: { refundStatus: "owed" } });
   }
+}
+
+const rupees = (paise: number) => (paise / 100).toFixed(2);
+
+/**
+ * A refund after the order completed (a return, or a complaint resolved with
+ * money back) comes out of what the seller is owed. The customer is refunded
+ * at once from the money Flouna holds; the seller's share then has to shrink
+ * by the same amount, and nothing did that. A payout or settlement still
+ * waiting would have been paid in full, so Flouna paid the refund twice over:
+ * once to the customer and again inside the seller's money.
+ *
+ * So a payout or settlement not yet paid is held, with a note saying how much
+ * to take off, for the operator who already decides every payout. One already
+ * paid is flagged for recovery from the seller, loudly, as a double payment is.
+ * Nothing is re-calculated here: how a refund splits between the seller's
+ * share and our fee is a decision for a person, not a guess in code.
+ *
+ * Before completion there is neither row, and the seller's final bill already
+ * gives a lower total, so a cancellation needs none of this.
+ */
+async function holdSellerMoneyAfterRefund(ondcOrderId: string, refundedPaise: number): Promise<void> {
+  const reduce = `Customer refunded Rs ${rupees(refundedPaise)} after the order completed: take it off before paying the seller.`;
+  const recover = `RECOVER: customer refunded Rs ${rupees(refundedPaise)} after the seller was paid. Recover it from the seller.`;
+  const withNote = (note: string | null, add: string) => (note ? `${note} ${add}` : add);
+
+  // Each row is re-read if it changed under us, for instance an operator
+  // marking the payout paid at the same moment, so the note is never lost.
+  let payoutNoted = false;
+  let payoutSeen = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const payout = await prisma.ondcPayout.findUnique({ where: { ondcOrderId } });
+    if (!payout) break;
+    payoutSeen = true;
+    const waiting = payout.status === "due" || payout.status === "held";
+    const done = await prisma.ondcPayout.updateMany({
+      where: { id: payout.id, status: payout.status, note: payout.note },
+      data: waiting ? { status: "held", note: withNote(payout.note, reduce) } : { note: withNote(payout.note, recover) },
+    });
+    if (!done.count) continue;
+    payoutNoted = true;
+    if (!waiting) console.error("[ondc] refund after the seller was paid by hand, order", ondcOrderId);
+    break;
+  }
+  // The row kept changing under every attempt. Said loudly, since a payout
+  // without this note would be paid in full.
+  if (payoutSeen && !payoutNoted) console.error(`[ondc] could not note a Rs ${rupees(refundedPaise)} refund on the seller payout for order ${ondcOrderId}: check it before paying`);
+
+  // Only where Flouna collected: when the seller collected, the seller
+  // refunds the customer itself and owes us only the fee.
+  let settlementNoted = false;
+  let settlementSeen = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const settlement = await prisma.ondcSettlement.findUnique({ where: { ondcOrderId } });
+    if (!settlement || settlement.role !== "collector") break;
+    settlementSeen = true;
+    const waiting = settlement.status === "due" || settlement.status === "held";
+    const done = await prisma.ondcSettlement.updateMany({
+      where: { id: settlement.id, status: settlement.status, note: settlement.note },
+      data: waiting ? { status: "held", note: withNote(settlement.note, reduce) } : { note: withNote(settlement.note, recover) },
+    });
+    if (!done.count) continue;
+    settlementNoted = true;
+    if (!waiting) console.error("[ondc] refund after the seller was settled, order", ondcOrderId);
+    break;
+  }
+  if (settlementSeen && !settlementNoted) console.error(`[ondc] could not note a Rs ${rupees(refundedPaise)} refund on the settlement for order ${ondcOrderId}: check it before settling`);
 }
 
 /**
@@ -151,6 +218,11 @@ export function durationMs(iso: string | null | undefined): number | null {
   return (((Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0)) * 60 + Number(m[3] ?? 0)) * 60 + Number(m[4] ?? 0)) * 1000;
 }
 
+/** The note on a payout or settlement whose seller billed more than the customer paid. */
+export function overBilledNote(billedPaise: number, paidPaise: number): string {
+  return `The seller billed Rs ${(billedPaise / 100).toFixed(2)} but the customer paid Rs ${(paidPaise / 100).toFixed(2)}: worked out on what was paid. Settle the difference with the seller before paying.`;
+}
+
 /**
  * Records what Flouna owes the seller app for a delivered order. Once per
  * order (the row is unique on it). Only for orders Flouna collected for.
@@ -160,26 +232,37 @@ export async function recordPayout(ondcOrderId: string, completedAt: Date) {
   if (!order.paidAt || !order.payment || order.totalPaise == null) return;
   const terms = JSON.parse(order.payment) as PaymentTerms & { settlementWindow?: string; settlementBasis?: string };
   if (terms.collectedBy !== "BAP") return;
-  const fee = finderFeePaise(order.totalPaise, terms);
+  // A seller's later status can carry a bill above what the customer paid.
+  // Flouna can only pass on money it took, so the payout is worked out on
+  // the amount paid and held for a person to settle the difference with the
+  // seller. Worked out on the seller's figure, it paid the seller out of our
+  // own pocket.
+  const overBilled = order.paidPaise != null && order.totalPaise > order.paidPaise;
+  const total = overBilled ? order.paidPaise! : order.totalPaise;
+  const fee = finderFeePaise(total, terms);
   // The window is counted from delivery. A basis of return_window_expiry means
   // the seller expects it after its return window too, which the order does
   // not carry, so those are held for an operator to date.
   const windowMs = durationMs(terms.settlementWindow) ?? 3 * 86_400_000;
-  const held = terms.settlementBasis === "return_window_expiry";
+  const notes = [
+    ...(terms.settlementBasis === "return_window_expiry" ? ["Due after the seller's return window ends; check the item's return window before paying."] : []),
+    ...(overBilled ? [overBilledNote(order.totalPaise, order.paidPaise!)] : []),
+  ];
+  const held = notes.length > 0;
   await prisma.ondcPayout
     .create({
       data: {
         ondcOrderId: order.id,
         bppId: order.bppId,
-        orderTotalPaise: order.totalPaise,
+        orderTotalPaise: total,
         feePaise: fee,
-        amountPaise: order.totalPaise - fee,
+        amountPaise: total - fee,
         settlement: JSON.stringify(terms.settlementDetails),
         settlementWindow: terms.settlementWindow ?? null,
         settlementBasis: terms.settlementBasis ?? null,
         dueAt: new Date(completedAt.getTime() + windowMs),
         status: held ? "held" : "due",
-        note: held ? "Due after the seller's return window ends; check the item's return window before paying" : null,
+        note: held ? notes.join(" ") : null,
       },
     })
     .catch((err: { code?: string }) => {
