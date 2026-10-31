@@ -9,9 +9,11 @@ import { useI18n } from "@/components/i18n/I18nContext";
 import { useAuth } from "@/components/auth/AuthContext";
 
 // Public landing — matches the Figma "intial landing page" frame: the mark
-// and headline sit in the upper third, then an open middle, then the three
-// entry points anchored to the bottom safe area (Google, Login or Signup,
-// Continue without logging in). The static prerender is English (SEO keeps
+// and headline sit in the upper third, then an open middle, then the
+// entry points anchored to the bottom safe area (Google, Login or Signup). The
+// frame also draws Continue without logging in, left out here because every
+// screen behind it needs an account, so it only led back to the login page.
+// The static prerender is English (SEO keeps
 // indexing English copy); a returning visitor's saved language applies after
 // hydration like the rest of the app.
 export default function LandingPage() {
@@ -65,14 +67,6 @@ export default function LandingPage() {
             <p role="alert" className="mt-3 text-[13px] text-danger">
               {googleError}
             </p>
-          )}
-          {!user && (
-            <Link
-              href="/home"
-              className="tap-target mt-5 block text-center text-[14px] font-medium text-cocoa hover:text-ink"
-            >
-              {t("landing.continueGuest")}
-            </Link>
           )}
         </FadeIn>
 
