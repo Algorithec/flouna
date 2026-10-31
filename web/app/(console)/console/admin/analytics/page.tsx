@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { StatCard, PageTitle } from "@/components/console/ConsoleShell";
 import { ConsolePage, Card, Empty, rupeesCompact } from "@/components/console/ui";
 import { BarChartC, DonutChart } from "@/components/console/charts";
+import { ReportActions } from "@/components/console/ReportActions";
 
 type Domain = { domain: string; gmvPaise: number; orders: number };
 type Analytics = {
@@ -33,7 +34,10 @@ export default function AnalyticsPage() {
 
   return (
     <ConsolePage accept={["admin", "super_admin"]}>
-      <PageTitle title="Analytics" subtitle="Revenue and growth across all domains." />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageTitle title="Analytics" subtitle="Revenue and growth across all domains." />
+        <ReportActions csvPath="/api/console/admin/reports/analytics.csv" name="analytics" className="mb-4" />
+      </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Orders (total)" value={a?.orders?.total ?? "No data"} />

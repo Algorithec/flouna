@@ -135,3 +135,40 @@ jobs:
         env:
           # The build only needs a public API URL placeholder; no secrets in CI.
           NEXT_PUBLIC_API_URL: http://localhost:4000
+
+  android:
+    name: Android (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Only when the app itself changed: a Gradle build on every web or
+      # server PR would queue behind the free runners for nothing. A push
+      # whose base cannot be compared (the first push of a branch) builds.
+      - name: Skip unless the Android app changed
+        id: changed
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if git diff --quiet "$BASE" HEAD -- android 2>/dev/null; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      # The wrapper jar runs on every build machine, so it must be the one
+      # Gradle published, not one swapped in a pull request.
+      - uses: gradle/actions/wrapper-validation@v4
+        if: steps.changed.outputs.run == 'true'
+      - uses: actions/setup-java@v4
+        if: steps.changed.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+      # No upload key here, so the release bundle is unsigned; this proves the
+      # project builds, not that it is ready to upload.
+      - name: Build the debug app and the release bundle
+        if: steps.changed.outputs.run == 'true'
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain assembleDebug bundleRelease

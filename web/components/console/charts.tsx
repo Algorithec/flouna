@@ -111,7 +111,8 @@ export function LineChartC({
   height = 240,
   valueLabel,
 }: {
-  data: { name: string; value: number }[];
+  // A null value is a gap in the line, for a day with nothing to measure.
+  data: { name: string; value: number | null }[];
   height?: number;
   valueLabel?: (v: number) => string;
 }) {

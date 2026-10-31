@@ -80,6 +80,17 @@ describe("production config gate", () => {
     expect(errors.join(" ")).toMatch(/would be refused/);
   });
 
+  it("refuses a workbench address that is not ONDC's, and the workbench on the production registry", async () => {
+    expect((await loadEnv({ ONDC_WORKBENCH_URL: "https://workbench.ondc.tech/api-service" })).exited).toBe(false);
+    const elsewhere = await loadEnv({ ONDC_WORKBENCH_URL: "https://workbench.ondc.tech.example.com/api-service" });
+    expect(elsewhere.exited).toBe(true);
+    expect(elsewhere.errors.join(" ")).toMatch(/ONDC_WORKBENCH_URL must be an https address/);
+    expect((await loadEnv({ ONDC_WORKBENCH_URL: "http://workbench.ondc.tech/api-service" })).exited).toBe(true);
+    const live = await loadEnv({ ONDC_WORKBENCH_URL: "https://workbench.ondc.tech/api-service", ONDC_REGISTRY_ENV: "prod" });
+    expect(live.exited).toBe(true);
+    expect(live.errors.join(" ")).toMatch(/pre-production tool/);
+  });
+
   it("refuses to start without payment credentials — checkout would dead-end", async () => {
     for (const missing of ["CASHFREE_APP_ID", "CASHFREE_SECRET_KEY"]) {
       const { exited, errors } = await loadEnv({ [missing]: undefined });
@@ -129,6 +140,14 @@ describe("production config gate", () => {
     const undated = await loadEnv({ ONDC_STATIC_TERMS_URL: "https://flouna.com/ondc/terms" });
     expect(undated.exited).toBe(true);
     expect(undated.errors.join(" ")).toMatch(/ONDC_STATIC_TERMS_EFFECTIVE_DATE/);
+  });
+
+  it("refuses half of the ride signing pair, which would sign rides with a key ONDC does not have", async () => {
+    const half = await loadEnv({ ONDC_UNIQUE_KEY_ID_TRV10: "0b46d048-ride" });
+    expect(half.exited).toBe(true);
+    expect(half.errors.join(" ")).toMatch(/ONDC_UNIQUE_KEY_ID_TRV10 and ONDC_SIGNING_PRIVATE_KEY_TRV10 are set together/);
+    const both = await loadEnv({ ONDC_UNIQUE_KEY_ID_TRV10: "0b46d048-ride", ONDC_SIGNING_PRIVATE_KEY_TRV10: "ride-private" });
+    expect(both.exited).toBe(false);
   });
 
   it("warns without refusing when a feature is merely switched off", async () => {

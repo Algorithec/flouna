@@ -133,6 +133,45 @@ const CORRECTIONS: Correction[] = [
 
 const BY_MATCH = new Map(CORRECTIONS.map((c) => [c.match, c]));
 
+// --- Contact addresses ---
+//
+// The source documents give every contact address, and the website, on
+// algorithec.ai. The company does not hold that domain: it has no DNS at all,
+// so every mail sent to a published address bounced, including the grievance
+// and privacy contacts the law requires us to publish. The same mailboxes were
+// set up on algorithec.com (aliases of info@algorithec.com, 30 Oct 2026), and
+// www.algorithec.com is the company's site, so the domain is rewritten
+// wherever it appears. Unlike the corrections above this changes part of a
+// line, so it runs after them and on every kind of block.
+const DEAD_DOMAIN = "algorithec.ai";
+const LIVE_DOMAIN = "algorithec.com";
+
+/**
+ * Every address on algorithec.com that exists as a mailbox or alias. A policy
+ * that publishes any other address on the domain fails the build below, since
+ * the mail would be lost as surely as it was on algorithec.ai.
+ */
+export const PUBLISHED_MAILBOXES = new Set([
+  "info",
+  "official",
+  "support",
+  "grievance",
+  "privacy",
+  "security",
+  "accessibility",
+  "legal",
+  "escalation",
+  "ai-fairness",
+  "appeals",
+  "feedback",
+  "dpo",
+  "ceo",
+]);
+
+function liveDomain(text: string): string {
+  return text.split(DEAD_DOMAIN).join(LIVE_DOMAIN);
+}
+
 function fixItems(items: string[]): string[] {
   const out: string[] = [];
   for (const item of items) {
@@ -161,11 +200,24 @@ function fixBlock(b: Block): Block | null {
   return b;
 }
 
+function liveDomainBlock(b: Block): Block {
+  switch (b.t) {
+    case "h":
+    case "p":
+      return { ...b, text: liveDomain(b.text) };
+    case "ul":
+      return { ...b, items: b.items.map(liveDomain) };
+    case "table":
+      return { ...b, head: b.head.map(liveDomain), rows: b.rows.map((r) => r.map(liveDomain)) };
+  }
+}
+
 /** Applies the corrections to one document. */
 export function correct(doc: PolicyDocument): PolicyDocument {
   const blocks = doc.blocks
     .map(fixBlock)
-    .filter((b): b is Block => b !== null);
+    .filter((b): b is Block => b !== null)
+    .map(liveDomainBlock);
   return { ...doc, blocks };
 }
 
@@ -204,3 +256,25 @@ function verifyCorrectionsStillApply(): void {
 }
 
 verifyCorrectionsStillApply();
+
+/**
+ * Fails the build if a published policy names an address on the company's
+ * domain that is not a real mailbox, or still names the dead domain.
+ */
+function verifyPublishedAddresses(): void {
+  const problems = new Set<string>();
+  for (const doc of POLICY_DOCUMENTS) {
+    const text = JSON.stringify(correct(doc).blocks);
+    if (text.includes(DEAD_DOMAIN)) problems.add(`${doc.slug} still names ${DEAD_DOMAIN}`);
+    for (const m of text.matchAll(/([a-z0-9._-]+)@algorithec\.com/gi)) {
+      if (!PUBLISHED_MAILBOXES.has(m[1]!.toLowerCase())) problems.add(`${doc.slug} names ${m[0]}, which is not a mailbox`);
+    }
+  }
+  if (problems.size) {
+    throw new Error(
+      "Policy contact addresses would not receive mail:\n" + [...problems].map((p) => `  - ${p}`).join("\n"),
+    );
+  }
+}
+
+verifyPublishedAddresses();

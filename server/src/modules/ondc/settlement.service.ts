@@ -3,7 +3,7 @@ import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../middleware/error.js";
 import { BAP_ID, checkedHttpsUrl } from "./context.js";
-import { durationMs, finderFeePaise } from "./ondcMoney.js";
+import { durationMs, finderFeePaise, overBilledNote } from "./ondcMoney.js";
 import type { PaymentTerms } from "./orderReplies.js";
 import {
   buildOnRecon,
@@ -20,6 +20,7 @@ import {
   type ReconStatus,
 } from "./settlement.js";
 import type { SigningIdentity } from "./signing.js";
+import { ondcIdentity } from "./identity.js";
 import { sendSigned, type SendResult } from "./transport.js";
 
 // The settlement ledger: one row per completed ONDC order, saying who owes
@@ -44,9 +45,7 @@ const DAY = 86_400_000;
 const BATCH = 100;
 
 function defaultIdentity(): SigningIdentity | null {
-  return env.ONDC_SUBSCRIBER_ID && env.ONDC_UNIQUE_KEY_ID && env.ONDC_SIGNING_PRIVATE_KEY
-    ? { subscriberId: env.ONDC_SUBSCRIBER_ID, uniqueKeyId: env.ONDC_UNIQUE_KEY_ID, signingPrivateKey: env.ONDC_SIGNING_PRIVATE_KEY }
-    : null;
+  return ondcIdentity();
 }
 
 /**
@@ -85,7 +84,11 @@ export async function recordSettlement(ondcOrderId: string, completedAt: Date) {
   // Flouna can only settle money it actually took.
   if (role === "collector" && !order.paidAt) return;
 
-  const total = order.totalPaise;
+  // Where Flouna collected, it can pass on only what it took: a seller bill
+  // above the amount paid is settled on the amount paid and held (see
+  // recordPayout, which does the same).
+  const overBilled = role === "collector" && order.paidPaise != null && order.totalPaise > order.paidPaise;
+  const total = overBilled ? order.paidPaise! : order.totalPaise;
   const fee = finderFeePaise(total, terms);
   const withholding = terms.withholdingPaise ?? 0;
   const held: string[] = [];
@@ -94,6 +97,7 @@ export async function recordSettlement(ondcOrderId: string, completedAt: Date) {
   }
   if (terms.settlementBasis === "return_window_expiry") held.push("It settles after the seller's return window, which the order does not carry: check it first.");
   if (withholding > 0) held.push(`The seller asked for ${withholding / 100} rupees to be withheld: check how it is released.`);
+  if (overBilled) held.push(overBilledNote(order.totalPaise, order.paidPaise!));
 
   const amounts =
     role === "collector"
