@@ -218,6 +218,11 @@ export function durationMs(iso: string | null | undefined): number | null {
   return (((Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0)) * 60 + Number(m[3] ?? 0)) * 60 + Number(m[4] ?? 0)) * 1000;
 }
 
+/** The note on a payout or settlement whose seller billed more than the customer paid. */
+export function overBilledNote(billedPaise: number, paidPaise: number): string {
+  return `The seller billed Rs ${(billedPaise / 100).toFixed(2)} but the customer paid Rs ${(paidPaise / 100).toFixed(2)}: worked out on what was paid. Settle the difference with the seller before paying.`;
+}
+
 /**
  * Records what Flouna owes the seller app for a delivered order. Once per
  * order (the row is unique on it). Only for orders Flouna collected for.
@@ -227,26 +232,37 @@ export async function recordPayout(ondcOrderId: string, completedAt: Date) {
   if (!order.paidAt || !order.payment || order.totalPaise == null) return;
   const terms = JSON.parse(order.payment) as PaymentTerms & { settlementWindow?: string; settlementBasis?: string };
   if (terms.collectedBy !== "BAP") return;
-  const fee = finderFeePaise(order.totalPaise, terms);
+  // A seller's later status can carry a bill above what the customer paid.
+  // Flouna can only pass on money it took, so the payout is worked out on
+  // the amount paid and held for a person to settle the difference with the
+  // seller. Worked out on the seller's figure, it paid the seller out of our
+  // own pocket.
+  const overBilled = order.paidPaise != null && order.totalPaise > order.paidPaise;
+  const total = overBilled ? order.paidPaise! : order.totalPaise;
+  const fee = finderFeePaise(total, terms);
   // The window is counted from delivery. A basis of return_window_expiry means
   // the seller expects it after its return window too, which the order does
   // not carry, so those are held for an operator to date.
   const windowMs = durationMs(terms.settlementWindow) ?? 3 * 86_400_000;
-  const held = terms.settlementBasis === "return_window_expiry";
+  const notes = [
+    ...(terms.settlementBasis === "return_window_expiry" ? ["Due after the seller's return window ends; check the item's return window before paying."] : []),
+    ...(overBilled ? [overBilledNote(order.totalPaise, order.paidPaise!)] : []),
+  ];
+  const held = notes.length > 0;
   await prisma.ondcPayout
     .create({
       data: {
         ondcOrderId: order.id,
         bppId: order.bppId,
-        orderTotalPaise: order.totalPaise,
+        orderTotalPaise: total,
         feePaise: fee,
-        amountPaise: order.totalPaise - fee,
+        amountPaise: total - fee,
         settlement: JSON.stringify(terms.settlementDetails),
         settlementWindow: terms.settlementWindow ?? null,
         settlementBasis: terms.settlementBasis ?? null,
         dueAt: new Date(completedAt.getTime() + windowMs),
         status: held ? "held" : "due",
-        note: held ? "Due after the seller's return window ends; check the item's return window before paying" : null,
+        note: held ? notes.join(" ") : null,
       },
     })
     .catch((err: { code?: string }) => {
