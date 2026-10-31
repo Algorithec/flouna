@@ -21,7 +21,9 @@
     "test": "vitest run",
     "seed": "tsx prisma/seed.ts",
     "db:deploy:check": "node scripts/set-db-provider.mjs postgresql && node scripts/pg-baseline.mjs",
-    "start:local": "node --env-file=.env dist/index.js"
+    "start:local": "node --env-file=.env dist/index.js",
+    "gate:model": "node scripts/model-gate.mjs",
+    "export:training": "node scripts/export-training.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
