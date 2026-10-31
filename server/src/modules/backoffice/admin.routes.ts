@@ -7,6 +7,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireRole } from "../../middleware/auth.js";
 import { listTermsAcceptances } from "../ondc/termsAcceptance.js";
+import { commissionCsv, commissionReport, decideException, EXCEPTION_REASONS } from "../ondc/commission.service.js";
 import {
   listComplaintsForOps,
   getComplaintForOps,
@@ -338,6 +339,75 @@ adminRouter.post(
       const result = await sendRecon(req.body.ids);
       await auditFromReq(req, { action: "ondc.recon_sent", targetType: "ondc_settlement", targetId: req.body.ids[0], summary: `Sent a seller app our figures for ${result.sent} orders to reconcile` });
       res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// --- Commission on ONDC orders, and settlements that do not add up ---
+//
+// A period is whole days, from and to inclusive, in YYYY-MM-DD. Without one,
+// the last 30 days. Anything else is refused rather than guessed at.
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const periodQuery = z
+  .object({ from: day.optional(), to: day.optional() })
+  .transform(({ from, to }) => {
+    const end = to ? new Date(`${to}T00:00:00.000Z`) : new Date();
+    const until = new Date(end.getTime() + (to ? 86_400_000 : 0));
+    const since = from ? new Date(`${from}T00:00:00.000Z`) : new Date(until.getTime() - 30 * 86_400_000);
+    return { from: since, to: until };
+  })
+  .refine((p) => !Number.isNaN(p.from.getTime()) && !Number.isNaN(p.to.getTime()) && p.from < p.to, "Choose a start date before the end date");
+
+adminRouter.get("/ondc/commission", async (req, res, next) => {
+  try {
+    const period = periodQuery.safeParse(req.query);
+    if (!period.success) return res.status(400).json({ error: "Choose a valid period" });
+    res.json(await commissionReport(period.data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.get("/ondc/commission.csv", async (req, res, next) => {
+  try {
+    const period = periodQuery.safeParse(req.query);
+    if (!period.success) return res.status(400).json({ error: "Choose a valid period" });
+    const name = `ondc-commission-${period.data.from.toISOString().slice(0, 10)}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
+    res.send(await commissionCsv(period.data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post(
+  "/ondc/commission/exceptions",
+  validateBody(
+    z
+      .object({
+        settlementId: z.string().cuid(),
+        reason: z.enum(EXCEPTION_REASONS),
+        status: z.enum(["investigating", "resolved"]),
+        note: z.string().trim().max(500).optional(),
+      })
+      .strict(),
+  ),
+  async (req, res, next) => {
+    try {
+      const body = req.body as { settlementId: string; reason: (typeof EXCEPTION_REASONS)[number]; status: "investigating" | "resolved"; note?: string };
+      if (!(await decideException({ ...body, by: req.userId! }))) {
+        return res.status(409).json({ error: "This settlement is not in the queue for that reason" });
+      }
+      await auditFromReq(req, {
+        action: "ondc.settlement_exception",
+        targetType: "ondc_settlement",
+        targetId: body.settlementId,
+        summary: `Marked a settlement ${body.reason.replace(/_/g, " ")} as ${body.status}`,
+      });
+      res.json({ ok: true });
     } catch (err) {
       next(err);
     }
