@@ -85,7 +85,7 @@ export async function googleAutocomplete(
 export async function googlePlaceDetails(
   key: string,
   placeId: string,
-  opts: { session?: string; timeoutMs?: number } = {},
+  opts: { session?: string; name?: string; timeoutMs?: number } = {},
 ): Promise<ResolvedPlace | null> {
   if (!PLACE_ID.test(placeId)) return null;
   try {
@@ -95,21 +95,26 @@ export async function googlePlaceDetails(
       signal: AbortSignal.timeout(opts.timeoutMs ?? 4000),
       headers: {
         "X-Goog-Api-Key": key,
-        // Only what is used; Places bills by the fields requested.
-        "X-Goog-FieldMask": "displayName,formattedAddress,location",
+        // Only what is used; Places bills by the fields requested. The name
+        // is not asked for: displayName is a Pro field, which moves every
+        // lookup to the Pro price (half the free calls, over three times the
+        // cost in India), and the rider already saw the name on the
+        // suggestion they picked, which the caller passes in.
+        "X-Goog-FieldMask": "formattedAddress,location",
       },
     });
     if (!res.ok) return null;
     const d = (await res.json()) as {
-      displayName?: { text?: string };
       formattedAddress?: string;
       location?: { latitude?: number; longitude?: number };
     };
     const lat = d.location?.latitude;
     const lng = d.location?.longitude;
     if (typeof lat !== "number" || typeof lng !== "number") return null;
-    const name = d.displayName?.text ?? d.formattedAddress ?? "Selected place";
     const address = d.formattedAddress ?? "";
+    // A caller that sends no name (an app version from before it did) gets the
+    // address's first part, which for a landmark is usually its name.
+    const name = opts.name?.trim() || address.split(",")[0]?.trim() || "Selected place";
     return {
       name,
       // Google's address usually opens with the place's own name, which the

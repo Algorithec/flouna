@@ -6,7 +6,9 @@ import { commercialTerms } from "./commercial.js";
 import { distanceKm, parseOnSearch, type OndcOffer } from "./catalog.js";
 import { buildSearch } from "./retail.js";
 import type { SigningIdentity } from "./signing.js";
-import { GATEWAY_URL, sendSigned, type SendResult } from "./transport.js";
+import { sendSigned, type SendResult } from "./transport.js";
+import { isOndcTester, searchUrl } from "./workbench.js";
+import { ondcIdentity } from "./identity.js";
 
 // Searching the ONDC network for food.
 //
@@ -62,9 +64,7 @@ export function stdCodeFor(city: string): string | null {
 type Send = (url: string, action: string, envelope: { context: Record<string, unknown>; message: unknown }, id: SigningIdentity) => Promise<SendResult>;
 
 function identity(): SigningIdentity | null {
-  return env.ONDC_SUBSCRIBER_ID && env.ONDC_UNIQUE_KEY_ID && env.ONDC_SIGNING_PRIVATE_KEY
-    ? { subscriberId: env.ONDC_SUBSCRIBER_ID, uniqueKeyId: env.ONDC_UNIQUE_KEY_ID, signingPrivateKey: env.ONDC_SIGNING_PRIVATE_KEY }
-    : null;
+  return ondcIdentity("ONDC:RET11");
 }
 
 export type StartOutcome = { searchId: string } | { unavailable: string };
@@ -77,10 +77,7 @@ export async function ondcSearchFor(
   userId: string,
   config: { enabled: boolean; testers: Set<string> } = { enabled: env.ONDC_SEARCH_ENABLED, testers: env.ONDC_SEARCH_TESTERS },
 ): Promise<boolean> {
-  if (config.enabled) return true;
-  if (config.testers.size === 0) return false;
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-  return Boolean(user && config.testers.has(user.email.toLowerCase()));
+  return config.enabled || isOndcTester(userId, config.testers);
 }
 
 /**
@@ -140,7 +137,7 @@ export async function startOndcSearch(
     },
   });
   const send = async () => {
-    const result = await (opts.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(GATEWAY_URL[env.ONDC_REGISTRY_ENV], "search", envelope, id);
+    const result = await (opts.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(await searchUrl(userId, "ONDC:RET11"), "search", envelope, id);
     await prisma.ondcSearch.update({ where: { id: searchId }, data: { status: result.ack ? "sent" : "refused" } });
     await prisma.ondcTransaction.create({
       data: {

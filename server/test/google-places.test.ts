@@ -97,26 +97,25 @@ describe("looking up the place that was picked", () => {
   it("keeps an address that does not repeat the name", async () => {
     fakeGoogle(() =>
       json({
-        displayName: { text: "Inorbit Mall" },
         formattedAddress: "Mindspace, Hitec City, Hyderabad",
         location: { latitude: 17.4344, longitude: 78.3866 },
       }),
     );
     const { agent } = await authedAgent();
-    const res = await agent.get(`/api/rides/place?id=${PLACE_ID}&session=${SESSION}`).expect(200);
+    const res = await agent.get(`/api/rides/place?id=${PLACE_ID}&session=${SESSION}&name=Inorbit%20Mall`).expect(200);
+    expect(res.body.place.name).toBe("Inorbit Mall");
     expect(res.body.place.area).toBe("Mindspace, Hitec City, Hyderabad");
   });
 
   it("returns its coordinates, asking only for the fields used", async () => {
     const seen = fakeGoogle(() =>
       json({
-        displayName: { text: "Hitech City" },
         formattedAddress: "Hitech City, Hyderabad, Telangana",
         location: { latitude: 17.4435, longitude: 78.3772 },
       }),
     );
     const { agent } = await authedAgent();
-    const res = await agent.get(`/api/rides/place?id=${PLACE_ID}&session=${SESSION}`).expect(200);
+    const res = await agent.get(`/api/rides/place?id=${PLACE_ID}&session=${SESSION}&name=Hitech%20City`).expect(200);
 
     expect(res.body.place).toEqual({
       name: "Hitech City",
@@ -126,9 +125,28 @@ describe("looking up the place that was picked", () => {
       lng: 78.3772,
     });
     const headers = seen[0]!.init!.headers as Record<string, string>;
-    expect(headers["X-Goog-FieldMask"]).toBe("displayName,formattedAddress,location");
+    // Essentials fields only. displayName would bill every lookup at the Pro
+    // price; the name comes from the suggestion the rider picked.
+    expect(headers["X-Goog-FieldMask"]).toBe("formattedAddress,location");
     expect(seen[0]!.url).toContain(`sessionToken=${SESSION}`);
     expect(seen[0]!.url).not.toContain("test-google-key");
+  });
+
+  it("names the place from its address when the app sends no name, and ignores a name it cannot use", async () => {
+    fakeGoogle(() =>
+      json({
+        formattedAddress: "Charminar, Char Kaman, Ghansi Bazaar, Hyderabad",
+        location: { latitude: 17.3616, longitude: 78.4747 },
+      }),
+    );
+    const { agent } = await authedAgent();
+    const bare = await agent.get(`/api/rides/place?id=${PLACE_ID}`).expect(200);
+    expect(bare.body.place).toMatchObject({ name: "Charminar", area: "Char Kaman, Ghansi Bazaar, Hyderabad" });
+    // Too long, or carrying control characters: the address names it instead.
+    for (const bad of ["x".repeat(121), "Home%0A%0DSet-Cookie"]) {
+      const res = await agent.get(`/api/rides/place?id=${PLACE_ID}&name=${bad}`).expect(200);
+      expect(res.body.place.name, bad).toBe("Charminar");
+    }
   });
 
   it("refuses an id that is not a place id, before it reaches a URL", async () => {
@@ -139,7 +157,7 @@ describe("looking up the place that was picked", () => {
   });
 
   it("says so when Google has no coordinates, instead of inventing them", async () => {
-    fakeGoogle(() => json({ displayName: { text: "Nowhere" } }));
+    fakeGoogle(() => json({ formattedAddress: "Nowhere" }));
     const { agent } = await authedAgent();
     await agent.get(`/api/rides/place?id=${PLACE_ID}`).expect(502);
   });
