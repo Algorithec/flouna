@@ -120,3 +120,27 @@ export function subscriberIdProblem(configured: string | undefined): string | nu
     "so every seller's answer would be refused as addressed to someone else"
   );
 }
+
+/**
+ * Why a workbench address cannot be used, or null when it can. Only ONDC's own
+ * hosts, over https: the address receives our signed searches with the
+ * customer's location in them.
+ */
+export function workbenchUrlProblem(url: string | undefined): string | null {
+  if (!url) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "ONDC_WORKBENCH_URL is not a URL";
+  }
+  const host = parsed.hostname.toLowerCase();
+  const ondcHost = host === "ondc.tech" || host.endsWith(".ondc.tech") || host === "ondc.org" || host.endsWith(".ondc.org");
+  if (parsed.protocol !== "https:" || !ondcHost) {
+    return "ONDC_WORKBENCH_URL must be an https address on ondc.tech or ondc.org, such as https://workbench.ondc.tech/api-service";
+  }
+  if (parsed.search || parsed.hash || parsed.username || parsed.password) {
+    return "ONDC_WORKBENCH_URL must be a plain base address, without a query, fragment or credentials";
+  }
+  return null;
+}

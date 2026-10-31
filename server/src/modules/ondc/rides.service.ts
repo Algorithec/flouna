@@ -8,7 +8,9 @@ import { buildRideCancel, buildRideConfirm, buildRideInit, buildRideSearch, buil
 import { parseRideOnSearch, readRideOnInit, readRideOnSelect, readRideState, readRideTrack, type RideOffer, type RidePaymentTerms } from "./rideReplies.js";
 import { stdCodeFor } from "./search.service.js";
 import type { SigningIdentity } from "./signing.js";
-import { GATEWAY_URL, sendSigned, type SendResult } from "./transport.js";
+import { sendSigned, type SendResult } from "./transport.js";
+import { searchUrl } from "./workbench.js";
+import { ondcIdentity } from "./identity.js";
 import { fareChangedProblem, PROBLEM, problemCode } from "./problems.js";
 
 // Booking a ride with an ONDC ride provider (TRV10 2.0.1).
@@ -45,9 +47,7 @@ export type RiderCancelReason = keyof typeof RIDER_CANCEL_REASONS;
 export const RIDE_SEARCH_WINDOW_MS = 30_000;
 
 function defaultIdentity(): SigningIdentity | null {
-  return env.ONDC_SUBSCRIBER_ID && env.ONDC_UNIQUE_KEY_ID && env.ONDC_SIGNING_PRIVATE_KEY
-    ? { subscriberId: env.ONDC_SUBSCRIBER_ID, uniqueKeyId: env.ONDC_UNIQUE_KEY_ID, signingPrivateKey: env.ONDC_SIGNING_PRIVATE_KEY }
-    : null;
+  return ondcIdentity("ONDC:TRV10");
 }
 
 type RideRow = NonNullable<Awaited<ReturnType<typeof prisma.ondcRide.findUnique>>>;
@@ -175,7 +175,7 @@ export async function startRideSearch(userId: string, input: { pickup: PlaceInpu
     staticTermsUrl: terms.staticTermsUrl,
     delayInterestPercent: terms.delayInterestPercent,
   });
-  const ok = await sendStep(ride, "search", envelope, null, deps, GATEWAY_URL[env.ONDC_REGISTRY_ENV]);
+  const ok = await sendStep(ride, "search", envelope, null, deps, await searchUrl(userId, "ONDC:TRV10"));
   if (!ok) {
     await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "failed", problem: PROBLEM.searchRefused } });
   }

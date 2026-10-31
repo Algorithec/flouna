@@ -19,6 +19,7 @@ import {
   cashfreeConfigured,
   createCashfreeRefund,
 } from "../payments/cashfree.js";
+import { toCsv } from "../../lib/csv.js";
 
 // --- Staff / operators ---------------------------------------------------
 
@@ -455,20 +456,6 @@ export async function rejectRefund(paymentId: string): Promise<RefundResult> {
 // --- CSV exports ------------------------------------------------------------
 // Founder-grade data pulls. Values are quoted/escaped; money stays integer paise
 // plus a rupee column for spreadsheet friendliness.
-
-function csvCell(v: unknown): string {
-  let s = v == null ? "" : String(v);
-  // Formula-injection guard: a cell starting with = + - @ (or a tab/CR remnant)
-  // executes as a formula in Excel/Sheets. Titles and names are user-controlled,
-  // and the person opening these exports is a super-admin — prefix a ' so
-  // spreadsheet apps render it as literal text.
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-function toCsv(header: string[], rows: unknown[][]): string {
-  return [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\n") + "\n";
-}
 
 export async function ordersCsv(): Promise<string> {
   const orders = await prisma.order.findMany({

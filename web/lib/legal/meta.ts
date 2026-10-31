@@ -40,6 +40,11 @@ export const POLICY_INDEX = [
     title: "Accessibility Statement",
     blurb: "Where Flouna meets the standard today, and where it does not yet.",
   },
+  {
+    slug: "delete-account",
+    title: "Delete your account",
+    blurb: "How to delete your account, and what is erased and what is kept.",
+  },
 ] as const;
 
 /**
