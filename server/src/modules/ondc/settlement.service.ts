@@ -20,6 +20,7 @@ import {
   type ReconStatus,
 } from "./settlement.js";
 import type { SigningIdentity } from "./signing.js";
+import { ondcIdentity } from "./identity.js";
 import { sendSigned, type SendResult } from "./transport.js";
 
 // The settlement ledger: one row per completed ONDC order, saying who owes
@@ -44,9 +45,7 @@ const DAY = 86_400_000;
 const BATCH = 100;
 
 function defaultIdentity(): SigningIdentity | null {
-  return env.ONDC_SUBSCRIBER_ID && env.ONDC_UNIQUE_KEY_ID && env.ONDC_SIGNING_PRIVATE_KEY
-    ? { subscriberId: env.ONDC_SUBSCRIBER_ID, uniqueKeyId: env.ONDC_UNIQUE_KEY_ID, signingPrivateKey: env.ONDC_SIGNING_PRIVATE_KEY }
-    : null;
+  return ondcIdentity();
 }
 
 /**

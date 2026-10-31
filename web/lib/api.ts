@@ -98,15 +98,40 @@ export async function api<T>(
   }
 
   const data = res.status === 204 ? null : await res.json().catch(() => null);
-  if (!res.ok) {
-    const fromTheApi = typeof (data as { error?: unknown } | null)?.error === "string";
-    if (!fromTheApi && NOT_FROM_THE_API.has(res.status)) throw unreachable();
-    throw new ApiClientError(
-      res.status,
-      (data as { error?: string } | null)?.error ?? `Request failed (${res.status})`,
-      (data as { details?: unknown } | null)?.details,
-      (data as { code?: string } | null)?.code,
-    );
-  }
+  if (!res.ok) throw failure(res.status, data);
   return data as T;
+}
+
+function failure(status: number, data: unknown): ApiClientError {
+  const fromTheApi = typeof (data as { error?: unknown } | null)?.error === "string";
+  if (!fromTheApi && NOT_FROM_THE_API.has(status)) return unreachable();
+  return new ApiClientError(
+    status,
+    (data as { error?: string } | null)?.error ?? `Request failed (${status})`,
+    (data as { details?: unknown } | null)?.details,
+    (data as { code?: string } | null)?.code,
+  );
+}
+
+/**
+ * Saves a file the API sends, such as a console export, under `filename`. A
+ * plain link to the file would skip the refresh api() does, so an operator
+ * whose access token had just expired got a page of JSON instead of a file.
+ */
+export async function apiDownload(path: string, filename: string): Promise<void> {
+  let res = await send(path, {});
+  if (res.status === 401 && !path.startsWith("/api/auth/") && (await tryRefresh())) {
+    res = await send(path, {});
+  }
+  if (!res.ok) throw failure(res.status, await res.json().catch(() => null));
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Released once the browser has had time to start the download; revoking it
+  // straight away can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
