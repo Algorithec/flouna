@@ -21,6 +21,7 @@ import { owe, recordPayout, refundAfterCancel } from "./ondcMoney.js";
 import { recordTermsAcceptance, statesAcceptance } from "./termsAcceptance.js";
 import { recordSettlement } from "./settlement.service.js";
 import type { SigningIdentity } from "./signing.js";
+import { ondcIdentity } from "./identity.js";
 import { sendSigned, type SendResult } from "./transport.js";
 import { billReducedProblem, outOfStockProblem, PROBLEM, problemCode, type ProblemCode } from "./problems.js";
 
@@ -55,9 +56,7 @@ export type OrderDeps = {
 };
 
 function defaultIdentity(): SigningIdentity | null {
-  return env.ONDC_SUBSCRIBER_ID && env.ONDC_UNIQUE_KEY_ID && env.ONDC_SIGNING_PRIVATE_KEY
-    ? { subscriberId: env.ONDC_SUBSCRIBER_ID, uniqueKeyId: env.ONDC_UNIQUE_KEY_ID, signingPrivateKey: env.ONDC_SIGNING_PRIVATE_KEY }
-    : null;
+  return ondcIdentity("ONDC:RET11");
 }
 
 export type OrderRow = NonNullable<Awaited<ReturnType<typeof prisma.ondcOrder.findUnique>>>;

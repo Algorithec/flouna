@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
 import { sendSigned, type SendResult } from "../ondc/transport.js";
 import type { SigningIdentity } from "../ondc/signing.js";
+import { ondcIdentity } from "../ondc/identity.js";
 import {
   appendIssueAction,
   buildIssue,
@@ -139,16 +140,13 @@ type Send = (baseUrl: string, action: string, envelope: { context: Record<string
 export class NetworkIgmAdapter {
   readonly live = true;
   private readonly send: Send;
-  private readonly identity: () => SigningIdentity | null;
+  // Signed with the key of the order's own domain: a ride complaint with the
+  // TRV10 key, a food one with the RET11 key (see ondc/identity.ts).
+  private readonly identity: (domain: string) => SigningIdentity | null;
 
-  constructor(opts: { send?: Send; identity?: () => SigningIdentity | null } = {}) {
+  constructor(opts: { send?: Send; identity?: (domain: string) => SigningIdentity | null } = {}) {
     this.send = opts.send ?? ((u, a, e, i) => sendSigned(u, a, e, i));
-    this.identity =
-      opts.identity ??
-      (() =>
-        env.ONDC_SUBSCRIBER_ID && env.ONDC_UNIQUE_KEY_ID && env.ONDC_SIGNING_PRIVATE_KEY
-          ? { subscriberId: env.ONDC_SUBSCRIBER_ID, uniqueKeyId: env.ONDC_UNIQUE_KEY_ID, signingPrivateKey: env.ONDC_SIGNING_PRIVATE_KEY }
-          : null);
+    this.identity = opts.identity ?? ((domain) => ondcIdentity(domain));
   }
 
   /** Records that nothing went out and why, so the trail says so rather than looking sent. */
@@ -192,7 +190,7 @@ export class NetworkIgmAdapter {
     if (!complaint.user.phone) {
       return this.held(complaint.id, "issue", "ONDC needs the customer's phone number on a complaint, and this account has none");
     }
-    const identity = this.identity();
+    const identity = this.identity(ref.domain);
     if (!identity) return this.held(complaint.id, "issue", "ONDC signing identity is not configured on this deployment");
     const opened = complaint.actions[0];
     if (!opened) return this.held(complaint.id, "issue", "The complaint has no opening action to send");
@@ -238,7 +236,8 @@ export class NetworkIgmAdapter {
     if (!first || !latestIn) {
       return this.held(complaintId, "issue", "The seller app has not answered this issue yet, so there is nothing to add to");
     }
-    const identity = this.identity();
+    const firstEnvelope = JSON.parse(first.payload) as { context: Record<string, unknown> };
+    const identity = this.identity(String(firstEnvelope.context.domain ?? ""));
     if (!identity) return this.held(complaintId, "issue", "ONDC signing identity is not configured on this deployment");
 
     let refId: string | undefined;
@@ -246,7 +245,6 @@ export class NetworkIgmAdapter {
       const row = await prisma.complaintResolution.findUnique({ where: { id: action.resolutionRowId }, select: { resolutionId: true } });
       refId = row ? protocolId(complaintId, row.resolutionId) : undefined;
     }
-    const firstEnvelope = JSON.parse(first.payload) as { context: Record<string, unknown> };
     const latestIssue = (JSON.parse(latestIn.payload) as { message?: { issue?: Record<string, unknown> } }).message?.issue ?? {};
     const envelope = appendIssueAction({
       firstContext: firstEnvelope.context,
