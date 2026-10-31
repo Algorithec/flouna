@@ -1713,6 +1713,26 @@ model OndcSettlement {
   @@index([bppId, networkOrderId])
 }
 
+// A settlement that does not add up, once a person has looked at it.
+//
+// The queue itself is worked out from the settlement rows on every read
+// (ondc/commission.service.ts): an amount that differs, a dispute, a failure,
+// an overdue or long held row. This keeps only what a person decided about one
+// of them, so a fixed figure leaves the queue on its own and a decision is
+// never lost when the row changes. No row here means "open".
+model SettlementException {
+  id           String   @id @default(cuid())
+  settlementId String
+  reason       String // amount_mismatch | dispute | failed | overdue | held_too_long
+  status       String // investigating | resolved
+  note         String?
+  updatedBy    String // user id of the operator
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([settlementId, reason])
+}
+
 // ONDC Network Observability outbox: one row per log, already anonymised,
 // waiting to be pushed to ONDC's logging service (see ondc/observability.ts).
 model OndcNoLog {

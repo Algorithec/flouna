@@ -40,6 +40,11 @@ export const POLICY_INDEX = [
     title: "Accessibility Statement",
     blurb: "Where Flouna meets the standard today, and where it does not yet.",
   },
+  {
+    slug: "delete-account",
+    title: "Delete your account",
+    blurb: "How to delete your account, and what is erased and what is kept.",
+  },
 ] as const;
 
 /**
@@ -47,17 +52,18 @@ export const POLICY_INDEX = [
  *
  * These come from the policy documents. A published address that bounces is
  * worse than no address, because someone exercising a legal right has been
- * told to write somewhere nobody reads. Each one needs to be a real mailbox
- * before launch.
+ * told to write somewhere nobody reads. Each one is an alias of
+ * info@algorithec.com; the policies named algorithec.ai, which has no mail
+ * (see PUBLISHED_MAILBOXES in corrections.ts).
  */
 export const CONTACTS = {
-  support: "support@algorithec.ai",
-  grievance: "grievance@algorithec.ai",
-  privacy: "privacy@algorithec.ai",
-  security: "security@algorithec.ai",
-  accessibility: "accessibility@algorithec.ai",
-  legal: "legal@algorithec.ai",
-  escalation: "escalation@algorithec.ai",
+  support: "support@algorithec.com",
+  grievance: "grievance@algorithec.com",
+  privacy: "privacy@algorithec.com",
+  security: "security@algorithec.com",
+  accessibility: "accessibility@algorithec.com",
+  legal: "legal@algorithec.com",
+  escalation: "escalation@algorithec.com",
   phone: "+91 7396144250",
 } as const;
 

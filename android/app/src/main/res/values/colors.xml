@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The site's cream, so the bars and splash match the page beneath them. -->
+    <color name="background">#FFF9F6</color>
+</resources>

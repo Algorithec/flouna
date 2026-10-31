@@ -229,14 +229,23 @@ ridesRouter.get("/geocode", async (req, res, next) => {
 // this; every other provider returns coordinates with the suggestion itself.
 ridesRouter.get("/place", async (req, res, next) => {
   try {
-    const { id, session } = z
+    const { id, session, name } = z
       .object({
         id: z.string().regex(PLACE_ID),
         session: z.string().uuid().optional(),
+        // The suggestion's name as the rider saw it, so Google is not paid to
+        // send it again. Only shown back to the rider who sent it.
+        name: z
+          .string()
+          .trim()
+          .max(120)
+          .regex(/^[^\p{Cc}]*$/u)
+          .optional()
+          .catch(undefined),
       })
       .parse(req.query);
     if (!env.GOOGLE_MAPS_API_KEY) throw new ApiError(404, "Place lookup is not available");
-    const place = await googlePlaceDetails(env.GOOGLE_MAPS_API_KEY, id, { session });
+    const place = await googlePlaceDetails(env.GOOGLE_MAPS_API_KEY, id, { session, name });
     if (!place) throw new ApiError(502, "Could not find that place right now");
     res.json({ place });
   } catch (err) {

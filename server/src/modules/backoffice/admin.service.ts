@@ -102,7 +102,7 @@ export async function getUserDetail(userId: string) {
       where: { userId, status: { in: ["confirmed", "in_progress", "completed"] } },
       _sum: { amount: true },
     }),
-    prisma.order.aggregate({ where: { userId }, _sum: { savedPaise: true } }),
+    prisma.order.aggregate({ where: { userId, status: { in: ["confirmed", "in_progress", "completed"] } }, _sum: { savedPaise: true } }),
   ]);
 
   return {
@@ -224,7 +224,8 @@ export async function adminAnalytics() {
       where: { ...paid, createdAt: { gte: since } },
       _sum: { amount: true },
     }),
-    prisma.order.aggregate({ _sum: { savedPaise: true } }),
+    // Paid orders only, as on the dashboard and the customer's Savings screen.
+    prisma.order.aggregate({ where: { status: { in: ["confirmed", "in_progress", "completed"] } }, _sum: { savedPaise: true } }),
     prisma.supportTicket.count({ where: { status: { in: ["open", "in_progress"] } } }),
   ]);
 
