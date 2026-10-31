@@ -154,7 +154,7 @@ export function ConsoleShell({
         <button
           aria-label="Close menu"
           onClick={() => setNavOpen(false)}
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden print:hidden"
         />
       )}
       <aside
@@ -162,7 +162,7 @@ export function ConsoleShell({
         // is still in the tab order, so on a narrow window a keyboard user
         // leaving the hamburger walked into twenty-odd links they could not
         // see. Visibility is in the transition so the slide-out still plays.
-        className={`fixed inset-y-0 left-0 z-40 flex w-56 shrink-0 flex-col text-white transition-[transform,visibility] lg:visible lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-56 shrink-0 flex-col text-white transition-[transform,visibility] lg:visible lg:static lg:translate-x-0 print:hidden ${
           navOpen ? "translate-x-0" : "invisible -translate-x-full"
         }`}
         style={{ background: "var(--c-crimson)" }}
@@ -244,7 +244,7 @@ export function ConsoleShell({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile header: the only way to reach the nav once it's a drawer. */}
         <header
-          className="flex items-center gap-3 px-4 py-3 text-white lg:hidden"
+          className="flex items-center gap-3 px-4 py-3 text-white lg:hidden print:hidden"
           style={{ background: "var(--c-crimson)" }}
         >
           <button
@@ -262,7 +262,9 @@ export function ConsoleShell({
             Console
           </span>
         </header>
-        <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 lg:px-8 lg:py-7">
+        {/* Printed as a report: the page alone, without the console around it, and
+            not cut off at the window's height. */}
+        <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 lg:px-8 lg:py-7 print:overflow-visible print:p-0">
           {children}
         </main>
       </div>

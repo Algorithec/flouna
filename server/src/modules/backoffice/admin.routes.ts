@@ -3,7 +3,7 @@
 // small set of audited, money-safe mutations (suspend a user, flag a refund,
 // work the support queue). No secrets, no role changes (that's super-admin only).
 
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { z } from "zod";
 import { requireRole } from "../../middleware/auth.js";
 import { listTermsAcceptances } from "../ondc/termsAcceptance.js";
@@ -64,6 +64,14 @@ import {
   couponStats,
   priceAlertsOverview,
   gmvByDomain,
+  adminTrends,
+  systemHealth,
+  CITY_SORTS,
+  dashboardCsv,
+  analyticsCsv,
+  citiesCsv,
+  vendorsCsv,
+  trendsCsv,
 } from "./reporting.service.js";
 
 // A page number out of a URL, parsed rather than coerced. `Number(...) || 1`
@@ -77,6 +85,61 @@ const pageParam = z.coerce.number().int().min(1).max(100_000).catch(1);
 
 export const adminRouter = Router();
 adminRouter.use(requireRole("admin")); // super_admin satisfies admin
+
+// Filters for the city report, applied on the server so an export holds the
+// rows the page shows. An unknown state or tier is simply nothing to show.
+const cityQuery = z.object({
+  state: z.string().trim().max(60).optional().catch(undefined),
+  tier: z.string().trim().max(20).optional().catch(undefined),
+  sort: z.enum(CITY_SORTS).catch("orders"),
+});
+
+// Days for a trend, parsed the way pageParam is: a query string never reaches
+// a query as Infinity or a fraction.
+const daysParam = z.coerce.number().int().min(7).max(90).catch(30);
+
+adminRouter.get("/reports/trends", async (req, res, next) => {
+  try {
+    res.json(await adminTrends(daysParam.parse(req.query.days)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.get("/system-health", async (_req, res, next) => {
+  try {
+    res.json(await systemHealth());
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Report exports: CSV that opens in Excel. Audited, as every data pull from
+// the console is, and never cached on the way.
+const REPORT_EXPORTS: Record<string, (req: Request) => Promise<string>> = {
+  dashboard: () => dashboardCsv(),
+  analytics: () => analyticsCsv(),
+  cities: (req) => citiesCsv(cityQuery.parse(req.query)),
+  vendors: () => vendorsCsv(),
+  trends: (req) => trendsCsv(daysParam.parse(req.query.days)),
+};
+
+for (const [name, build] of Object.entries(REPORT_EXPORTS)) {
+  adminRouter.get(`/reports/${name}.csv`, async (req, res, next) => {
+    try {
+      const csv = await build(req);
+      await auditFromReq(req, { action: `export.${name}`, targetType: "system", summary: `Exported the ${name} report` });
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${name}.csv"`);
+      res.setHeader("Cache-Control", "no-store");
+      // The byte order mark tells Excel the file is UTF-8, so a city or vendor
+      // name outside ASCII opens as written.
+      res.send(`\uFEFF${csv}`);
+    } catch (err) {
+      next(err);
+    }
+  });
+}
 
 // --- Reporting dashboards (founder's admin view) ------------------------
 adminRouter.get("/dashboard", async (_req, res, next) => {
@@ -95,9 +158,9 @@ adminRouter.get("/reports/gmv-by-domain", async (_req, res, next) => {
   }
 });
 
-adminRouter.get("/cities", async (_req, res, next) => {
+adminRouter.get("/cities", async (req, res, next) => {
   try {
-    res.json(await cityReport());
+    res.json(await cityReport(cityQuery.parse(req.query)));
   } catch (err) {
     next(err);
   }
