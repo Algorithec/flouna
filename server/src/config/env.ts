@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { subscriberIdProblem } from "../modules/ondc/context.js";
+import { subscriberIdProblem, workbenchUrlProblem } from "../modules/ondc/context.js";
 import { commercialTerms } from "../modules/ondc/commercial.js";
 
 const envSchema = z.object({
@@ -165,6 +165,10 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => new Set((v ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean))),
+  // ONDC's workbench, https://workbench.ondc.tech/api-service, for running its
+  // test flows from the live app: the testers above search its mock seller
+  // instead of the gateway. Pre-production only; see modules/ondc/workbench.ts.
+  ONDC_WORKBENCH_URL: z.string().optional(),
   // Commercial terms on ONDC, the founder's to set. Read and checked by
   // modules/ondc/commercial.ts, which explains each and its default.
   ONDC_FOOD_PAYMENT_COLLECTOR: z.string().optional(),
@@ -249,6 +253,11 @@ if (isProd) {
   }
   const subscriberProblem = subscriberIdProblem(env.ONDC_SUBSCRIBER_ID);
   if (subscriberProblem) problems.push(subscriberProblem);
+  const workbenchProblem = workbenchUrlProblem(env.ONDC_WORKBENCH_URL);
+  if (workbenchProblem) problems.push(workbenchProblem);
+  if (env.ONDC_WORKBENCH_URL && env.ONDC_REGISTRY_ENV === "prod") {
+    problems.push("ONDC_WORKBENCH_URL is a pre-production tool, unset it with ONDC_REGISTRY_ENV=prod");
+  }
   // A term set to something that cannot go on the wire stops the server: it
   // would otherwise fail on the first order, in front of a customer.
   let ondcTerms: ReturnType<typeof commercialTerms> | null = null;
