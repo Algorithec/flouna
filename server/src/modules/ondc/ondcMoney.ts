@@ -98,7 +98,7 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
       });
     // Demo payments took no money, so there is nothing to send back.
     if (order.paymentRef?.startsWith("demo_") || (!cashfreeConfigured && !deps.refund)) {
-      await finished("no_gateway");
+      if ((await finished("no_gateway")).count) await holdSellerMoneyAfterRefund(order.id, amount);
     } else {
       try {
         const r = await (deps.refund ?? createCashfreeRefund)({
@@ -107,7 +107,7 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
           amountRupees: amount / 100,
           note: "Refund for an ONDC order",
         });
-        await finished(String(r.cf_refund_id));
+        if ((await finished(String(r.cf_refund_id))).count) await holdSellerMoneyAfterRefund(order.id, amount);
       } catch (err) {
         console.error("[ondc] refund failed for", order.id, err instanceof Error ? err.message : String(err));
         await prisma.ondcOrder.update({ where: { id: order.id }, data: { refundStatus: "failed", refundPaise: amount } });
@@ -119,6 +119,73 @@ export async function sendRefund(ondcOrderId: string, deps: { refund?: typeof cr
     if (after.refundDuePaise == null || after.refundDuePaise <= after.refundedPaise) return;
     await prisma.ondcOrder.updateMany({ where: { id: order.id, refundStatus: "done" }, data: { refundStatus: "owed" } });
   }
+}
+
+const rupees = (paise: number) => (paise / 100).toFixed(2);
+
+/**
+ * A refund after the order completed (a return, or a complaint resolved with
+ * money back) comes out of what the seller is owed. The customer is refunded
+ * at once from the money Flouna holds; the seller's share then has to shrink
+ * by the same amount, and nothing did that. A payout or settlement still
+ * waiting would have been paid in full, so Flouna paid the refund twice over:
+ * once to the customer and again inside the seller's money.
+ *
+ * So a payout or settlement not yet paid is held, with a note saying how much
+ * to take off, for the operator who already decides every payout. One already
+ * paid is flagged for recovery from the seller, loudly, as a double payment is.
+ * Nothing is re-calculated here: how a refund splits between the seller's
+ * share and our fee is a decision for a person, not a guess in code.
+ *
+ * Before completion there is neither row, and the seller's final bill already
+ * gives a lower total, so a cancellation needs none of this.
+ */
+async function holdSellerMoneyAfterRefund(ondcOrderId: string, refundedPaise: number): Promise<void> {
+  const reduce = `Customer refunded Rs ${rupees(refundedPaise)} after the order completed: take it off before paying the seller.`;
+  const recover = `RECOVER: customer refunded Rs ${rupees(refundedPaise)} after the seller was paid. Recover it from the seller.`;
+  const withNote = (note: string | null, add: string) => (note ? `${note} ${add}` : add);
+
+  // Each row is re-read if it changed under us, for instance an operator
+  // marking the payout paid at the same moment, so the note is never lost.
+  let payoutNoted = false;
+  let payoutSeen = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const payout = await prisma.ondcPayout.findUnique({ where: { ondcOrderId } });
+    if (!payout) break;
+    payoutSeen = true;
+    const waiting = payout.status === "due" || payout.status === "held";
+    const done = await prisma.ondcPayout.updateMany({
+      where: { id: payout.id, status: payout.status, note: payout.note },
+      data: waiting ? { status: "held", note: withNote(payout.note, reduce) } : { note: withNote(payout.note, recover) },
+    });
+    if (!done.count) continue;
+    payoutNoted = true;
+    if (!waiting) console.error("[ondc] refund after the seller was paid by hand, order", ondcOrderId);
+    break;
+  }
+  // The row kept changing under every attempt. Said loudly, since a payout
+  // without this note would be paid in full.
+  if (payoutSeen && !payoutNoted) console.error(`[ondc] could not note a Rs ${rupees(refundedPaise)} refund on the seller payout for order ${ondcOrderId}: check it before paying`);
+
+  // Only where Flouna collected: when the seller collected, the seller
+  // refunds the customer itself and owes us only the fee.
+  let settlementNoted = false;
+  let settlementSeen = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const settlement = await prisma.ondcSettlement.findUnique({ where: { ondcOrderId } });
+    if (!settlement || settlement.role !== "collector") break;
+    settlementSeen = true;
+    const waiting = settlement.status === "due" || settlement.status === "held";
+    const done = await prisma.ondcSettlement.updateMany({
+      where: { id: settlement.id, status: settlement.status, note: settlement.note },
+      data: waiting ? { status: "held", note: withNote(settlement.note, reduce) } : { note: withNote(settlement.note, recover) },
+    });
+    if (!done.count) continue;
+    settlementNoted = true;
+    if (!waiting) console.error("[ondc] refund after the seller was settled, order", ondcOrderId);
+    break;
+  }
+  if (settlementSeen && !settlementNoted) console.error(`[ondc] could not note a Rs ${rupees(refundedPaise)} refund on the settlement for order ${ondcOrderId}: check it before settling`);
 }
 
 /**
