@@ -1,13 +1,16 @@
 "use client";
 
 import { useI18n } from "@/components/i18n/I18nContext";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { isAndroidApp } from "@/lib/androidApp";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useAuth, type User } from "./AuthContext";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+const neverChanges = () => () => {};
 
 declare global {
   interface Window {
@@ -69,6 +72,7 @@ export function GoogleButton({
   const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
+  const inApp = useSyncExternalStore(neverChanges, isAndroidApp, () => false);
   const router = useRouter();
   const { setUser } = useAuth();
   const surface =
@@ -98,7 +102,7 @@ export function GoogleButton({
   }, [router, setUser, onError, t]);
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !ref.current) return;
+    if (!GOOGLE_CLIENT_ID || !ref.current || isAndroidApp()) return;
     let alive = true;
     void loadGoogle().then(() => {
       if (!alive || !window.google || !ref.current) return;
@@ -125,6 +129,10 @@ export function GoogleButton({
       alive = false;
     };
   }, []);
+
+  // Google refuses to sign anyone in from inside an app's WebView, and the
+  // button would just do nothing.
+  if (inApp) return null;
 
   if (!GOOGLE_CLIENT_ID) {
     const handleDevLogin = async () => {
