@@ -21,6 +21,11 @@ export async function isOndcTester(userId: string, testers: Set<string> = env.ON
   return Boolean(user && testers.has(user.email.toLowerCase()));
 }
 
+/** Whether searchUrl chose the workbench's mock seller rather than a gateway. */
+export function isWorkbenchUrl(url: string): boolean {
+  return !Object.values(GATEWAY_URL).includes(url as (typeof GATEWAY_URL)[keyof typeof GATEWAY_URL]);
+}
+
 /** Where this customer's search goes: the workbench's mock seller for a tester while it is set, else the gateway. */
 export async function searchUrl(
   userId: string,
