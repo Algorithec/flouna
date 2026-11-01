@@ -101,6 +101,34 @@ describe("searches from the app while the workbench is set", () => {
     expect(r.urls).toEqual([`${WORKBENCH}/ONDC:RET11/1.2.0/seller`, GATEWAY]);
   });
 
+  it("states our static terms to the network but not to the workbench, which accepts only ONDC's own", async () => {
+    const before = { url: process.env.ONDC_STATIC_TERMS_URL, date: process.env.ONDC_STATIC_TERMS_EFFECTIVE_DATE };
+    process.env.ONDC_STATIC_TERMS_URL = "https://www.flouna.com/ondc/static-terms-v1.0.1.pdf";
+    process.env.ONDC_STATIC_TERMS_EFFECTIVE_DATE = "2026-10-30";
+    try {
+      const other = await customer();
+      const sent: { url: string; tags: unknown }[] = [];
+      const send = async (url: string, _action: string, envelope: { message: unknown }) => {
+        sent.push({ url, tags: (envelope.message as { intent: { tags?: unknown } }).intent.tags });
+        return { ack: true, status: 200 };
+      };
+      const mine = await startOndcSearch(tester.userId, "pizza", { identity, send });
+      const theirs = await startOndcSearch(other.userId, "pizza", { identity, send });
+      expect(sent[0]).toEqual({ url: `${WORKBENCH}/ONDC:RET11/1.2.0/seller`, tags: undefined });
+      expect(sent[1]!.url).toBe(GATEWAY);
+      expect(JSON.stringify(sent[1]!.tags)).toContain("static-terms-v1.0.1.pdf");
+      // The record says what each search actually stated.
+      const row = (o: typeof mine) => prisma.ondcSearch.findUniqueOrThrow({ where: { id: (o as { searchId: string }).searchId } });
+      expect((await row(mine)).termsUrl).toBeNull();
+      expect((await row(theirs)).termsUrl).toContain("static-terms-v1.0.1.pdf");
+    } finally {
+      if (before.url === undefined) delete process.env.ONDC_STATIC_TERMS_URL;
+      else process.env.ONDC_STATIC_TERMS_URL = before.url;
+      if (before.date === undefined) delete process.env.ONDC_STATIC_TERMS_EFFECTIVE_DATE;
+      else process.env.ONDC_STATIC_TERMS_EFFECTIVE_DATE = before.date;
+    }
+  });
+
   it("sends a tester's ride search to the mock seller and a rider's to the gateway", async () => {
     const other = await customer();
     const r = recorder();

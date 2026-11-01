@@ -7,7 +7,7 @@ import { distanceKm, parseOnSearch, type OndcOffer } from "./catalog.js";
 import { buildSearch } from "./retail.js";
 import type { SigningIdentity } from "./signing.js";
 import { sendSigned, type SendResult } from "./transport.js";
-import { isOndcTester, searchUrl } from "./workbench.js";
+import { isOndcTester, isWorkbenchUrl, searchUrl } from "./workbench.js";
 import { ondcIdentity } from "./identity.js";
 
 // Searching the ONDC network for food.
@@ -112,11 +112,15 @@ export async function startOndcSearch(
 
   const searchId = crypto.randomUUID();
   const terms = commercialTerms();
+  const url = await searchUrl(userId, "ONDC:RET11");
+  // The workbench refuses any terms but ONDC's own standard set, and skips the
+  // check when none are stated. Sellers on the network still get ours.
+  const staticTerms = isWorkbenchUrl(url) ? null : terms.staticTerms;
   const envelope = buildSearch({
     transactionId: searchId,
     city,
     finderFeePercent: terms.finderFeePercent,
-    staticTerms: terms.staticTerms,
+    staticTerms,
     query: query.slice(0, 80),
     gps: `${address.lat.toFixed(6)},${address.lng.toFixed(6)}`,
     areaCode: address.pincode,
@@ -132,12 +136,12 @@ export async function startOndcSearch(
       lng: address.lng,
       city,
       status: "sending",
-      termsUrl: terms.staticTerms?.url ?? null,
-      termsEffective: terms.staticTerms?.effectiveDate ?? null,
+      termsUrl: staticTerms?.url ?? null,
+      termsEffective: staticTerms?.effectiveDate ?? null,
     },
   });
   const send = async () => {
-    const result = await (opts.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(await searchUrl(userId, "ONDC:RET11"), "search", envelope, id);
+    const result = await (opts.send ?? ((u, a, e, i) => sendSigned(u, a, e, i)))(url, "search", envelope, id);
     await prisma.ondcSearch.update({ where: { id: searchId }, data: { status: result.ack ? "sent" : "refused" } });
     await prisma.ondcTransaction.create({
       data: {
