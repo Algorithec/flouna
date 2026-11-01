@@ -44,7 +44,11 @@ describe("ride messages match ONDC's TRV10 2.0.1 examples", () => {
   it("confirm on the terms returned in on_init", () => {
     const p = ex.confirm.order.payments[0];
     const m = buildRideConfirm({ ...base, customer, payment: { collectedBy: "BPP", params: p.params, tags: p.tags, id: p.id } });
-    expect(m.message).toEqual(ex.confirm);
+    // The one place we leave ONDC's example. It carries the LOCATION tag here,
+    // but the workbench refuses a confirm with any tag other than ROUTE_INFO.
+    const { tags: _areaTags, ...fulfillment } = ex.confirm.order.fulfillments[0];
+    expect(_areaTags[0].descriptor.code).toBe("LOCATION");
+    expect(m.message).toEqual({ ...ex.confirm, order: { ...ex.confirm.order, fulfillments: [fulfillment] } });
   });
 
   it("asks a ride's status by order id", () => {
