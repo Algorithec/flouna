@@ -147,11 +147,15 @@ export function buildRideInit(o: RideBase & { customer: { name: string; phone: s
 /** Books the ride on the terms the provider returned in on_init. */
 export function buildRideConfirm(o: RideBase & { customer: { name: string; phone: string }; payment: RidePayment & { id: string } }) {
   const init = buildRideInit(o);
+  // ONDC's rules allow only ROUTE_INFO tags on a confirm's fulfillment, and that
+  // tag is the provider's to send, so the area tags stop at init.
+  const { tags: _areaTags, ...booked } = init.message.order.fulfillments[0]!;
   return {
     context: ctx(o, "confirm"),
     message: {
       order: {
         ...init.message.order,
+        fulfillments: [booked],
         payments: [{ ...init.message.order.payments[0]!, id: o.payment.id }],
       },
     },
