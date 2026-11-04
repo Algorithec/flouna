@@ -2,4 +2,5 @@
 <resources>
     <!-- The site's cream, so the bars and splash match the page beneath them. -->
     <color name="background">#FFF9F6</color>
+    <color name="accent">#E8651A</color>
 </resources>
