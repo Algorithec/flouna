@@ -1144,6 +1144,7 @@ model OndcTransaction {
   request   String? // JSON: the Beckn request envelope (context + message)
   response  String? // JSON: the matching callback envelope, when present
   status    String // "ack" | "nack" | "error"
+  nackReason String? // JSON error from the seller/gateway when status is "nack"
   signed    Boolean  @default(true) // request carried an Ed25519 signature
   latencyMs Int? // round-trip for request→callback, when known
   simulated Boolean  @default(true) // pre-registration synthetic record

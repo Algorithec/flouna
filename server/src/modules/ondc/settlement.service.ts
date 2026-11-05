@@ -154,6 +154,7 @@ async function logOutbound(envelope: { context: Record<string, unknown> }, actio
       bppId,
       request: JSON.stringify(envelope),
       status: ack ? "ack" : "nack",
+      nackReason: ack ? undefined : "unknown",
       signed: true,
       simulated: false,
     },

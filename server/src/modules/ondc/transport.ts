@@ -68,3 +68,9 @@ export async function sendSigned(
     return { ack: false, status: 0, error: message };
   }
 }
+
+export function nackReasonOf(error: unknown): string | undefined {
+  if (error == null) return undefined;
+  if (typeof error === "string") return error.slice(0, 2000);
+  try { return JSON.stringify(error).slice(0, 2000); } catch { return String(error).slice(0, 2000); }
+}
