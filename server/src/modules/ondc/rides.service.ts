@@ -8,7 +8,7 @@ import { buildRideCancel, buildRideConfirm, buildRideInit, buildRideSearch, buil
 import { parseRideOnSearch, readRideOnInit, readRideOnSelect, readRideState, readRideTrack, type RideOffer, type RidePaymentTerms } from "./rideReplies.js";
 import { stdCodeFor } from "./search.service.js";
 import type { SigningIdentity } from "./signing.js";
-import { sendSigned, type SendResult } from "./transport.js";
+import { nackReasonOf, sendSigned, type SendResult } from "./transport.js";
 import { searchUrl } from "./workbench.js";
 import { ondcIdentity } from "./identity.js";
 import { fareChangedProblem, PROBLEM, problemCode } from "./problems.js";
@@ -87,6 +87,7 @@ async function sendStep(ride: RideRow, action: string, envelope: { context: Reco
       bppId: ride.bppId,
       request: JSON.stringify(envelope),
       status: result.ack ? "ack" : "nack",
+      nackReason: result.ack ? undefined : nackReasonOf(result.error),
       signed: true,
       simulated: false,
     },

@@ -22,7 +22,7 @@ import { recordTermsAcceptance, statesAcceptance } from "./termsAcceptance.js";
 import { recordSettlement } from "./settlement.service.js";
 import type { SigningIdentity } from "./signing.js";
 import { ondcIdentity } from "./identity.js";
-import { sendSigned, type SendResult } from "./transport.js";
+import { nackReasonOf, sendSigned, type SendResult } from "./transport.js";
 import { billReducedProblem, outOfStockProblem, PROBLEM, problemCode, type ProblemCode } from "./problems.js";
 
 // Placing a food order with an ONDC seller.
@@ -94,6 +94,7 @@ async function sendStep(
       bppId: order.bppId,
       request: JSON.stringify(envelope),
       status: result.ack ? "ack" : "nack",
+      nackReason: result.ack ? undefined : nackReasonOf(result.error),
       signed: true,
       simulated: false,
     },
@@ -330,7 +331,7 @@ async function askAboutOrder(userId: string, id: string, action: "status" | "tra
     (err: unknown) => ({ ack: false as const, status: 0, error: String(err) }),
   );
   await prisma.ondcTransaction.create({
-    data: { txnId: order.txnId, messageId: envelope.context.message_id as string, action, domain: "ONDC:RET11", orderId: order.id, bppId: order.bppId, request: JSON.stringify(envelope), status: result.ack ? "ack" : "nack", signed: true, simulated: false },
+    data: { txnId: order.txnId, messageId: envelope.context.message_id as string, action, domain: "ONDC:RET11", orderId: order.id, bppId: order.bppId, request: JSON.stringify(envelope), status: result.ack ? "ack" : "nack", nackReason: result.ack ? undefined : nackReasonOf(result.error), signed: true, simulated: false },
   });
   return { asked: result.ack };
 }

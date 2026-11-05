@@ -6,7 +6,7 @@ import { commercialTerms } from "./commercial.js";
 import { distanceKm, parseOnSearch, type OndcOffer } from "./catalog.js";
 import { buildSearch } from "./retail.js";
 import type { SigningIdentity } from "./signing.js";
-import { sendSigned, type SendResult } from "./transport.js";
+import { nackReasonOf, sendSigned, type SendResult } from "./transport.js";
 import { isOndcTester, isWorkbenchUrl, searchUrl } from "./workbench.js";
 import { ondcIdentity } from "./identity.js";
 
@@ -151,6 +151,7 @@ export async function startOndcSearch(
         domain: "ONDC:RET11",
         request: JSON.stringify(envelope),
         status: result.ack ? "ack" : "nack",
+        nackReason: result.ack ? undefined : nackReasonOf(result.error),
         signed: true,
         simulated: false,
       },
