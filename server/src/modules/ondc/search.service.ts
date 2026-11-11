@@ -7,7 +7,7 @@ import { distanceKm, parseOnSearch, type OndcOffer } from "./catalog.js";
 import { buildSearch } from "./retail.js";
 import type { SigningIdentity } from "./signing.js";
 import { nackReasonOf, sendSigned, type SendResult } from "./transport.js";
-import { isOndcTester, isWorkbenchUrl, searchUrl } from "./workbench.js";
+import { isOndcTester, isWorkbenchUrl, searchUrl, workbenchBpp } from "./workbench.js";
 import { ondcIdentity } from "./identity.js";
 
 // Searching the ONDC network for food.
@@ -113,6 +113,7 @@ export async function startOndcSearch(
   const searchId = crypto.randomUUID();
   const terms = commercialTerms();
   const url = await searchUrl(userId, "ONDC:RET11");
+  const bpp = workbenchBpp(url);
   // The workbench refuses any terms but ONDC's own standard set, and skips the
   // check when none are stated. Sellers on the network still get ours.
   const staticTerms = isWorkbenchUrl(url) ? null : terms.staticTerms;
@@ -124,6 +125,7 @@ export async function startOndcSearch(
     query: query.slice(0, 80),
     gps: `${address.lat.toFixed(6)},${address.lng.toFixed(6)}`,
     areaCode: address.pincode,
+    ...(bpp ? { bpp } : {}),
   });
   // Recorded before sending, so answers that arrive quickly have a search to
   // belong to.
