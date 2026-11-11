@@ -26,6 +26,16 @@ export function isWorkbenchUrl(url: string): boolean {
   return !Object.values(GATEWAY_URL).includes(url as (typeof GATEWAY_URL)[keyof typeof GATEWAY_URL]);
 }
 
+/** The workbench's bpp_id and bpp_uri for a workbench seller URL, or null for a gateway. */
+export function workbenchBpp(url: string): { id: string; uri: string } | null {
+  if (!isWorkbenchUrl(url)) return null;
+  try {
+    return { id: new URL(url).hostname, uri: url };
+  } catch {
+    return null;
+  }
+}
+
 /** Where this customer's search goes: the workbench's mock seller for a tester while it is set, else the gateway. */
 export async function searchUrl(
   userId: string,
