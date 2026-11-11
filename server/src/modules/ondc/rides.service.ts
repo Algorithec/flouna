@@ -9,7 +9,7 @@ import { parseRideOnSearch, readRideOnInit, readRideOnSelect, readRideState, rea
 import { stdCodeFor } from "./search.service.js";
 import type { SigningIdentity } from "./signing.js";
 import { nackReasonOf, sendSigned, type SendResult } from "./transport.js";
-import { searchUrl } from "./workbench.js";
+import { searchUrl, workbenchBpp } from "./workbench.js";
 import { ondcIdentity } from "./identity.js";
 import { fareChangedProblem, PROBLEM, problemCode } from "./problems.js";
 
@@ -167,6 +167,8 @@ export async function startRideSearch(userId: string, input: { pickup: PlaceInpu
   const ride = await prisma.ondcRide.create({
     data: { userId, txnId: crypto.randomUUID(), status: "searching", city, pickup: JSON.stringify(pickup), drop: JSON.stringify(drop) },
   });
+  const url = await searchUrl(userId, "ONDC:TRV10");
+  const bpp = workbenchBpp(url);
   const envelope = buildRideSearch({
     transactionId: ride.txnId,
     city,
@@ -175,8 +177,9 @@ export async function startRideSearch(userId: string, input: { pickup: PlaceInpu
     finderFeePercent: terms.finderFeePercent,
     staticTermsUrl: terms.staticTermsUrl,
     delayInterestPercent: terms.delayInterestPercent,
+    ...(bpp ? { bpp } : {}),
   });
-  const ok = await sendStep(ride, "search", envelope, null, deps, await searchUrl(userId, "ONDC:TRV10"));
+  const ok = await sendStep(ride, "search", envelope, null, deps, url);
   if (!ok) {
     await prisma.ondcRide.update({ where: { id: ride.id }, data: { status: "failed", problem: PROBLEM.searchRefused } });
   }
