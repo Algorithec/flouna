@@ -55,9 +55,11 @@ export function buildRideSearch(o: {
   /** Where Flouna's own static terms are published. */
   staticTermsUrl: string;
   delayInterestPercent?: number;
+  /** Set when the search targets the workbench mock seller directly. */
+  bpp?: { id: string; uri: string };
 }) {
   return {
-    context: buildContext({ domain: DOMAIN, action: "search", city: o.city, transactionId: o.transactionId }),
+    context: buildContext({ domain: DOMAIN, action: "search", city: o.city, transactionId: o.transactionId, ...(o.bpp ? { bppId: o.bpp.id, bppUri: o.bpp.uri } : {}) }),
     message: {
       intent: {
         fulfillment: { stops: stops(o.pickup, o.drop), tags: areaTags(o.pickup, o.drop) },

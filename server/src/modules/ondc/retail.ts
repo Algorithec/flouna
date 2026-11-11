@@ -66,9 +66,10 @@ export function buildSearch(o: {
   gps?: string;
   areaCode?: string;
   staticTerms?: StaticTerms | null;
+  bpp?: { id: string; uri: string };
 }) {
   return {
-    context: buildContext({ domain: DOMAIN, action: "search", city: o.city, transactionId: o.transactionId }),
+    context: buildContext({ domain: DOMAIN, action: "search", city: o.city, transactionId: o.transactionId, ...(o.bpp ? { bppId: o.bpp.id, bppUri: o.bpp.uri } : {}) }),
     message: {
       intent: {
         ...(o.query ? { item: { descriptor: { name: o.query } } } : {}),
