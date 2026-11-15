@@ -1,0 +1,364 @@
+[
+  {
+    "prompt": "order me a pizza under 300 rupees",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Looking up pizza deals for you.\", \"food\": {\"item\": \"pizza\", \"budgetPaise\": 30000, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}}",
+    "ms": 1647.3,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 59
+  },
+  {
+    "prompt": "find me a cheap pizza",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me compare the lowest prices.\", \"food\": {\"item\": \"pizza\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"price\"}}",
+    "ms": 1385.2,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 54
+  },
+  {
+    "prompt": "I need food quickly",
+    "raw": "{\"domain\": \"food\", \"reply\": \"On it, finding food options now.\", \"food\": {\"item\": \"food\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"speed\"}}",
+    "ms": 1396.5,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 55
+  },
+  {
+    "prompt": "find me something affordable",
+    "raw": "{\"domain\": \"price\", \"reply\": \"Let me compare something affordable prices.\", \"price\": \"affordable\"}",
+    "ms": 653.8,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [
+      "unexpected root keys: ['price']",
+      "domain 'price' not in ('food', 'ride', 'shop', 'combo', 'greeting', 'out_of_scope')"
+    ],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 25
+  },
+  {
+    "prompt": "show me non-veg biryani",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best biryani options for you.\", \"food\": {\"item\": \"biryani\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"nonveg\", \"priority\": \"balanced\"}}",
+    "ms": 1593.8,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 63
+  },
+  {
+    "prompt": "find non vegetarian food",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best food options for you.\", \"food\": {\"item\": \"food\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"nonveg\", \"priority\": \"balanced\"}}",
+    "ms": 1510.0,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 59
+  },
+  {
+    "prompt": "what is the fastest option",
+    "raw": "{\"domain\": \"speed\", \"reply\": \"Let me compare the best options.\", \"food\": {\"item\": \"food\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"speed\"}}",
+    "ms": 1364.2,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [
+      "domain 'speed' not in ('food', 'ride', 'shop', 'combo', 'greeting', 'out_of_scope')"
+    ],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 54
+  },
+  {
+    "prompt": "I don't want to wait",
+    "raw": "{\"domain\": \"out_of_scope\", \"reply\": \"I can help you order food, book rides, or shop. What would you like?\"}",
+    "ms": 834.2,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 32
+  },
+  {
+    "prompt": "tell me a joke",
+    "raw": "{\"domain\": \"out_of_scope\", \"reply\": \"I can help you order food, book rides, or shop. What would you like?\"}",
+    "ms": 827.5,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 32
+  },
+  {
+    "prompt": "who won the cricket match",
+    "raw": "{\"domain\": \"out_of_scope\", \"reply\": \"I can help you order food, book rides, or shop. What would you like?\"}",
+    "ms": 821.3,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 32
+  },
+  {
+    "prompt": "what is the weather today",
+    "raw": "{\"domain\": \"out_of_scope\", \"reply\": \"I can help you order food, book rides, or shop. What would you like?\"}",
+    "ms": 817.4,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 32
+  },
+  {
+    "prompt": "explain quantum computing",
+    "raw": "{\"domain\": \"out_of_scope\", \"reply\": \"I can help you order food, book rides, or shop. What would you like?\"}",
+    "ms": 817.1,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 32
+  },
+  {
+    "prompt": "I want pizza",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best pizza options for you.\", \"food\": {\"item\": \"pizza\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}}",
+    "ms": 1426.5,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 57
+  },
+  {
+    "prompt": "I want vegetarian pizza under 300",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best pizza options for you.\", \"food\": {\"item\": \"pizza\", \"budgetPaise\": 30000, \"maxEtaMinutes\": null, \"dietary\": \"veg\", \"priority\": \"balanced\"}}",
+    "ms": 1601.9,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 63
+  },
+  {
+    "prompt": "I want chicken biryani delivered quickly",
+    "raw": "{\"domain\": \"food\", \"reply\": \"On it, finding chicken biryani options now.\", \"food\": {\"item\": \"chicken biryani\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"nonveg\", \"priority\": \"speed\"}}",
+    "ms": 1612.7,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 64
+  },
+  {
+    "prompt": "I need a cab to the airport",
+    "raw": "{\"domain\": \"ride\", \"reply\": \"On it, comparing ride options for you.\", \"ride\": {\"pickup\": null, \"drop\": \"the airport\", \"vehicle\": \"cab\", \"budgetPaise\": null, \"maxPickupMinutes\": null, \"priority\": \"balanced\", \"scheduleAt\": null}}",
+    "ms": 1732.6,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 68
+  },
+  {
+    "prompt": "cheapest veg biryani",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best veg biryani options for you.\", \"food\": {\"item\": \"veg biryani\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"veg\", \"priority\": \"price\"}}",
+    "ms": 1642.1,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 65
+  },
+  {
+    "prompt": "top rated pizza near me",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best pizza options for you.\", \"food\": {\"item\": \"pizza\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"rating\"}}",
+    "ms": 1452.1,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 57
+  },
+  {
+    "prompt": "quick delivery of dosa",
+    "raw": "{\"domain\": \"food\", \"reply\": \"On it, finding the quickest option.\", \"food\": {\"item\": \"dosa\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"veg\", \"priority\": \"speed\"}}",
+    "ms": 1435.4,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 57
+  },
+  {
+    "prompt": "I eat meat, show me food",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best food options for you.\", \"food\": {\"item\": \"food\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"nonveg\", \"priority\": \"balanced\"}}",
+    "ms": 1518.6,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 59
+  },
+  {
+    "prompt": "show me non vegetarian food under 250",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best food options for you.\", \"food\": {\"item\": \"food\", \"budgetPaise\": 25000, \"maxEtaMinutes\": null, \"dietary\": \"nonveg\", \"priority\": \"balanced\"}}",
+    "ms": 1618.9,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 64
+  },
+  {
+    "prompt": "pick me up from Banjara Hills in 6 minutes, drop at Hitech City",
+    "raw": "{\"domain\": \"ride\", \"reply\": \"On it, comparing ride options for you.\", \"ride\": {\"pickup\": \"Banjara Hills\", \"drop\": \"Hitech City\", \"vehicle\": \"any\", \"budgetPaise\": null, \"maxPickupMinutes\": 6, \"priority\": \"speed\", \"scheduleAt\": null}}",
+    "ms": 1888.0,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 74
+  },
+  {
+    "prompt": "book a cab to the airport at 7pm",
+    "raw": "{\"domain\": \"ride\", \"reply\": \"On it, comparing ride options for you.\", \"ride\": {\"pickup\": null, \"drop\": \"the airport\", \"vehicle\": \"cab\", \"budgetPaise\": null, \"maxPickupMinutes\": null, \"priority\": \"balanced\", \"scheduleAt\": \"19:00\"}}",
+    "ms": 1849.9,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 73
+  },
+  {
+    "prompt": "order dinner and book a cab home",
+    "raw": "{\"domain\": \"combo\", \"reply\": \"I'll find dinner and a ride to home for you.\", \"food\": {\"item\": \"dinner\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}, \"ride\": {\"pickup\": null, \"drop\": \"home\", \"vehicle\": \"cab\", \"budgetPaise\": null, \"maxPickupMinutes\": null, \"priority\": \"balanced\", \"scheduleAt\": null}}",
+    "ms": 2681.3,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 107
+  },
+  {
+    "prompt": "I want veg pizza under 300 within 30 minutes",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Looking up pizza deals for you.\", \"food\": {\"item\": \"pizza\", \"budgetPaise\": 30000, \"maxEtaMinutes\": 30, \"dietary\": \"veg\", \"priority\": \"speed\"}}",
+    "ms": 1595.2,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 62
+  },
+  {
+    "prompt": "I'm hungry",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find something for you.\", \"food\": {\"item\": \"food\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}}",
+    "ms": 1353.3,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 54
+  },
+  {
+    "prompt": "something spicy",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best something spicy options for you.\", \"food\": {\"item\": \"something spicy\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}}",
+    "ms": 1494.2,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 59
+  },
+  {
+    "prompt": "cab",
+    "raw": "{\"domain\": \"ride\", \"reply\": \"On it, comparing ride options for you.\", \"ride\": {\"pickup\": null, \"drop\": \"the office\", \"vehicle\": \"cab\", \"budgetPaise\": null, \"maxPickupMinutes\": null, \"priority\": \"balanced\", \"scheduleAt\": null}}",
+    "ms": 1722.7,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 68
+  },
+  {
+    "prompt": "I want to order two veg pizzas for my family under 500 rupees and a cab to the airport at 7pm",
+    "raw": "{\"domain\": \"combo\", \"reply\": \"Let me handle both, veg pizzas and a ride to the airport.\", \"food\": {\"item\": \"veg pizzas\", \"budgetPaise\": 50000, \"maxEtaMinutes\": null, \"dietary\": \"veg\", \"priority\": \"balanced\"}, \"ride\": {\"pickup\": null, \"drop\": \"the airport\", \"vehicle\": \"cab\", \"budgetPaise\": null, \"maxPickupMinutes\": null, \"reply\": \"On it, comparing veg pizzas prices for you.\", \"scheduleAt\": \"19:00\"}}",
+    "ms": 3306.4,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [
+      "ride has unexpected keys: ['reply']",
+      "ride missing keys: ['priority']"
+    ],
+    "conflicts": [
+      "ride.budgetPaise null but text states an amount"
+    ],
+    "done_reason": "stop",
+    "eval_count": 130
+  },
+  {
+    "prompt": "I want biryani",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best biryani options for you.\", \"food\": {\"item\": \"biryani\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}}",
+    "ms": 1532.5,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 61
+  },
+  {
+    "prompt": "hello",
+    "raw": "{\"domain\": \"greeting\", \"reply\": \"Hey there! Tell me what you need, food, a ride, or something to buy.\"}",
+    "ms": 813.4,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 32
+  },
+  {
+    "prompt": "who is the president of France",
+    "raw": "{\"domain\": \"out_of_scope\", \"reply\": \"I can help you order food, book rides, or shop. What would you like?\"}",
+    "ms": 845.3,
+    "parse_ok": true,
+    "parse_error": null,
+    "schema_errors": [],
+    "conflicts": [],
+    "done_reason": "stop",
+    "eval_count": 32
+  }
+]
