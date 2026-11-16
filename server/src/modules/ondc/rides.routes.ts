@@ -54,7 +54,7 @@ const RATE_MAX = 5;
 const RATE_MAP_CAP = 10_000;
 const searchStamps = new Map<string, number[]>();
 const place = z
-  .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), address: z.string().trim().min(3).max(200), area: z.string().trim().min(1).max(80) })
+  .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), address: z.string().trim().min(3).max(200), area: z.string().trim().min(1).max(200) })
   .strict();
 
 ondcRidesRouter.post("/", validateBody(z.object({ pickup: place, drop: place, city: z.string().trim().min(2).max(60).optional() }).strict()), async (req, res, next) => {
