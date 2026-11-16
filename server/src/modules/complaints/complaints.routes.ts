@@ -11,6 +11,7 @@ import {
   escalateComplaint,
 } from "./complaints.service.js";
 import { addEvidence, readEvidence } from "./evidence.service.js";
+import { igmAdapter } from "./igm.adapter.js";
 
 // Customer-facing complaint API (ONDC IGM 2.0).
 //
@@ -217,6 +218,16 @@ complaintsRouter.get("/:id/refund", async (req, res, next) => {
         completedAt: r.completedAt,
       })),
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+complaintsRouter.post("/:id/retry-igm", async (req, res, next) => {
+  try {
+    await getComplaint(req.userId!, req.params.id!);
+    const result = await igmAdapter.sendIssue(req.params.id!);
+    res.json(result);
   } catch (err) {
     next(err);
   }

@@ -320,7 +320,9 @@ export async function createComplaint(input: {
   // and swallowed on failure: the customer has filed something real, and an
   // ONDC outage must not lose it. The adapter records what it queued either
   // way, so nothing has to be reconstructed later.
-  await igmAdapter.sendIssue(complaint.id).catch(() => {});
+  await igmAdapter.sendIssue(complaint.id).catch((err) => {
+    console.error(`[IGM] sendIssue failed for complaint ${complaint.id}:`, err);
+  });
 
   return complaint;
 }
