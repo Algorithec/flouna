@@ -223,7 +223,7 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
               {t("or.confirm")}
             </button>
           )}
-          {ride.status === "booked" && (
+          {(ride.status === "booked" || ride.status === "completed") && (
             <>
               <div className="flex gap-2">
                 <button type="button" className={`${SOFT} flex-1`} disabled={busy} onClick={() => void step("status")}>
@@ -244,7 +244,7 @@ export default function OndcRidePage({ params }: { params: Promise<{ id: string 
                   </button>
                 )}
               </div>
-              {ride.rideState !== "RIDE_STARTED" && (
+              {ride.status === "booked" && ride.rideState !== "RIDE_STARTED" && (
                 <button type="button" className={`${PILL} w-full text-danger hover:bg-beige/60`} disabled={busy} onClick={() => setAskWhy(true)}>
                   {t("or.cancel")}
                 </button>
