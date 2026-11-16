@@ -134,7 +134,7 @@ function liveAdapter(): IgmAdapter {
  * dropping a customer's grievance.
  */
 export const igmAdapter: IgmAdapter =
-  process.env.ONDC_IGM_ENABLED === "true"
+  process.env.ONDC_IGM_ENABLED === "true" || process.env.ONDC_SUBSCRIBER_ID
     ? liveAdapter()
     : new PendingSpecAdapter();
 
