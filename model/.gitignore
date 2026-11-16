@@ -12,6 +12,7 @@ flouna-lora/
 flouna-fused/
 flouna_gguf/
 flouna_full/
+flouna-*-fused/
 
 # Python
 .venv/

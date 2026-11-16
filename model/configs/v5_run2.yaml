@@ -1,0 +1,41 @@
+# V5 run 2. Continues from the run-1 adapter on the duplicate-free targeted
+# curriculum built by build_v5_run2.py (864 rows: 207 hand-written extras for
+# greeting/meta, OOS, dish-implied dietary, Hindi/Telugu cues, ETA-only
+# requests, shop/ride edges + 75 OOS + 32 greeting + stratified base).
+#
+# OLD: 2e-4 cosine over 600, from base, unweighted corpus
+# NEW: 1e-4 cosine over 400, resumed from run1 adapters.safetensors, 864-row curriculum
+# REASON: run 2 is a targeted refinement, so a lower LR and short schedule avoid
+# destroying the run-1 model. 400 steps x batch 4 is ~1.9 passes over the
+# curriculum, which gives each targeted row several updates without
+# oversampling copies. val loss 0.049 at the run-1 checkpoint leaves headroom.
+# LoRA recipe (rank 16, scale 2.0 = alpha 32 / r16, last 16 layers, batch 4,
+# seq 640, grad checkpoint) is unchanged so the adapter tensors stay compatible.
+model: "Qwen/Qwen2.5-1.5B-Instruct"
+train: true
+data: "/tmp/flouna_v5_run2"
+fine_tune_type: "lora"
+optimizer: "adamw"
+num_layers: 16
+mask_prompt: true
+lora_parameters:
+  rank: 16
+  scale: 2.0
+  dropout: 0.05
+batch_size: 4
+grad_accumulation_steps: 1
+iters: 400
+learning_rate: 1.0e-4
+lr_schedule:
+  name: "cosine_decay"
+  arguments: [1.0e-4, 400]
+  warmup: 12
+max_seq_length: 640
+grad_checkpoint: true
+val_batches: 2
+steps_per_report: 20
+steps_per_eval: 200
+save_every: 200
+resume_adapter_file: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v5-run1/adapters.safetensors"
+adapter_path: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v5-run2"
+seed: 7

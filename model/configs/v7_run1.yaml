@@ -1,0 +1,63 @@
+# V7 run 1. Fresh LoRA from Qwen2.5-1.5B-Instruct on the V7 dataset built by
+# data/v7/build_v7.py: 4,147 train rows / 225 valid rows, validator PASS, zero
+# sealed-holdout copies (exact or >=0.8 4-gram Jaccard).
+#
+# WHAT CHANGED VS V6 (not a blind reuse):
+#   - Corpus: 4,147 curated rows instead of 11,418. V7 is rebuilt from the
+#     audited V6 core plus explicit boundary families (action hard negatives,
+#     vehicle any-vs-cab, ride boundaries, nested minimal pairs, dietary,
+#     generic food entities, greeting/OOS, production-prompt robustness,
+#     paraphrases); duplicate template rows were not carried over.
+#   - Prompt mix: rows use three system prompts (v6 canonical, production
+#     prompt from prompt.ts, and a short prompt) so the adapter does not depend
+#     on one prompt wording. V6 trained on a single prompt.
+#   - Steps: 1,600 x micro-batch 1 with accumulation 4 = 6,400 samples, about
+#     1.5 epochs over V7. V6 run 1 trained 2,400 samples (0.2 epochs over
+#     11,418) and V6 run 2 refined 1,600 samples on a 727-row curriculum.
+#   - LR: 1.5e-4 cosine. Between V6 run 1 (2e-4, fresh, large corpus) and V6
+#     run 2 (8e-5, resumed warm model). V7 is fresh, so it needs a real LR, but
+#     the corpus is small enough that 2e-4 for 1.5 epochs risks memorising
+#     templates.
+#   - Seed: 11 (new shuffle order; V6 used 42/7).
+#
+# UNCHANGED BY DESIGN: rank 16, MLX scale 2.0 (= PEFT alpha 32), dropout 0.05,
+# last 16 layers, mask_prompt, AdamW, grad checkpoint, max_seq_length 1152.
+# Keeping the LoRA recipe identical makes V7 comparable and stackable with V5/V6.
+#
+# MEMORY: 16 GB M2. At 1152-token sequences micro-batch 2 wired ~9.5 GB and
+# stalled in Metal completion; micro-batch 1 + accumulation 4 is the validated
+# ceiling-safe setting.
+#
+# DATA STAGING (before training, not run by this phase):
+#   mkdir -p /tmp/flouna_v7_data
+#   cp data/v7/training/train.jsonl data/v7/training/valid.jsonl /tmp/flouna_v7_data/
+#   caffeinate -i .venv/bin/python -u -m mlx_lm lora -c configs/v7_run1.yaml
+# START TRAINING FROM AN INTERACTIVE TERMINAL: launchd/nohup runs stalled at
+# micro-batch 2 in V6; interactive sessions behaved.
+model: "Qwen/Qwen2.5-1.5B-Instruct"
+train: true
+data: "/tmp/flouna_v7_data"
+fine_tune_type: "lora"
+optimizer: "adamw"
+num_layers: 16
+mask_prompt: true
+lora_parameters:
+  rank: 16
+  scale: 2.0
+  dropout: 0.05
+batch_size: 1
+grad_accumulation_steps: 4
+iters: 1600
+learning_rate: 1.5e-4
+lr_schedule:
+  name: "cosine_decay"
+  arguments: [1.5e-4, 1600]
+  warmup: 50
+max_seq_length: 1152
+grad_checkpoint: true
+val_batches: 2
+steps_per_report: 20
+steps_per_eval: 200
+save_every: 200
+adapter_path: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v7-run1"
+seed: 11

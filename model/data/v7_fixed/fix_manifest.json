@@ -1,0 +1,57 @@
+{
+  "dataset": "v7_fixed",
+  "created_at": "2026-11-16T07:13:23+00:00",
+  "pre_fix_dataset": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7",
+  "reason": "prod system prompt was 1589 tokens; every prod row exceeded max_seq_length 1152 and had an empty loss mask",
+  "compact_prompt": {
+    "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7/prompts/production_compact.txt",
+    "version": "FLOUNA_PRODUCTION_COMPACT_V1",
+    "sha256": "52d22515559df19be7b2264e614905f7cfbcbabd0e8c338a8d487e0e24e72858",
+    "tokens": 838,
+    "chars": 3176
+  },
+  "production_prompt_ts": {
+    "path": "server/src/modules/chat/llm/prompt.ts",
+    "sha256": "907de19eeccd8a4c89e7dc963830ca321b9a47725e7faa599b0b05b10dfffec6",
+    "modified": false
+  },
+  "splits": {
+    "train": {
+      "rows": 4147,
+      "prod_rows_replaced": 1871,
+      "rows_unchanged": 2276,
+      "rows_removed": 0
+    },
+    "valid": {
+      "rows": 225,
+      "prod_rows_replaced": 97,
+      "rows_unchanged": 128,
+      "rows_removed": 0
+    },
+    "eval": {
+      "rows": 495,
+      "prod_rows_replaced": 221,
+      "rows_unchanged": 274,
+      "rows_removed": 0
+    }
+  },
+  "removals": [],
+  "source_hashes_before": {
+    "train": "678338cba7af5277e6e39c99ecfdcd3ee63b90be983865da71e61cc1797878bf",
+    "valid": "6cf147ed4ae801d38999a8d3d418e443de574f44880983e1c3f9bff32737baee",
+    "eval": "2467d61641064dda43bf829ef9c2c328344ddca0acf65e698248d54d432b8e8a"
+  },
+  "source_hashes_after": {
+    "train": "678338cba7af5277e6e39c99ecfdcd3ee63b90be983865da71e61cc1797878bf",
+    "valid": "6cf147ed4ae801d38999a8d3d418e443de574f44880983e1c3f9bff32737baee",
+    "eval": "2467d61641064dda43bf829ef9c2c328344ddca0acf65e698248d54d432b8e8a"
+  },
+  "fixed_hashes": {
+    "train": "98be01950daae3d15fef49e51397dbda6a11a1a9433d6cc315f3d31762427899",
+    "valid": "902a1dbebe99276eb5a281ce4df7653a94a8d23674f2a255b59bb4e28d6b9799",
+    "eval": "23bdf50cf949e01d8e4118d9427bae2ed70dad79760058b95fc8751479353c08",
+    "mlx_train": "98be01950daae3d15fef49e51397dbda6a11a1a9433d6cc315f3d31762427899",
+    "mlx_valid": "902a1dbebe99276eb5a281ce4df7653a94a8d23674f2a255b59bb4e28d6b9799"
+  },
+  "sealed_holdout_sha256": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a"
+}

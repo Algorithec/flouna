@@ -1,0 +1,40 @@
+# V5 run 3. Continues from the run-2 adapter on the duplicate-free targeted
+# curriculum built by build_v5_run3.py (481 rows: 81 hand-written extras for
+# over-eager OOS on short nouns, "se ... tak" pickup/drop order, pickup waits,
+# express/Hinglish cues, manchi/badhiya/sasta, nonvegetarian options, shop
+# categories, meta greetings, healthy/budget-auto/urgently + 400 base rows).
+#
+# OLD: 1e-4 cosine over 400, resumed from run1, 864-row curriculum
+# NEW: 6e-5 cosine over 250, resumed from run2, 481-row curriculum
+# REASON: run 2 reached fixtures 94.7 / valid 89.0 / holdout 90.1 and the
+# remaining misses are narrow phrasings. A third pass at a lower LR on a
+# smaller set (~2 passes at batch 4) adds those behaviours while limiting
+# drift from run 2. The LoRA recipe is unchanged so the adapter stacks.
+model: "Qwen/Qwen2.5-1.5B-Instruct"
+train: true
+data: "/tmp/flouna_v5_run3"
+fine_tune_type: "lora"
+optimizer: "adamw"
+num_layers: 16
+mask_prompt: true
+lora_parameters:
+  rank: 16
+  scale: 2.0
+  dropout: 0.05
+batch_size: 4
+grad_accumulation_steps: 1
+iters: 250
+learning_rate: 6.0e-5
+lr_schedule:
+  name: "cosine_decay"
+  arguments: [6.0e-5, 250]
+  warmup: 10
+max_seq_length: 640
+grad_checkpoint: true
+val_batches: 2
+steps_per_report: 20
+steps_per_eval: 100
+save_every: 250
+resume_adapter_file: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v5-run2/adapters.safetensors"
+adapter_path: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v5-run3"
+seed: 11

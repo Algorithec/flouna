@@ -1,0 +1,432 @@
+{
+  "phase": 13,
+  "dataset": "v7_fixed",
+  "generated_at": "2026-11-16T07:18:48+00:00",
+  "pass": true,
+  "checks": [
+    {
+      "name": "sealed holdout sha256 unchanged",
+      "pass": true,
+      "detail": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a"
+    },
+    {
+      "name": "pre-fix dataset preserved: train_v7.jsonl",
+      "pass": true,
+      "detail": "678338cba7af5277e6e39c99ecfdcd3ee63b90be983865da71e61cc1797878bf"
+    },
+    {
+      "name": "pre-fix dataset preserved: valid_v7.jsonl",
+      "pass": true,
+      "detail": "6cf147ed4ae801d38999a8d3d418e443de574f44880983e1c3f9bff32737baee"
+    },
+    {
+      "name": "pre-fix dataset preserved: validation/v7_validation.jsonl",
+      "pass": true,
+      "detail": "2467d61641064dda43bf829ef9c2c328344ddca0acf65e698248d54d432b8e8a"
+    },
+    {
+      "name": "train: rows parsed and valid",
+      "pass": true,
+      "detail": {
+        "rows": 4147,
+        "errors": 0,
+        "examples": []
+      }
+    },
+    {
+      "name": "valid: rows parsed and valid",
+      "pass": true,
+      "detail": {
+        "rows": 225,
+        "errors": 0,
+        "examples": []
+      }
+    },
+    {
+      "name": "eval: rows parsed and valid",
+      "pass": true,
+      "detail": {
+        "rows": 495,
+        "errors": 0,
+        "examples": []
+      }
+    },
+    {
+      "name": "train rows",
+      "pass": true,
+      "detail": {
+        "value": 4147,
+        "expected": "3500..4500"
+      }
+    },
+    {
+      "name": "eval rows",
+      "pass": true,
+      "detail": {
+        "value": 495,
+        "expected": "300..500"
+      }
+    },
+    {
+      "name": "category core",
+      "pass": true,
+      "detail": {
+        "value": 1636,
+        "expected": "1500..1800"
+      }
+    },
+    {
+      "name": "category action_positive",
+      "pass": true,
+      "detail": {
+        "value": 440,
+        "expected": "400..600"
+      }
+    },
+    {
+      "name": "category action_hard_negative",
+      "pass": true,
+      "detail": {
+        "value": 320,
+        "expected": "280..360"
+      }
+    },
+    {
+      "name": "category ride_boundary",
+      "pass": true,
+      "detail": {
+        "value": 280,
+        "expected": "250..340"
+      }
+    },
+    {
+      "name": "category domain_boundary",
+      "pass": true,
+      "detail": {
+        "value": 230,
+        "expected": "200..280"
+      }
+    },
+    {
+      "name": "category generic_food",
+      "pass": true,
+      "detail": {
+        "value": 180,
+        "expected": "150..220"
+      }
+    },
+    {
+      "name": "category greeting_oos",
+      "pass": true,
+      "detail": {
+        "value": 190,
+        "expected": "170..230"
+      }
+    },
+    {
+      "name": "category nested",
+      "pass": true,
+      "detail": {
+        "value": 230,
+        "expected": "200..280"
+      }
+    },
+    {
+      "name": "category dietary",
+      "pass": true,
+      "detail": {
+        "value": 157,
+        "expected": "140..200"
+      }
+    },
+    {
+      "name": "category production_robustness",
+      "pass": true,
+      "detail": {
+        "value": 224,
+        "expected": "200..320"
+      }
+    },
+    {
+      "name": "category paraphrase",
+      "pass": true,
+      "detail": {
+        "value": 260,
+        "expected": "240..320"
+      }
+    },
+    {
+      "name": "action hard-negative share",
+      "pass": true,
+      "detail": {
+        "value": 0.4211,
+        "expected": "0.4..0.45"
+      }
+    },
+    {
+      "name": "train uses all three system prompts",
+      "pass": true,
+      "detail": {
+        "prod_compact": 1871,
+        "short": 544,
+        "v6": 1732
+      }
+    },
+    {
+      "name": "every system prompt has at least 5% of train rows",
+      "pass": true,
+      "detail": {
+        "prod_compact": 1871,
+        "short": 544,
+        "v6": 1732
+      }
+    },
+    {
+      "name": "train domains cover every schema domain",
+      "pass": true,
+      "detail": [
+        "action",
+        "combo",
+        "food",
+        "greeting",
+        "out_of_scope",
+        "ride",
+        "shop"
+      ]
+    },
+    {
+      "name": "eval domains cover action, greeting, OOS and the three search domains",
+      "pass": true,
+      "detail": [
+        "action",
+        "combo",
+        "food",
+        "greeting",
+        "out_of_scope",
+        "ride",
+        "shop"
+      ]
+    },
+    {
+      "name": "MLX staging files match the split files",
+      "pass": true,
+      "detail": {
+        "train": "98be01950daae3d1"
+      }
+    },
+    {
+      "name": "token preflight: no row above max_seq_length 1152",
+      "pass": true,
+      "detail": {
+        "rows_above": 0,
+        "max_tokens": 1090
+      }
+    },
+    {
+      "name": "token preflight: no empty loss mask",
+      "pass": true,
+      "detail": {
+        "empty_masks": 0
+      }
+    },
+    {
+      "name": "token preflight: no unexpectedly tiny loss mask",
+      "pass": true,
+      "detail": {
+        "tiny_masks": 0
+      }
+    },
+    {
+      "name": "token preflight: rows above 1100 are documented",
+      "pass": true,
+      "detail": {
+        "over_1100": 0,
+        "exceptions": 0
+      }
+    }
+  ],
+  "summary": {
+    "train": {
+      "rows": 4147,
+      "domains": {
+        "food": 1465,
+        "ride": 1250,
+        "action": 490,
+        "shop": 389,
+        "out_of_scope": 295,
+        "combo": 140,
+        "greeting": 118
+      },
+      "systems": {
+        "prod_compact": 1871,
+        "short": 544,
+        "v6": 1732
+      },
+      "system_variants": 3
+    },
+    "valid": {
+      "rows": 225,
+      "domains": {
+        "food": 78,
+        "ride": 60,
+        "action": 30,
+        "greeting": 21,
+        "shop": 19,
+        "combo": 10,
+        "out_of_scope": 7
+      },
+      "systems": {
+        "prod_compact": 97,
+        "v6": 99,
+        "short": 29
+      },
+      "system_variants": 3
+    },
+    "eval": {
+      "rows": 495,
+      "domains": {
+        "food": 167,
+        "ride": 117,
+        "action": 70,
+        "out_of_scope": 45,
+        "shop": 42,
+        "greeting": 34,
+        "combo": 20
+      },
+      "systems": {
+        "prod_compact": 221,
+        "v6": 213,
+        "short": 61
+      },
+      "system_variants": 3
+    }
+  },
+  "composition": {
+    "core": 1636,
+    "action_positive": 440,
+    "action_hard_negative": 320,
+    "ride_boundary": 280,
+    "paraphrase": 260,
+    "domain_boundary": 230,
+    "nested": 230,
+    "production_robustness": 224,
+    "greeting_oos": 190,
+    "generic_food": 180,
+    "dietary": 157
+  },
+  "action_hard_negative_share": 0.4211,
+  "counts": {
+    "sealed holdout sha256 unchanged": true,
+    "pre-fix dataset preserved: train_v7.jsonl": true,
+    "pre-fix dataset preserved: valid_v7.jsonl": true,
+    "pre-fix dataset preserved: validation/v7_validation.jsonl": true,
+    "train: rows parsed and valid": true,
+    "valid: rows parsed and valid": true,
+    "eval: rows parsed and valid": true,
+    "train rows": true,
+    "eval rows": true,
+    "category core": true,
+    "category action_positive": true,
+    "category action_hard_negative": true,
+    "category ride_boundary": true,
+    "category domain_boundary": true,
+    "category generic_food": true,
+    "category greeting_oos": true,
+    "category nested": true,
+    "category dietary": true,
+    "category production_robustness": true,
+    "category paraphrase": true,
+    "action hard-negative share": true,
+    "train uses all three system prompts": true,
+    "every system prompt has at least 5% of train rows": true,
+    "train domains cover every schema domain": true,
+    "eval domains cover action, greeting, OOS and the three search domains": true,
+    "MLX staging files match the split files": true,
+    "token preflight: no row above max_seq_length 1152": true,
+    "token preflight: no empty loss mask": true,
+    "token preflight: no unexpectedly tiny loss mask": true,
+    "token preflight: rows above 1100 are documented": true
+  },
+  "token_preflight": {
+    "rows": 4867,
+    "max_sequence_tokens": 1090,
+    "counts": {
+      "over_900": 3954,
+      "over_1000": 1817,
+      "over_1024": 963,
+      "over_1100": 0,
+      "over_1152": 0,
+      "empty_loss_masks": 0,
+      "nonempty_loss_masks": 4867,
+      "tiny_loss_masks": 0
+    },
+    "splits": {
+      "train": {
+        "rows": 4147,
+        "sequence_tokens": {
+          "rows": 4147,
+          "min": 330,
+          "max": 1090,
+          "mean": 895.86,
+          "median": 947,
+          "p95": 1050,
+          "p99": 1072
+        },
+        "counts": {
+          "over_900": 3370,
+          "over_1000": 1564,
+          "over_1024": 818,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_loss_masks": 0,
+          "nonempty_loss_masks": 4147,
+          "tiny_loss_masks": 0
+        }
+      },
+      "valid": {
+        "rows": 225,
+        "sequence_tokens": {
+          "rows": 225,
+          "min": 359,
+          "max": 1081,
+          "mean": 902.53,
+          "median": 957,
+          "p95": 1052,
+          "p99": 1074
+        },
+        "counts": {
+          "over_900": 181,
+          "over_1000": 86,
+          "over_1024": 60,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_loss_masks": 0,
+          "nonempty_loss_masks": 225,
+          "tiny_loss_masks": 0
+        }
+      },
+      "eval": {
+        "rows": 495,
+        "sequence_tokens": {
+          "rows": 495,
+          "min": 339,
+          "max": 1083,
+          "mean": 898.58,
+          "median": 952,
+          "p95": 1051,
+          "p99": 1075
+        },
+        "counts": {
+          "over_900": 403,
+          "over_1000": 167,
+          "over_1024": 85,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_loss_masks": 0,
+          "nonempty_loss_masks": 495,
+          "tiny_loss_masks": 0
+        }
+      }
+    }
+  }
+}

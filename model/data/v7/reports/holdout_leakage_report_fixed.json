@@ -1,0 +1,77 @@
+{
+  "phase": 12,
+  "dataset": "v7_fixed",
+  "holdout": {
+    "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/eval_mlx_v5.jsonl",
+    "sha256": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a",
+    "rows": 382,
+    "sha256_after": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a",
+    "unchanged": true
+  },
+  "reference_sets": {
+    "fixtures": 198,
+    "holdout_plus_fixtures": 580
+  },
+  "near_threshold": 0.8,
+  "splits": {
+    "train_v7_fixed": {
+      "path": "v7_fixed/train_v7.jsonl",
+      "rows": 4147,
+      "exact_holdout_copies": 0,
+      "exact_fixture_copies": 0,
+      "near_duplicates": 0,
+      "max_reference_similarity": 0.0,
+      "internal_duplicates": 0,
+      "cross_split_duplicates": 0,
+      "examples": {
+        "exact_holdout": [],
+        "near": [],
+        "internal": [],
+        "cross_split": []
+      }
+    },
+    "valid_v7_fixed": {
+      "path": "v7_fixed/valid_v7.jsonl",
+      "rows": 225,
+      "exact_holdout_copies": 0,
+      "exact_fixture_copies": 0,
+      "near_duplicates": 0,
+      "max_reference_similarity": 0.0,
+      "internal_duplicates": 0,
+      "cross_split_duplicates": 0,
+      "examples": {
+        "exact_holdout": [],
+        "near": [],
+        "internal": [],
+        "cross_split": []
+      }
+    },
+    "v7_validation_fixed": {
+      "path": "v7_fixed/validation/v7_validation.jsonl",
+      "rows": 495,
+      "exact_holdout_copies": 0,
+      "exact_fixture_copies": 0,
+      "near_duplicates": 0,
+      "max_reference_similarity": 0.0,
+      "internal_duplicates": 0,
+      "cross_split_duplicates": 0,
+      "examples": {
+        "exact_holdout": [],
+        "near": [],
+        "internal": [],
+        "cross_split": []
+      }
+    }
+  },
+  "pass": true,
+  "criteria": {
+    "exact_copies_allowed": 0,
+    "near_duplicates_allowed_at_threshold": 0,
+    "no_train_eval_text_overlap": true
+  },
+  "overlaps": {
+    "train_v7_fixed_vs_v7_validation_fixed": 0,
+    "train_v7_fixed_vs_valid_v7_fixed": 0,
+    "v7_validation_fixed_vs_valid_v7_fixed": 0
+  }
+}

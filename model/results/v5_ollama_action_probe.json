@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "put that in my basket",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best something sweet options for you.\", \"food\": {\"item\": \"something sweet\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}}"
+  },
+  {
+    "prompt": "show me my cart",
+    "raw": "{\"domain\": \"shop\", \"reply\": \"Let me find the best cart deals for you.\", \"shop\": {\"item\": \"cart\", \"budgetPaise\": null, \"category\": \"home\", \"priority\": \"balanced\"}}"
+  },
+  {
+    "prompt": "start a group order",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best group order options for you.\", \"food\": {\"item\": \"group order\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}}"
+  },
+  {
+    "prompt": "make it two",
+    "raw": "{\"domain\": \"food\", \"reply\": \"Let me find the best two options for you.\", \"food\": {\"item\": \"two\", \"budgetPaise\": null, \"maxEtaMinutes\": null, \"dietary\": \"any\", \"priority\": \"balanced\"}}"
+  }
+]

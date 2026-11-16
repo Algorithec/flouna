@@ -1,0 +1,2287 @@
+{
+  "generated_at": "2026-11-16T07:18:34+00:00",
+  "tokenizer": {
+    "name": "Qwen/Qwen2.5-1.5B-Instruct",
+    "class": "Qwen2Tokenizer",
+    "tokenization_path": "mlx_lm.tuner.datasets.ChatDataset(mask_prompt=True)"
+  },
+  "limits": {
+    "max_seq_length": 1152,
+    "preferred_total": 1000,
+    "warn_above": 1024,
+    "hard_above": 1100,
+    "absolute_fail_above": 1152,
+    "min_loss_mask_tokens": 10
+  },
+  "fixed": {
+    "root": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7_fixed",
+    "rows": 4867,
+    "pass": true,
+    "splits": {
+      "train": {
+        "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7_fixed/train_v7.jsonl",
+        "pass": true,
+        "rows": 4147,
+        "unknown_prompts": 0,
+        "sequence_tokens": {
+          "rows": 4147,
+          "min": 330,
+          "max": 1090,
+          "mean": 895.86,
+          "median": 947,
+          "p95": 1050,
+          "p99": 1072
+        },
+        "prompt_offset": {
+          "rows": 4147,
+          "min": 304,
+          "max": 986,
+          "mean": 828.65,
+          "median": 865,
+          "p95": 962,
+          "p99": 975
+        },
+        "output_tokens": {
+          "rows": 4147,
+          "min": 15,
+          "max": 125,
+          "mean": 65.22,
+          "median": 65,
+          "p95": 98,
+          "p99": 116
+        },
+        "loss_mask_tokens": {
+          "rows": 4147,
+          "min": 17,
+          "max": 127,
+          "mean": 67.22,
+          "median": 67,
+          "p95": 100,
+          "p99": 118
+        },
+        "counts": {
+          "over_900": 3370,
+          "over_1000": 1564,
+          "over_1024": 818,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_loss_masks": 0,
+          "nonempty_loss_masks": 4147,
+          "tiny_loss_masks": 0
+        },
+        "by_prompt": {
+          "v6": {
+            "rows": 1732,
+            "sequence_tokens": {
+              "rows": 1732,
+              "min": 965,
+              "max": 1090,
+              "mean": 1024.23,
+              "median": 1024,
+              "p95": 1055,
+              "p99": 1078
+            },
+            "prompt_offset": {
+              "rows": 1732,
+              "min": 947,
+              "max": 986,
+              "mean": 956.04,
+              "median": 954,
+              "p95": 972,
+              "p99": 978
+            },
+            "output_tokens": {
+              "rows": 1732,
+              "min": 15,
+              "max": 125,
+              "mean": 66.19,
+              "median": 65,
+              "p95": 98,
+              "p99": 116
+            },
+            "loss_mask_tokens": {
+              "rows": 1732,
+              "min": 17,
+              "max": 127,
+              "mean": 68.19,
+              "median": 67,
+              "p95": 100,
+              "p99": 118
+            },
+            "over_1024": 818,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "prod_compact": {
+            "rows": 1871,
+            "sequence_tokens": {
+              "rows": 1871,
+              "min": 869,
+              "max": 990,
+              "mean": 926.53,
+              "median": 928,
+              "p95": 959,
+              "p99": 983
+            },
+            "prompt_offset": {
+              "rows": 1871,
+              "min": 852,
+              "max": 899,
+              "mean": 860.76,
+              "median": 859,
+              "p95": 877,
+              "p99": 883
+            },
+            "output_tokens": {
+              "rows": 1871,
+              "min": 15,
+              "max": 121,
+              "mean": 63.78,
+              "median": 64,
+              "p95": 98,
+              "p99": 116
+            },
+            "loss_mask_tokens": {
+              "rows": 1871,
+              "min": 17,
+              "max": 123,
+              "mean": 65.78,
+              "median": 66,
+              "p95": 100,
+              "p99": 118
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "short": {
+            "rows": 544,
+            "sequence_tokens": {
+              "rows": 544,
+              "min": 330,
+              "max": 444,
+              "mean": 381.69,
+              "median": 380,
+              "p95": 413,
+              "p99": 437
+            },
+            "prompt_offset": {
+              "rows": 544,
+              "min": 304,
+              "max": 345,
+              "mean": 312.62,
+              "median": 311,
+              "p95": 326,
+              "p99": 334
+            },
+            "output_tokens": {
+              "rows": 544,
+              "min": 21,
+              "max": 122,
+              "mean": 67.07,
+              "median": 65,
+              "p95": 100,
+              "p99": 117
+            },
+            "loss_mask_tokens": {
+              "rows": 544,
+              "min": 23,
+              "max": 124,
+              "mean": 69.07,
+              "median": 67,
+              "p95": 102,
+              "p99": 119
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          }
+        },
+        "documented_exceptions": [],
+        "warnings": [
+          {
+            "text": "I want biryani within 20 minutes under ₹150",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "dinner for the family tonight: tandoori chicken. keep the total my budget is 250 and have it arrive delivered in 20 min. no special preference",
+            "prompt": "v6",
+            "sequence_tokens": 1053,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "mujhe best khichdi under ₹400 chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 64
+          },
+          {
+            "text": "Good value manchurian delivery 800 ke andar",
+            "prompt": "v6",
+            "sequence_tokens": 1027,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "get me seekh kebab 700 rupaye mein and deliver it within 35 mins",
+            "prompt": "v6",
+            "sequence_tokens": 1039,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "fish tikka budget 800, 30 min me",
+            "prompt": "v6",
+            "sequence_tokens": 1031,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "takkuva rate veg fried rice 800 lopu chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1030,
+            "loss_mask_tokens": 66
+          },
+          {
+            "text": "order paneer roll under 1000 rupees, need it max 20 minutes",
+            "prompt": "v6",
+            "sequence_tokens": 1036,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "get me sambhar rice 200 tak and deliver it 20 min me",
+            "prompt": "v6",
+            "sequence_tokens": 1035,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "i'm ordering dal khichdi for four people tonight. please keep the total max ₹700 and deliver it delivered in 30 min. no special preference",
+            "prompt": "v6",
+            "sequence_tokens": 1052,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "sandwich budget 150 chahiye, in under 20 minutes",
+            "prompt": "v6",
+            "sequence_tokens": 1029,
+            "loss_mask_tokens": 66
+          },
+          {
+            "text": "order plain dosa within 150 rupees, need it in under 60 minutes",
+            "prompt": "v6",
+            "sequence_tokens": 1033,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "dinner: budget chicken tikka within 600 rupees",
+            "prompt": "v6",
+            "sequence_tokens": 1029,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "halwa 400 rupaye mein chahiye, 35 min me",
+            "prompt": "v6",
+            "sequence_tokens": 1030,
+            "loss_mask_tokens": 65
+          },
+          {
+            "text": "mutton kebab ₹1000 ke andar chahiye, 20 min me",
+            "prompt": "v6",
+            "sequence_tokens": 1037,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "ORDER DAL MAKHANI UNDER 300 RUPEES, NEED IT DELIVERED IN 20 MIN",
+            "prompt": "v6",
+            "sequence_tokens": 1038,
+            "loss_mask_tokens": 68
+          },
+          {
+            "text": "order seekh kebab below ₹300",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "i want malai kofta delivered in 30 min",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "We have guests coming over in a while, so I need jalebi. My budget is ₹700 ke andar and I want it in under 35 minutes. No special preference",
+            "prompt": "v6",
+            "sequence_tokens": 1055,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "get me masala dosa 350 lopala and deliver it max 15 minutes",
+            "prompt": "v6",
+            "sequence_tokens": 1036,
+            "loss_mask_tokens": 69
+          }
+        ],
+        "longest_rows": [
+          {
+            "text": "send mutton rogan josh and arrange a ride to Kukatpally",
+            "prompt": "v6",
+            "sequence_tokens": 1090,
+            "prompt_offset": 963,
+            "loss_mask_tokens": 127
+          },
+          {
+            "text": "food: aloo tikki, and also need a ride to Mehdipatnam",
+            "prompt": "v6",
+            "sequence_tokens": 1087,
+            "prompt_offset": 964,
+            "loss_mask_tokens": 123
+          },
+          {
+            "text": "I want dal makhani for dinner and a car to nanakramguda",
+            "prompt": "v6",
+            "sequence_tokens": 1086,
+            "prompt_offset": 963,
+            "loss_mask_tokens": 123
+          },
+          {
+            "text": "send egg biryani and arrange a ride to Dilsukhnagar",
+            "prompt": "v6",
+            "sequence_tokens": 1084,
+            "prompt_offset": 961,
+            "loss_mask_tokens": 123
+          },
+          {
+            "text": "I want prawn masala for dinner and a cab to Panjagutta",
+            "prompt": "v6",
+            "sequence_tokens": 1083,
+            "prompt_offset": 962,
+            "loss_mask_tokens": 121
+          }
+        ]
+      },
+      "valid": {
+        "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7_fixed/valid_v7.jsonl",
+        "pass": true,
+        "rows": 225,
+        "unknown_prompts": 0,
+        "sequence_tokens": {
+          "rows": 225,
+          "min": 359,
+          "max": 1081,
+          "mean": 902.53,
+          "median": 957,
+          "p95": 1052,
+          "p99": 1074
+        },
+        "prompt_offset": {
+          "rows": 225,
+          "min": 306,
+          "max": 980,
+          "mean": 834.37,
+          "median": 876,
+          "p95": 975,
+          "p99": 976
+        },
+        "output_tokens": {
+          "rows": 225,
+          "min": 21,
+          "max": 119,
+          "mean": 66.16,
+          "median": 66,
+          "p95": 100,
+          "p99": 116
+        },
+        "loss_mask_tokens": {
+          "rows": 225,
+          "min": 23,
+          "max": 121,
+          "mean": 68.16,
+          "median": 68,
+          "p95": 102,
+          "p99": 118
+        },
+        "counts": {
+          "over_900": 181,
+          "over_1000": 86,
+          "over_1024": 60,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_loss_masks": 0,
+          "nonempty_loss_masks": 225,
+          "tiny_loss_masks": 0
+        },
+        "by_prompt": {
+          "v6": {
+            "rows": 99,
+            "sequence_tokens": {
+              "rows": 99,
+              "min": 974,
+              "max": 1081,
+              "mean": 1027.68,
+              "median": 1029,
+              "p95": 1068,
+              "p99": 1081
+            },
+            "prompt_offset": {
+              "rows": 99,
+              "min": 948,
+              "max": 980,
+              "mean": 959.37,
+              "median": 956,
+              "p95": 976,
+              "p99": 980
+            },
+            "output_tokens": {
+              "rows": 99,
+              "min": 21,
+              "max": 117,
+              "mean": 66.3,
+              "median": 66,
+              "p95": 110,
+              "p99": 117
+            },
+            "loss_mask_tokens": {
+              "rows": 99,
+              "min": 23,
+              "max": 119,
+              "mean": 68.3,
+              "median": 68,
+              "p95": 112,
+              "p99": 119
+            },
+            "over_1024": 60,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "prod_compact": {
+            "rows": 97,
+            "sequence_tokens": {
+              "rows": 97,
+              "min": 877,
+              "max": 986,
+              "mean": 930.0,
+              "median": 930,
+              "p95": 963,
+              "p99": 986
+            },
+            "prompt_offset": {
+              "rows": 97,
+              "min": 852,
+              "max": 883,
+              "mean": 862.27,
+              "median": 859,
+              "p95": 881,
+              "p99": 883
+            },
+            "output_tokens": {
+              "rows": 97,
+              "min": 22,
+              "max": 119,
+              "mean": 65.73,
+              "median": 67,
+              "p95": 100,
+              "p99": 119
+            },
+            "loss_mask_tokens": {
+              "rows": 97,
+              "min": 24,
+              "max": 121,
+              "mean": 67.73,
+              "median": 69,
+              "p95": 102,
+              "p99": 121
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "short": {
+            "rows": 29,
+            "sequence_tokens": {
+              "rows": 29,
+              "min": 359,
+              "max": 416,
+              "mean": 383.45,
+              "median": 382,
+              "p95": 412,
+              "p99": 416
+            },
+            "prompt_offset": {
+              "rows": 29,
+              "min": 306,
+              "max": 334,
+              "mean": 314.31,
+              "median": 311,
+              "p95": 332,
+              "p99": 334
+            },
+            "output_tokens": {
+              "rows": 29,
+              "min": 50,
+              "max": 98,
+              "mean": 67.14,
+              "median": 62,
+              "p95": 97,
+              "p99": 98
+            },
+            "loss_mask_tokens": {
+              "rows": 29,
+              "min": 52,
+              "max": 100,
+              "mean": 69.14,
+              "median": 64,
+              "p95": 99,
+              "p99": 100
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          }
+        },
+        "documented_exceptions": [],
+        "warnings": [
+          {
+            "text": "I'm ordering veg burger for the office. My ceiling is ₹250 and I need it delivered inside 40 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1040,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "Family dinner tonight, coconut rice for everyone. Upper limit ₹400, delivery within 45 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1035,
+            "loss_mask_tokens": 66
+          },
+          {
+            "text": "I need to get from Gachibowli to the office. A car is fine, and I can spend up to ₹200.",
+            "prompt": "v6",
+            "sequence_tokens": 1052,
+            "loss_mask_tokens": 76
+          },
+          {
+            "text": "Book me a car from Madhapur to Koti, with a ceiling of ₹300 on the fare.",
+            "prompt": "v6",
+            "sequence_tokens": 1045,
+            "loss_mask_tokens": 75
+          },
+          {
+            "text": "I'm looking for wallet for personal use. My budget is ₹5000 and I want the best rated option.",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 54
+          },
+          {
+            "text": "Could you find fish curry near me? My budget is ₹600 and it should reach me within 35 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1039,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "I'm ordering paneer bhurji for the office. My ceiling is ₹250 and I need it delivered inside 30 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1048,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "Pick me up from Whitefield and drop me at Secunderabad. Anything under ₹350 works, any vehicle is fine.",
+            "prompt": "v6",
+            "sequence_tokens": 1049,
+            "loss_mask_tokens": 76
+          },
+          {
+            "text": "Dinner for the family tonight: poha. Keep the total under ₹800 and have it arrive within 45 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1038,
+            "loss_mask_tokens": 64
+          },
+          {
+            "text": "We have guests coming over. Order jeera rice for four people, budget ₹600, and get it here in under 25 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1044,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "I'm looking for storage box for personal use. My budget is ₹1000 and I want the best rated option.",
+            "prompt": "v6",
+            "sequence_tokens": 1027,
+            "loss_mask_tokens": 55
+          },
+          {
+            "text": "Dinner for the family tonight: gobi paratha. Keep the total under ₹400 and have it arrive within 25 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1045,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "Dinner for the family tonight: sev puri. Keep the total under ₹400 and have it arrive within 30 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1043,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "I'm at Inorbit Mall and have to reach the railway station. Please keep the fare below ₹250 and send a any vehicle.",
+            "prompt": "v6",
+            "sequence_tokens": 1053,
+            "loss_mask_tokens": 78
+          },
+          {
+            "text": "I'm at Kukatpally and have to reach Lingampally. Please keep the fare below ₹350 and send a don't care which vehicle.",
+            "prompt": "v6",
+            "sequence_tokens": 1059,
+            "loss_mask_tokens": 79
+          },
+          {
+            "text": "Dinner for the family tonight: jeera rice. Keep the total under ₹800 and have it arrive within 30 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1043,
+            "loss_mask_tokens": 68
+          },
+          {
+            "text": "Book me a auto from Bachupally to Miyapur, with a ceiling of ₹200 on the fare.",
+            "prompt": "v6",
+            "sequence_tokens": 1047,
+            "loss_mask_tokens": 77
+          },
+          {
+            "text": "Could you find chole bhature near me? My budget is ₹500 and it should reach me within 25 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1043,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "Could you find curd rice near me? My budget is ₹250 and it should reach me within 35 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1041,
+            "loss_mask_tokens": 68
+          },
+          {
+            "text": "I'm looking for laptop for personal use. My budget is ₹5000 and I want the best rated option.",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 54
+          }
+        ],
+        "longest_rows": [
+          {
+            "text": "dinner is sev puri, then I need a ride to Manikonda",
+            "prompt": "v6",
+            "sequence_tokens": 1081,
+            "prompt_offset": 963,
+            "loss_mask_tokens": 118
+          },
+          {
+            "text": "send gulab jamun and arrange a ride to the railway station",
+            "prompt": "v6",
+            "sequence_tokens": 1078,
+            "prompt_offset": 959,
+            "loss_mask_tokens": 119
+          },
+          {
+            "text": "send khichdi and arrange a ride to Uppal",
+            "prompt": "v6",
+            "sequence_tokens": 1074,
+            "prompt_offset": 958,
+            "loss_mask_tokens": 116
+          },
+          {
+            "text": "get masala dosa and car to Miyapur",
+            "prompt": "v6",
+            "sequence_tokens": 1073,
+            "prompt_offset": 956,
+            "loss_mask_tokens": 117
+          },
+          {
+            "text": "order vada pav and book a cab to home",
+            "prompt": "v6",
+            "sequence_tokens": 1068,
+            "prompt_offset": 956,
+            "loss_mask_tokens": 112
+          }
+        ]
+      },
+      "eval": {
+        "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7_fixed/validation/v7_validation.jsonl",
+        "pass": true,
+        "rows": 495,
+        "unknown_prompts": 0,
+        "sequence_tokens": {
+          "rows": 495,
+          "min": 339,
+          "max": 1083,
+          "mean": 898.58,
+          "median": 952,
+          "p95": 1051,
+          "p99": 1075
+        },
+        "prompt_offset": {
+          "rows": 495,
+          "min": 305,
+          "max": 963,
+          "mean": 832.53,
+          "median": 863,
+          "p95": 958,
+          "p99": 961
+        },
+        "output_tokens": {
+          "rows": 495,
+          "min": 21,
+          "max": 120,
+          "mean": 64.05,
+          "median": 63,
+          "p95": 100,
+          "p99": 117
+        },
+        "loss_mask_tokens": {
+          "rows": 495,
+          "min": 23,
+          "max": 122,
+          "mean": 66.05,
+          "median": 65,
+          "p95": 102,
+          "p99": 119
+        },
+        "counts": {
+          "over_900": 403,
+          "over_1000": 167,
+          "over_1024": 85,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_loss_masks": 0,
+          "nonempty_loss_masks": 495,
+          "tiny_loss_masks": 0
+        },
+        "by_prompt": {
+          "v6": {
+            "rows": 213,
+            "sequence_tokens": {
+              "rows": 213,
+              "min": 971,
+              "max": 1083,
+              "mean": 1019.19,
+              "median": 1017,
+              "p95": 1057,
+              "p99": 1081
+            },
+            "prompt_offset": {
+              "rows": 213,
+              "min": 947,
+              "max": 963,
+              "mean": 953.77,
+              "median": 953,
+              "p95": 960,
+              "p99": 961
+            },
+            "output_tokens": {
+              "rows": 213,
+              "min": 21,
+              "max": 120,
+              "mean": 63.42,
+              "median": 61,
+              "p95": 100,
+              "p99": 118
+            },
+            "loss_mask_tokens": {
+              "rows": 213,
+              "min": 23,
+              "max": 122,
+              "mean": 65.42,
+              "median": 63,
+              "p95": 102,
+              "p99": 120
+            },
+            "over_1024": 85,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "prod_compact": {
+            "rows": 221,
+            "sequence_tokens": {
+              "rows": 221,
+              "min": 876,
+              "max": 986,
+              "mean": 925.86,
+              "median": 927,
+              "p95": 961,
+              "p99": 983
+            },
+            "prompt_offset": {
+              "rows": 221,
+              "min": 852,
+              "max": 873,
+              "mean": 859.73,
+              "median": 859,
+              "p95": 866,
+              "p99": 871
+            },
+            "output_tokens": {
+              "rows": 221,
+              "min": 22,
+              "max": 117,
+              "mean": 64.13,
+              "median": 64,
+              "p95": 100,
+              "p99": 117
+            },
+            "loss_mask_tokens": {
+              "rows": 221,
+              "min": 24,
+              "max": 119,
+              "mean": 66.13,
+              "median": 66,
+              "p95": 102,
+              "p99": 119
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "short": {
+            "rows": 61,
+            "sequence_tokens": {
+              "rows": 61,
+              "min": 339,
+              "max": 435,
+              "mean": 378.61,
+              "median": 377,
+              "p95": 409,
+              "p99": 435
+            },
+            "prompt_offset": {
+              "rows": 61,
+              "min": 305,
+              "max": 317,
+              "mean": 310.61,
+              "median": 310,
+              "p95": 316,
+              "p99": 317
+            },
+            "output_tokens": {
+              "rows": 61,
+              "min": 31,
+              "max": 117,
+              "mean": 66.0,
+              "median": 62,
+              "p95": 98,
+              "p99": 117
+            },
+            "loss_mask_tokens": {
+              "rows": 61,
+              "min": 33,
+              "max": 119,
+              "mean": 68.0,
+              "median": 64,
+              "p95": 100,
+              "p99": 119
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          }
+        },
+        "documented_exceptions": [],
+        "warnings": [
+          {
+            "text": "book me a rickshaw to Gachibowli",
+            "prompt": "v6",
+            "sequence_tokens": 1032,
+            "loss_mask_tokens": 74
+          },
+          {
+            "text": "I need a motorbike to Gachibowli",
+            "prompt": "v6",
+            "sequence_tokens": 1031,
+            "loss_mask_tokens": 74
+          },
+          {
+            "text": "any vehicle to Gachibowli please",
+            "prompt": "v6",
+            "sequence_tokens": 1027,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "Ameerpet ke liye no vehicle preference chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1031,
+            "loss_mask_tokens": 73
+          },
+          {
+            "text": "Madhapur ke liye auto rickshaw chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "car to Kukatpally please",
+            "prompt": "v6",
+            "sequence_tokens": 1031,
+            "loss_mask_tokens": 77
+          },
+          {
+            "text": "Kukatpally ke liye auto rickshaw chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1034,
+            "loss_mask_tokens": 73
+          },
+          {
+            "text": "get me a motorbike to Banjara Hills",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "book me a auto to Jubilee Hills",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "Jubilee Hills ke liye bike chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "Begumpet ke liye taxi chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "book me a don't care which vehicle to Secunderabad",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "I need a motorbike to Secunderabad",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "get me a whatever is available to Secunderabad",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "get me a any vehicle to Dilsukhnagar",
+            "prompt": "v6",
+            "sequence_tokens": 1029,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "Dilsukhnagar ke liye motorbike chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1033,
+            "loss_mask_tokens": 74
+          },
+          {
+            "text": "Uppal ke liye car chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "I need a no vehicle preference to Uppal",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "ride to Gachibowli ceiling of ₹200",
+            "prompt": "v6",
+            "sequence_tokens": 1038,
+            "loss_mask_tokens": 79
+          },
+          {
+            "text": "want palak paneer ceiling of ₹250",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 68
+          }
+        ],
+        "longest_rows": [
+          {
+            "text": "chana masala delivered and a cab to Dilsukhnagar after",
+            "prompt": "v6",
+            "sequence_tokens": 1083,
+            "prompt_offset": 961,
+            "loss_mask_tokens": 122
+          },
+          {
+            "text": "dinner is chicken shawarma, then I need a ride to Uppal",
+            "prompt": "v6",
+            "sequence_tokens": 1083,
+            "prompt_offset": 963,
+            "loss_mask_tokens": 120
+          },
+          {
+            "text": "get me veg cutlet and a ride to Gachibowli",
+            "prompt": "v6",
+            "sequence_tokens": 1081,
+            "prompt_offset": 960,
+            "loss_mask_tokens": 121
+          },
+          {
+            "text": "bhel puri delivered and a cab to Jubilee Hills after",
+            "prompt": "v6",
+            "sequence_tokens": 1078,
+            "prompt_offset": 959,
+            "loss_mask_tokens": 119
+          },
+          {
+            "text": "I need chicken pizza for dinner and a ride to Inorbit Mall",
+            "prompt": "v6",
+            "sequence_tokens": 1075,
+            "prompt_offset": 959,
+            "loss_mask_tokens": 116
+          }
+        ]
+      }
+    },
+    "totals": {
+      "rows": 4867,
+      "sequence_tokens": {
+        "rows": 4867,
+        "min": 330,
+        "max": 1090,
+        "mean": 896.45,
+        "median": 948,
+        "p95": 1050,
+        "p99": 1073
+      },
+      "prompt_offset": {
+        "rows": 4867,
+        "min": 304,
+        "max": 986,
+        "mean": 829.31,
+        "median": 865,
+        "p95": 962,
+        "p99": 975
+      },
+      "output_tokens": {
+        "rows": 4867,
+        "min": 15,
+        "max": 125,
+        "mean": 65.14,
+        "median": 65,
+        "p95": 98,
+        "p99": 116
+      },
+      "loss_mask_tokens": {
+        "rows": 4867,
+        "min": 17,
+        "max": 127,
+        "mean": 67.14,
+        "median": 67,
+        "p95": 100,
+        "p99": 118
+      },
+      "counts": {
+        "over_900": 3954,
+        "over_1000": 1817,
+        "over_1024": 963,
+        "over_1100": 0,
+        "over_1152": 0,
+        "empty_loss_masks": 0,
+        "nonempty_loss_masks": 4867,
+        "tiny_loss_masks": 0
+      },
+      "by_prompt": {
+        "v6": {
+          "rows": 2044,
+          "sequence_tokens": {
+            "rows": 2044,
+            "min": 965,
+            "max": 1090,
+            "mean": 1023.87,
+            "median": 1024,
+            "p95": 1056,
+            "p99": 1079
+          },
+          "over_1024": 963,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_masks": 0
+        },
+        "prod_compact": {
+          "rows": 2189,
+          "sequence_tokens": {
+            "rows": 2189,
+            "min": 869,
+            "max": 990,
+            "mean": 926.62,
+            "median": 928,
+            "p95": 960,
+            "p99": 983
+          },
+          "over_1024": 0,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_masks": 0
+        },
+        "short": {
+          "rows": 634,
+          "sequence_tokens": {
+            "rows": 634,
+            "min": 330,
+            "max": 444,
+            "mean": 381.47,
+            "median": 380,
+            "p95": 412,
+            "p99": 437
+          },
+          "over_1024": 0,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_masks": 0
+        }
+      }
+    }
+  },
+  "pre_fix_reference": {
+    "root": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7",
+    "rows": 4867,
+    "pass": false,
+    "splits": {
+      "train": {
+        "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7/train_v7.jsonl",
+        "pass": false,
+        "rows": 4147,
+        "unknown_prompts": 0,
+        "sequence_tokens": {
+          "rows": 4147,
+          "min": 330,
+          "max": 1741,
+          "mean": 1234.69,
+          "median": 1050,
+          "p95": 1704,
+          "p99": 1727
+        },
+        "prompt_offset": {
+          "rows": 4147,
+          "min": 304,
+          "max": 1650,
+          "mean": 1167.47,
+          "median": 963,
+          "p95": 1618,
+          "p99": 1632
+        },
+        "output_tokens": {
+          "rows": 4147,
+          "min": 15,
+          "max": 125,
+          "mean": 65.22,
+          "median": 65,
+          "p95": 98,
+          "p99": 116
+        },
+        "loss_mask_tokens": {
+          "rows": 4147,
+          "min": 0,
+          "max": 127,
+          "mean": 37.54,
+          "median": 48,
+          "p95": 98,
+          "p99": 116
+        },
+        "counts": {
+          "over_900": 3603,
+          "over_1000": 3435,
+          "over_1024": 2689,
+          "over_1100": 1871,
+          "over_1152": 1871,
+          "empty_loss_masks": 1871,
+          "nonempty_loss_masks": 2276,
+          "tiny_loss_masks": 1871
+        },
+        "by_prompt": {
+          "v6": {
+            "rows": 1732,
+            "sequence_tokens": {
+              "rows": 1732,
+              "min": 965,
+              "max": 1090,
+              "mean": 1024.23,
+              "median": 1024,
+              "p95": 1055,
+              "p99": 1078
+            },
+            "prompt_offset": {
+              "rows": 1732,
+              "min": 947,
+              "max": 986,
+              "mean": 956.04,
+              "median": 954,
+              "p95": 972,
+              "p99": 978
+            },
+            "output_tokens": {
+              "rows": 1732,
+              "min": 15,
+              "max": 125,
+              "mean": 66.19,
+              "median": 65,
+              "p95": 98,
+              "p99": 116
+            },
+            "loss_mask_tokens": {
+              "rows": 1732,
+              "min": 17,
+              "max": 127,
+              "mean": 68.19,
+              "median": 67,
+              "p95": 100,
+              "p99": 118
+            },
+            "over_1024": 818,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "prod": {
+            "rows": 1871,
+            "sequence_tokens": {
+              "rows": 1871,
+              "min": 1620,
+              "max": 1741,
+              "mean": 1677.53,
+              "median": 1679,
+              "p95": 1710,
+              "p99": 1734
+            },
+            "prompt_offset": {
+              "rows": 1871,
+              "min": 1603,
+              "max": 1650,
+              "mean": 1611.76,
+              "median": 1610,
+              "p95": 1628,
+              "p99": 1634
+            },
+            "output_tokens": {
+              "rows": 1871,
+              "min": 15,
+              "max": 121,
+              "mean": 63.78,
+              "median": 64,
+              "p95": 98,
+              "p99": 116
+            },
+            "loss_mask_tokens": {
+              "rows": 1871,
+              "min": 0,
+              "max": 0,
+              "mean": 0.0,
+              "median": 0,
+              "p95": 0,
+              "p99": 0
+            },
+            "over_1024": 1871,
+            "over_1100": 1871,
+            "over_1152": 1871,
+            "empty_masks": 1871
+          },
+          "short": {
+            "rows": 544,
+            "sequence_tokens": {
+              "rows": 544,
+              "min": 330,
+              "max": 444,
+              "mean": 381.69,
+              "median": 380,
+              "p95": 413,
+              "p99": 437
+            },
+            "prompt_offset": {
+              "rows": 544,
+              "min": 304,
+              "max": 345,
+              "mean": 312.62,
+              "median": 311,
+              "p95": 326,
+              "p99": 334
+            },
+            "output_tokens": {
+              "rows": 544,
+              "min": 21,
+              "max": 122,
+              "mean": 67.07,
+              "median": 65,
+              "p95": 100,
+              "p99": 117
+            },
+            "loss_mask_tokens": {
+              "rows": 544,
+              "min": 23,
+              "max": 124,
+              "mean": 69.07,
+              "median": 67,
+              "p95": 102,
+              "p99": 119
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          }
+        },
+        "documented_exceptions": [],
+        "warnings": [
+          {
+            "text": "I want biryani within 20 minutes under ₹150",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "dinner for the family tonight: tandoori chicken. keep the total my budget is 250 and have it arrive delivered in 20 min. no special preference",
+            "prompt": "v6",
+            "sequence_tokens": 1053,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "mujhe best khichdi under ₹400 chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 64
+          },
+          {
+            "text": "Good value manchurian delivery 800 ke andar",
+            "prompt": "v6",
+            "sequence_tokens": 1027,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "get me seekh kebab 700 rupaye mein and deliver it within 35 mins",
+            "prompt": "v6",
+            "sequence_tokens": 1039,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "fish tikka budget 800, 30 min me",
+            "prompt": "v6",
+            "sequence_tokens": 1031,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "takkuva rate veg fried rice 800 lopu chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1030,
+            "loss_mask_tokens": 66
+          },
+          {
+            "text": "order paneer roll under 1000 rupees, need it max 20 minutes",
+            "prompt": "v6",
+            "sequence_tokens": 1036,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "get me sambhar rice 200 tak and deliver it 20 min me",
+            "prompt": "v6",
+            "sequence_tokens": 1035,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "i'm ordering dal khichdi for four people tonight. please keep the total max ₹700 and deliver it delivered in 30 min. no special preference",
+            "prompt": "v6",
+            "sequence_tokens": 1052,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "sandwich budget 150 chahiye, in under 20 minutes",
+            "prompt": "v6",
+            "sequence_tokens": 1029,
+            "loss_mask_tokens": 66
+          },
+          {
+            "text": "order plain dosa within 150 rupees, need it in under 60 minutes",
+            "prompt": "v6",
+            "sequence_tokens": 1033,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "dinner: budget chicken tikka within 600 rupees",
+            "prompt": "v6",
+            "sequence_tokens": 1029,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "halwa 400 rupaye mein chahiye, 35 min me",
+            "prompt": "v6",
+            "sequence_tokens": 1030,
+            "loss_mask_tokens": 65
+          },
+          {
+            "text": "mutton kebab ₹1000 ke andar chahiye, 20 min me",
+            "prompt": "v6",
+            "sequence_tokens": 1037,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "ORDER DAL MAKHANI UNDER 300 RUPEES, NEED IT DELIVERED IN 20 MIN",
+            "prompt": "v6",
+            "sequence_tokens": 1038,
+            "loss_mask_tokens": 68
+          },
+          {
+            "text": "order seekh kebab below ₹300",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "i want malai kofta delivered in 30 min",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "We have guests coming over in a while, so I need jalebi. My budget is ₹700 ke andar and I want it in under 35 minutes. No special preference",
+            "prompt": "v6",
+            "sequence_tokens": 1055,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "get me masala dosa 350 lopala and deliver it max 15 minutes",
+            "prompt": "v6",
+            "sequence_tokens": 1036,
+            "loss_mask_tokens": 69
+          }
+        ],
+        "longest_rows": [
+          {
+            "text": "veg pulao order karo aur Tolichowki ke liye taxi book karo",
+            "prompt": "prod",
+            "sequence_tokens": 1741,
+            "prompt_offset": 1621,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "dinner is veg momos, then I need a ride to Kukatpally",
+            "prompt": "prod",
+            "sequence_tokens": 1741,
+            "prompt_offset": 1620,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "get me chole bhature and a ride to Nanakramguda",
+            "prompt": "prod",
+            "sequence_tokens": 1740,
+            "prompt_offset": 1617,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "food: jeera rice, and also need a ride to Mehdipatnam",
+            "prompt": "prod",
+            "sequence_tokens": 1740,
+            "prompt_offset": 1619,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "dinner is chana masala, then I need a ride to Koramangala",
+            "prompt": "prod",
+            "sequence_tokens": 1740,
+            "prompt_offset": 1620,
+            "loss_mask_tokens": 0
+          }
+        ]
+      },
+      "valid": {
+        "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7/valid_v7.jsonl",
+        "pass": false,
+        "rows": 225,
+        "unknown_prompts": 0,
+        "sequence_tokens": {
+          "rows": 225,
+          "min": 359,
+          "max": 1737,
+          "mean": 1226.3,
+          "median": 1052,
+          "p95": 1709,
+          "p99": 1732
+        },
+        "prompt_offset": {
+          "rows": 225,
+          "min": 306,
+          "max": 1634,
+          "mean": 1158.13,
+          "median": 973,
+          "p95": 1628,
+          "p99": 1632
+        },
+        "output_tokens": {
+          "rows": 225,
+          "min": 21,
+          "max": 119,
+          "mean": 66.16,
+          "median": 66,
+          "p95": 100,
+          "p99": 116
+        },
+        "loss_mask_tokens": {
+          "rows": 225,
+          "min": 0,
+          "max": 119,
+          "mean": 38.96,
+          "median": 53,
+          "p95": 98,
+          "p99": 117
+        },
+        "counts": {
+          "over_900": 196,
+          "over_1000": 183,
+          "over_1024": 157,
+          "over_1100": 97,
+          "over_1152": 97,
+          "empty_loss_masks": 97,
+          "nonempty_loss_masks": 128,
+          "tiny_loss_masks": 97
+        },
+        "by_prompt": {
+          "v6": {
+            "rows": 99,
+            "sequence_tokens": {
+              "rows": 99,
+              "min": 974,
+              "max": 1081,
+              "mean": 1027.68,
+              "median": 1029,
+              "p95": 1068,
+              "p99": 1081
+            },
+            "prompt_offset": {
+              "rows": 99,
+              "min": 948,
+              "max": 980,
+              "mean": 959.37,
+              "median": 956,
+              "p95": 976,
+              "p99": 980
+            },
+            "output_tokens": {
+              "rows": 99,
+              "min": 21,
+              "max": 117,
+              "mean": 66.3,
+              "median": 66,
+              "p95": 110,
+              "p99": 117
+            },
+            "loss_mask_tokens": {
+              "rows": 99,
+              "min": 23,
+              "max": 119,
+              "mean": 68.3,
+              "median": 68,
+              "p95": 112,
+              "p99": 119
+            },
+            "over_1024": 60,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "prod": {
+            "rows": 97,
+            "sequence_tokens": {
+              "rows": 97,
+              "min": 1628,
+              "max": 1737,
+              "mean": 1681.0,
+              "median": 1681,
+              "p95": 1714,
+              "p99": 1737
+            },
+            "prompt_offset": {
+              "rows": 97,
+              "min": 1603,
+              "max": 1634,
+              "mean": 1613.27,
+              "median": 1610,
+              "p95": 1632,
+              "p99": 1634
+            },
+            "output_tokens": {
+              "rows": 97,
+              "min": 22,
+              "max": 119,
+              "mean": 65.73,
+              "median": 67,
+              "p95": 100,
+              "p99": 119
+            },
+            "loss_mask_tokens": {
+              "rows": 97,
+              "min": 0,
+              "max": 0,
+              "mean": 0.0,
+              "median": 0,
+              "p95": 0,
+              "p99": 0
+            },
+            "over_1024": 97,
+            "over_1100": 97,
+            "over_1152": 97,
+            "empty_masks": 97
+          },
+          "short": {
+            "rows": 29,
+            "sequence_tokens": {
+              "rows": 29,
+              "min": 359,
+              "max": 416,
+              "mean": 383.45,
+              "median": 382,
+              "p95": 412,
+              "p99": 416
+            },
+            "prompt_offset": {
+              "rows": 29,
+              "min": 306,
+              "max": 334,
+              "mean": 314.31,
+              "median": 311,
+              "p95": 332,
+              "p99": 334
+            },
+            "output_tokens": {
+              "rows": 29,
+              "min": 50,
+              "max": 98,
+              "mean": 67.14,
+              "median": 62,
+              "p95": 97,
+              "p99": 98
+            },
+            "loss_mask_tokens": {
+              "rows": 29,
+              "min": 52,
+              "max": 100,
+              "mean": 69.14,
+              "median": 64,
+              "p95": 99,
+              "p99": 100
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          }
+        },
+        "documented_exceptions": [],
+        "warnings": [
+          {
+            "text": "I'm ordering veg burger for the office. My ceiling is ₹250 and I need it delivered inside 40 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1040,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "Family dinner tonight, coconut rice for everyone. Upper limit ₹400, delivery within 45 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1035,
+            "loss_mask_tokens": 66
+          },
+          {
+            "text": "I need to get from Gachibowli to the office. A car is fine, and I can spend up to ₹200.",
+            "prompt": "v6",
+            "sequence_tokens": 1052,
+            "loss_mask_tokens": 76
+          },
+          {
+            "text": "Book me a car from Madhapur to Koti, with a ceiling of ₹300 on the fare.",
+            "prompt": "v6",
+            "sequence_tokens": 1045,
+            "loss_mask_tokens": 75
+          },
+          {
+            "text": "I'm looking for wallet for personal use. My budget is ₹5000 and I want the best rated option.",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 54
+          },
+          {
+            "text": "Could you find fish curry near me? My budget is ₹600 and it should reach me within 35 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1039,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "I'm ordering paneer bhurji for the office. My ceiling is ₹250 and I need it delivered inside 30 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1048,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "Pick me up from Whitefield and drop me at Secunderabad. Anything under ₹350 works, any vehicle is fine.",
+            "prompt": "v6",
+            "sequence_tokens": 1049,
+            "loss_mask_tokens": 76
+          },
+          {
+            "text": "Dinner for the family tonight: poha. Keep the total under ₹800 and have it arrive within 45 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1038,
+            "loss_mask_tokens": 64
+          },
+          {
+            "text": "We have guests coming over. Order jeera rice for four people, budget ₹600, and get it here in under 25 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1044,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "I'm looking for storage box for personal use. My budget is ₹1000 and I want the best rated option.",
+            "prompt": "v6",
+            "sequence_tokens": 1027,
+            "loss_mask_tokens": 55
+          },
+          {
+            "text": "Dinner for the family tonight: gobi paratha. Keep the total under ₹400 and have it arrive within 25 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1045,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "Dinner for the family tonight: sev puri. Keep the total under ₹400 and have it arrive within 30 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1043,
+            "loss_mask_tokens": 67
+          },
+          {
+            "text": "I'm at Inorbit Mall and have to reach the railway station. Please keep the fare below ₹250 and send a any vehicle.",
+            "prompt": "v6",
+            "sequence_tokens": 1053,
+            "loss_mask_tokens": 78
+          },
+          {
+            "text": "I'm at Kukatpally and have to reach Lingampally. Please keep the fare below ₹350 and send a don't care which vehicle.",
+            "prompt": "v6",
+            "sequence_tokens": 1059,
+            "loss_mask_tokens": 79
+          },
+          {
+            "text": "Dinner for the family tonight: jeera rice. Keep the total under ₹800 and have it arrive within 30 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1043,
+            "loss_mask_tokens": 68
+          },
+          {
+            "text": "Book me a auto from Bachupally to Miyapur, with a ceiling of ₹200 on the fare.",
+            "prompt": "v6",
+            "sequence_tokens": 1047,
+            "loss_mask_tokens": 77
+          },
+          {
+            "text": "Could you find chole bhature near me? My budget is ₹500 and it should reach me within 25 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1043,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "Could you find curd rice near me? My budget is ₹250 and it should reach me within 35 minutes.",
+            "prompt": "v6",
+            "sequence_tokens": 1041,
+            "loss_mask_tokens": 68
+          },
+          {
+            "text": "I'm looking for laptop for personal use. My budget is ₹5000 and I want the best rated option.",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 54
+          }
+        ],
+        "longest_rows": [
+          {
+            "text": "send mutton kebab and arrange a ride to Panjagutta",
+            "prompt": "prod",
+            "sequence_tokens": 1737,
+            "prompt_offset": 1616,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "dinner is chicken biryani, then I need a ride to Attapur",
+            "prompt": "prod",
+            "sequence_tokens": 1736,
+            "prompt_offset": 1618,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "I need ice cream for dinner and a ride to Somajiguda",
+            "prompt": "prod",
+            "sequence_tokens": 1732,
+            "prompt_offset": 1616,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "I need egg curry for dinner and a ride to the mall",
+            "prompt": "prod",
+            "sequence_tokens": 1727,
+            "prompt_offset": 1614,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "Book me a don't care which vehicle from MG Road to Nanakramguda, with a ceiling of ₹200 on the fare.",
+            "prompt": "prod",
+            "sequence_tokens": 1714,
+            "prompt_offset": 1632,
+            "loss_mask_tokens": 0
+          }
+        ]
+      },
+      "eval": {
+        "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7/validation/v7_validation.jsonl",
+        "pass": false,
+        "rows": 495,
+        "unknown_prompts": 0,
+        "sequence_tokens": {
+          "rows": 495,
+          "min": 339,
+          "max": 1737,
+          "mean": 1233.88,
+          "median": 1051,
+          "p95": 1705,
+          "p99": 1729
+        },
+        "prompt_offset": {
+          "rows": 495,
+          "min": 305,
+          "max": 1624,
+          "mean": 1167.82,
+          "median": 958,
+          "p95": 1615,
+          "p99": 1621
+        },
+        "output_tokens": {
+          "rows": 495,
+          "min": 21,
+          "max": 120,
+          "mean": 64.05,
+          "median": 63,
+          "p95": 100,
+          "p99": 117
+        },
+        "loss_mask_tokens": {
+          "rows": 495,
+          "min": 0,
+          "max": 122,
+          "mean": 36.53,
+          "median": 33,
+          "p95": 100,
+          "p99": 119
+        },
+        "counts": {
+          "over_900": 434,
+          "over_1000": 388,
+          "over_1024": 306,
+          "over_1100": 221,
+          "over_1152": 221,
+          "empty_loss_masks": 221,
+          "nonempty_loss_masks": 274,
+          "tiny_loss_masks": 221
+        },
+        "by_prompt": {
+          "v6": {
+            "rows": 213,
+            "sequence_tokens": {
+              "rows": 213,
+              "min": 971,
+              "max": 1083,
+              "mean": 1019.19,
+              "median": 1017,
+              "p95": 1057,
+              "p99": 1081
+            },
+            "prompt_offset": {
+              "rows": 213,
+              "min": 947,
+              "max": 963,
+              "mean": 953.77,
+              "median": 953,
+              "p95": 960,
+              "p99": 961
+            },
+            "output_tokens": {
+              "rows": 213,
+              "min": 21,
+              "max": 120,
+              "mean": 63.42,
+              "median": 61,
+              "p95": 100,
+              "p99": 118
+            },
+            "loss_mask_tokens": {
+              "rows": 213,
+              "min": 23,
+              "max": 122,
+              "mean": 65.42,
+              "median": 63,
+              "p95": 102,
+              "p99": 120
+            },
+            "over_1024": 85,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          },
+          "prod": {
+            "rows": 221,
+            "sequence_tokens": {
+              "rows": 221,
+              "min": 1627,
+              "max": 1737,
+              "mean": 1676.86,
+              "median": 1678,
+              "p95": 1712,
+              "p99": 1734
+            },
+            "prompt_offset": {
+              "rows": 221,
+              "min": 1603,
+              "max": 1624,
+              "mean": 1610.73,
+              "median": 1610,
+              "p95": 1617,
+              "p99": 1622
+            },
+            "output_tokens": {
+              "rows": 221,
+              "min": 22,
+              "max": 117,
+              "mean": 64.13,
+              "median": 64,
+              "p95": 100,
+              "p99": 117
+            },
+            "loss_mask_tokens": {
+              "rows": 221,
+              "min": 0,
+              "max": 0,
+              "mean": 0.0,
+              "median": 0,
+              "p95": 0,
+              "p99": 0
+            },
+            "over_1024": 221,
+            "over_1100": 221,
+            "over_1152": 221,
+            "empty_masks": 221
+          },
+          "short": {
+            "rows": 61,
+            "sequence_tokens": {
+              "rows": 61,
+              "min": 339,
+              "max": 435,
+              "mean": 378.61,
+              "median": 377,
+              "p95": 409,
+              "p99": 435
+            },
+            "prompt_offset": {
+              "rows": 61,
+              "min": 305,
+              "max": 317,
+              "mean": 310.61,
+              "median": 310,
+              "p95": 316,
+              "p99": 317
+            },
+            "output_tokens": {
+              "rows": 61,
+              "min": 31,
+              "max": 117,
+              "mean": 66.0,
+              "median": 62,
+              "p95": 98,
+              "p99": 117
+            },
+            "loss_mask_tokens": {
+              "rows": 61,
+              "min": 33,
+              "max": 119,
+              "mean": 68.0,
+              "median": 64,
+              "p95": 100,
+              "p99": 119
+            },
+            "over_1024": 0,
+            "over_1100": 0,
+            "over_1152": 0,
+            "empty_masks": 0
+          }
+        },
+        "documented_exceptions": [],
+        "warnings": [
+          {
+            "text": "book me a rickshaw to Gachibowli",
+            "prompt": "v6",
+            "sequence_tokens": 1032,
+            "loss_mask_tokens": 74
+          },
+          {
+            "text": "I need a motorbike to Gachibowli",
+            "prompt": "v6",
+            "sequence_tokens": 1031,
+            "loss_mask_tokens": 74
+          },
+          {
+            "text": "any vehicle to Gachibowli please",
+            "prompt": "v6",
+            "sequence_tokens": 1027,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "Ameerpet ke liye no vehicle preference chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1031,
+            "loss_mask_tokens": 73
+          },
+          {
+            "text": "Madhapur ke liye auto rickshaw chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 69
+          },
+          {
+            "text": "car to Kukatpally please",
+            "prompt": "v6",
+            "sequence_tokens": 1031,
+            "loss_mask_tokens": 77
+          },
+          {
+            "text": "Kukatpally ke liye auto rickshaw chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1034,
+            "loss_mask_tokens": 73
+          },
+          {
+            "text": "get me a motorbike to Banjara Hills",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "book me a auto to Jubilee Hills",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "Jubilee Hills ke liye bike chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "Begumpet ke liye taxi chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 71
+          },
+          {
+            "text": "book me a don't care which vehicle to Secunderabad",
+            "prompt": "v6",
+            "sequence_tokens": 1028,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "I need a motorbike to Secunderabad",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "get me a whatever is available to Secunderabad",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "get me a any vehicle to Dilsukhnagar",
+            "prompt": "v6",
+            "sequence_tokens": 1029,
+            "loss_mask_tokens": 72
+          },
+          {
+            "text": "Dilsukhnagar ke liye motorbike chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1033,
+            "loss_mask_tokens": 74
+          },
+          {
+            "text": "Uppal ke liye car chahiye",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "I need a no vehicle preference to Uppal",
+            "prompt": "v6",
+            "sequence_tokens": 1026,
+            "loss_mask_tokens": 70
+          },
+          {
+            "text": "ride to Gachibowli ceiling of ₹200",
+            "prompt": "v6",
+            "sequence_tokens": 1038,
+            "loss_mask_tokens": 79
+          },
+          {
+            "text": "want palak paneer ceiling of ₹250",
+            "prompt": "v6",
+            "sequence_tokens": 1025,
+            "loss_mask_tokens": 68
+          }
+        ],
+        "longest_rows": [
+          {
+            "text": "dinner is chicken momos, then I need a ride to Lingampally",
+            "prompt": "prod",
+            "sequence_tokens": 1737,
+            "prompt_offset": 1618,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "get me gobi paratha and a ride to Bachupally",
+            "prompt": "prod",
+            "sequence_tokens": 1734,
+            "prompt_offset": 1615,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "send matar paneer and arrange a ride to Bachupally",
+            "prompt": "prod",
+            "sequence_tokens": 1734,
+            "prompt_offset": 1615,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "get me chicken roll and a ride to Manikonda",
+            "prompt": "prod",
+            "sequence_tokens": 1729,
+            "prompt_offset": 1613,
+            "loss_mask_tokens": 0
+          },
+          {
+            "text": "get me egg curry and a ride to Bachupally",
+            "prompt": "prod",
+            "sequence_tokens": 1729,
+            "prompt_offset": 1613,
+            "loss_mask_tokens": 0
+          }
+        ]
+      }
+    },
+    "totals": {
+      "rows": 4867,
+      "sequence_tokens": {
+        "rows": 4867,
+        "min": 330,
+        "max": 1741,
+        "mean": 1234.22,
+        "median": 1050,
+        "p95": 1705,
+        "p99": 1728
+      },
+      "prompt_offset": {
+        "rows": 4867,
+        "min": 304,
+        "max": 1650,
+        "mean": 1167.08,
+        "median": 962,
+        "p95": 1618,
+        "p99": 1632
+      },
+      "output_tokens": {
+        "rows": 4867,
+        "min": 15,
+        "max": 125,
+        "mean": 65.14,
+        "median": 65,
+        "p95": 98,
+        "p99": 116
+      },
+      "loss_mask_tokens": {
+        "rows": 4867,
+        "min": 0,
+        "max": 127,
+        "mean": 37.5,
+        "median": 46,
+        "p95": 98,
+        "p99": 116
+      },
+      "counts": {
+        "over_900": 4233,
+        "over_1000": 4006,
+        "over_1024": 3152,
+        "over_1100": 2189,
+        "over_1152": 2189,
+        "empty_loss_masks": 2189,
+        "nonempty_loss_masks": 2678,
+        "tiny_loss_masks": 2189
+      },
+      "by_prompt": {
+        "v6": {
+          "rows": 2044,
+          "sequence_tokens": {
+            "rows": 2044,
+            "min": 965,
+            "max": 1090,
+            "mean": 1023.87,
+            "median": 1024,
+            "p95": 1056,
+            "p99": 1079
+          },
+          "over_1024": 963,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_masks": 0
+        },
+        "prod": {
+          "rows": 2189,
+          "sequence_tokens": {
+            "rows": 2189,
+            "min": 1620,
+            "max": 1741,
+            "mean": 1677.62,
+            "median": 1679,
+            "p95": 1711,
+            "p99": 1734
+          },
+          "over_1024": 2189,
+          "over_1100": 2189,
+          "over_1152": 2189,
+          "empty_masks": 2189
+        },
+        "short": {
+          "rows": 634,
+          "sequence_tokens": {
+            "rows": 634,
+            "min": 330,
+            "max": 444,
+            "mean": 381.47,
+            "median": 380,
+            "p95": 412,
+            "p99": 437
+          },
+          "over_1024": 0,
+          "over_1100": 0,
+          "over_1152": 0,
+          "empty_masks": 0
+        }
+      }
+    }
+  },
+  "pass": true
+}

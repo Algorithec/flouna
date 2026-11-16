@@ -1,0 +1,32 @@
+# V5 run 1. Same LoRA recipe and prompt as the V4 baseline above, on the V5
+# corpus (10,166 rows). 600 steps x batch 4 = 2,400 samples (~0.24 epoch).
+# M2 throughput is ~11.5 s/iter, so 600 steps is ~1.9 h. The run is checkpointed
+# every 200 steps and can be stopped early if validation loss plateaus.
+# scale 2.0 is the MLX equivalent of PEFT alpha 32 / rank 16; see v4_baseline.yaml.
+model: "Qwen/Qwen2.5-1.5B-Instruct"
+train: true
+data: "/tmp/flouna_v5_data"
+fine_tune_type: "lora"
+optimizer: "adamw"
+num_layers: 16
+mask_prompt: true
+lora_parameters:
+  rank: 16
+  scale: 2.0
+  dropout: 0.05
+batch_size: 4
+grad_accumulation_steps: 1
+iters: 600
+learning_rate: 2.0e-4
+lr_schedule:
+  name: "cosine_decay"
+  arguments: [2.0e-4, 600]
+  warmup: 15
+max_seq_length: 640
+grad_checkpoint: true
+val_batches: 2
+steps_per_report: 20
+steps_per_eval: 200
+save_every: 200
+adapter_path: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v5-run1"
+seed: 42

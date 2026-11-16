@@ -1,0 +1,290 @@
+{
+  "generated_at": "2026-11-16T09:14:32+00:00",
+  "adapter_dir": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v7-run1-fixed",
+  "expected_lora_tensors": 224,
+  "checkpoints": [
+    {
+      "file": "0000200_adapters.safetensors",
+      "iteration": 200,
+      "size_bytes": 42229570,
+      "sha256": "b57a53869b320d0a39954a3ff73ad14e7470d825dbc69f0217acaf3a8ba5f7fb",
+      "safe_open": true,
+      "tensor_count": 224,
+      "key_set_matches_reference": true,
+      "dtypes": [
+        "mlx.core.float32"
+      ],
+      "shapes": {
+        "lora_a": [
+          [
+            1536,
+            16
+          ],
+          [
+            8960,
+            16
+          ]
+        ],
+        "lora_b": [
+          [
+            16,
+            256
+          ],
+          [
+            16,
+            1536
+          ],
+          [
+            16,
+            8960
+          ]
+        ]
+      },
+      "bad_rank_tensors": [],
+      "modules": [
+        "down_proj",
+        "gate_proj",
+        "k_proj",
+        "o_proj",
+        "q_proj",
+        "up_proj",
+        "v_proj"
+      ],
+      "nonfinite_tensors": [],
+      "finite": true,
+      "keys_sample": [
+        "model.layers.12.mlp.down_proj.lora_a",
+        "model.layers.12.mlp.down_proj.lora_b",
+        "model.layers.12.mlp.gate_proj.lora_a"
+      ]
+    },
+    {
+      "file": "0000400_adapters.safetensors",
+      "iteration": 400,
+      "size_bytes": 42229570,
+      "sha256": "8bb19a924dda73e699fed69763a1d5cc416460e42893682fa8f67f1aa060e6aa",
+      "safe_open": true,
+      "tensor_count": 224,
+      "key_set_matches_reference": true,
+      "dtypes": [
+        "mlx.core.float32"
+      ],
+      "shapes": {
+        "lora_a": [
+          [
+            1536,
+            16
+          ],
+          [
+            8960,
+            16
+          ]
+        ],
+        "lora_b": [
+          [
+            16,
+            256
+          ],
+          [
+            16,
+            1536
+          ],
+          [
+            16,
+            8960
+          ]
+        ]
+      },
+      "bad_rank_tensors": [],
+      "modules": [
+        "down_proj",
+        "gate_proj",
+        "k_proj",
+        "o_proj",
+        "q_proj",
+        "up_proj",
+        "v_proj"
+      ],
+      "nonfinite_tensors": [],
+      "finite": true,
+      "keys_sample": [
+        "model.layers.12.mlp.down_proj.lora_a",
+        "model.layers.12.mlp.down_proj.lora_b",
+        "model.layers.12.mlp.gate_proj.lora_a"
+      ]
+    },
+    {
+      "file": "0000600_adapters.safetensors",
+      "iteration": 600,
+      "size_bytes": 42229570,
+      "sha256": "ebf32fc29f248e15118fc155123db903d11b6df00c025a74ad090a18ad7871f0",
+      "safe_open": true,
+      "tensor_count": 224,
+      "key_set_matches_reference": true,
+      "dtypes": [
+        "mlx.core.float32"
+      ],
+      "shapes": {
+        "lora_a": [
+          [
+            1536,
+            16
+          ],
+          [
+            8960,
+            16
+          ]
+        ],
+        "lora_b": [
+          [
+            16,
+            256
+          ],
+          [
+            16,
+            1536
+          ],
+          [
+            16,
+            8960
+          ]
+        ]
+      },
+      "bad_rank_tensors": [],
+      "modules": [
+        "down_proj",
+        "gate_proj",
+        "k_proj",
+        "o_proj",
+        "q_proj",
+        "up_proj",
+        "v_proj"
+      ],
+      "nonfinite_tensors": [],
+      "finite": true,
+      "keys_sample": [
+        "model.layers.12.mlp.down_proj.lora_a",
+        "model.layers.12.mlp.down_proj.lora_b",
+        "model.layers.12.mlp.gate_proj.lora_a"
+      ]
+    },
+    {
+      "file": "0000800_adapters.safetensors",
+      "iteration": 800,
+      "size_bytes": 42229570,
+      "sha256": "27a2b9446946fce398106415d00e50de4898631065db1bd5fc1db5bcddd00f10",
+      "safe_open": true,
+      "tensor_count": 224,
+      "key_set_matches_reference": true,
+      "dtypes": [
+        "mlx.core.float32"
+      ],
+      "shapes": {
+        "lora_a": [
+          [
+            1536,
+            16
+          ],
+          [
+            8960,
+            16
+          ]
+        ],
+        "lora_b": [
+          [
+            16,
+            256
+          ],
+          [
+            16,
+            1536
+          ],
+          [
+            16,
+            8960
+          ]
+        ]
+      },
+      "bad_rank_tensors": [],
+      "modules": [
+        "down_proj",
+        "gate_proj",
+        "k_proj",
+        "o_proj",
+        "q_proj",
+        "up_proj",
+        "v_proj"
+      ],
+      "nonfinite_tensors": [],
+      "finite": true,
+      "keys_sample": [
+        "model.layers.12.mlp.down_proj.lora_a",
+        "model.layers.12.mlp.down_proj.lora_b",
+        "model.layers.12.mlp.gate_proj.lora_a"
+      ]
+    },
+    {
+      "file": "0001000_adapters.safetensors",
+      "iteration": 1000,
+      "size_bytes": 42229570,
+      "sha256": "c8ab0a8fcb596fc6ddb7e903221e3456dc22860afe16c3637f422b3e99ec3ae8",
+      "safe_open": true,
+      "tensor_count": 224,
+      "key_set_matches_reference": true,
+      "dtypes": [
+        "mlx.core.float32"
+      ],
+      "shapes": {
+        "lora_a": [
+          [
+            1536,
+            16
+          ],
+          [
+            8960,
+            16
+          ]
+        ],
+        "lora_b": [
+          [
+            16,
+            256
+          ],
+          [
+            16,
+            1536
+          ],
+          [
+            16,
+            8960
+          ]
+        ]
+      },
+      "bad_rank_tensors": [],
+      "modules": [
+        "down_proj",
+        "gate_proj",
+        "k_proj",
+        "o_proj",
+        "q_proj",
+        "up_proj",
+        "v_proj"
+      ],
+      "nonfinite_tensors": [],
+      "finite": true,
+      "keys_sample": [
+        "model.layers.12.mlp.down_proj.lora_a",
+        "model.layers.12.mlp.down_proj.lora_b",
+        "model.layers.12.mlp.gate_proj.lora_a"
+      ]
+    }
+  ],
+  "final_adapter": {
+    "file": "adapters.safetensors",
+    "size_bytes": 42229570,
+    "sha256": "c8ab0a8fcb596fc6ddb7e903221e3456dc22860afe16c3637f422b3e99ec3ae8",
+    "matches_checkpoint": "0001000_adapters.safetensors"
+  },
+  "errors": [],
+  "pass": true
+}

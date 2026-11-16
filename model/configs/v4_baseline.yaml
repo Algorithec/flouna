@@ -1,0 +1,39 @@
+# V4-equivalent baseline, reconstructed locally (the original V4 adapter was not
+# kept in the repo). Same data and LoRA recipe as model/train_peft_win.py:
+#   rank 16 / effective alpha 32 (MLX scale 2) / dropout 0.05, lr 2e-4 cosine,
+#   assistant-only loss, effective batch 2-equivalent exposure.
+# Local adaptations for the M2 (documented in results/v4_baseline.md):
+#   - compact 402-token training prompt (the V4 prompt was 1,037 tokens, 92% of
+#     every sequence; uncompressed training is ~10s/iter and does not fit a day)
+#   - batch 4, LoRA on the last 16 layers (the repo's MLX script default)
+#   - 800 steps = 3,200 samples (~0.59 epoch) instead of 8,400 samples
+#   - scale 2.0, not 32: MLX multiplies the low-rank delta by `scale` directly,
+#     so scale 2 is the equivalent of PEFT lora_alpha 32 / rank 16 (32/16)
+#   - 20-step warmup, the same 2.5% share of the run as V4's 100/4,200
+model: "Qwen/Qwen2.5-1.5B-Instruct"
+train: true
+data: "/tmp/flouna_v4_compact"
+fine_tune_type: "lora"
+optimizer: "adamw"
+num_layers: 16
+mask_prompt: true
+lora_parameters:
+  rank: 16
+  scale: 2.0
+  dropout: 0.05
+batch_size: 4
+grad_accumulation_steps: 1
+iters: 800
+learning_rate: 2.0e-4
+lr_schedule:
+  name: "cosine_decay"
+  arguments: [2.0e-4, 800]
+  warmup: 20
+max_seq_length: 640
+grad_checkpoint: true
+val_batches: 2
+steps_per_report: 20
+steps_per_eval: 200
+save_every: 200
+adapter_path: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v4-baseline"
+seed: 42

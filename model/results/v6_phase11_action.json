@@ -1,0 +1,1789 @@
+{
+  "metadata": {
+    "v6_checkpoint": "flouna-lora-v6-run2/0001600_adapters.safetensors",
+    "v6_checkpoint_sha256": "8b1324fc08d2fe2f0e6d403f5463ec492e321f1a26a97827a259feb007a3391e",
+    "v6_loaded_via": "flouna-lora-v6-run2 (adapters.safetensors is byte-identical to 0001600)",
+    "v6_loaded_sha256": "8b1324fc08d2fe2f0e6d403f5463ec492e321f1a26a97827a259feb007a3391e",
+    "holdout": "eval_mlx_v5.jsonl",
+    "holdout_sha256": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a",
+    "v5_baseline": "results/v5_run2.json",
+    "eval_script": "eval_v6.py",
+    "eval_harness": "eval_v5.py",
+    "analysis_script": "analyze_phase11.py",
+    "production_prompt": "prompt.ts (read through eval_v5.production_prompt)",
+    "eval_config": {
+      "backend": "mlx",
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "batch_size": 4,
+      "max_tokens": 512
+    },
+    "git_branch": "feat/flouna-1.5b-v6-training",
+    "git_head": "10db26a5c86d63ba3d0e0c1a0b4e92b7a6bd2fb0",
+    "python": "3.12.16",
+    "mlx": "0.32.4",
+    "mlx_lm": "0.32.2",
+    "safetensors": "0.8.0",
+    "gguf": "0.19.0"
+  },
+  "v6_v6prompt": {
+    "total": 72,
+    "right": 57,
+    "fields_right": 57,
+    "domain_right": 59,
+    "parse_ok": 72,
+    "json_valid": 70,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 0,
+    "injection_held": 0,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 59,
+        "total": 72
+      },
+      "action.kind": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.targetBy": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.targetPosition": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.targetName": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.qty": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.members": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.withMyItems": {
+        "ok": 48,
+        "total": 50
+      },
+      "action.pick": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.setting": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.on": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.value": {
+        "ok": 48,
+        "total": 50
+      },
+      "action.weeklyRupees": {
+        "ok": 49,
+        "total": 50
+      },
+      "food.item": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.maxEtaMinutes": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.dietary": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.priority": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.pickup": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.drop": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.vehicle": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.priority": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.scheduleAt": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.item": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.category": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.priority": {
+        "ok": 2,
+        "total": 2
+      }
+    },
+    "confusion": {
+      "action->action": 49,
+      "action->food": 1,
+      "food->food": 2,
+      "greeting->action": 6,
+      "out_of_scope->action": 6,
+      "out_of_scope->out_of_scope": 4,
+      "ride->ride": 2,
+      "shop->shop": 2
+    },
+    "slices": {
+      "action": {
+        "right": 47,
+        "domain": 49,
+        "total": 50
+      },
+      "budget": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "food": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "greeting": {
+        "right": 0,
+        "domain": 0,
+        "total": 6
+      },
+      "missing_field": {
+        "right": 5,
+        "domain": 5,
+        "total": 5
+      },
+      "nested": {
+        "right": 6,
+        "domain": 6,
+        "total": 6
+      },
+      "out_of_scope": {
+        "right": 4,
+        "domain": 4,
+        "total": 10
+      },
+      "priority_price": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "ride": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "shop": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      }
+    },
+    "latency": {
+      "p50": 3564.5,
+      "p95": 3656.8,
+      "max": 3720.1
+    },
+    "behaviour": {
+      "domains_expected": {
+        "action": 50,
+        "food": 2,
+        "ride": 2,
+        "shop": 2,
+        "greeting": 6,
+        "out_of_scope": 10
+      },
+      "domains_actual": {
+        "action": 61,
+        "food": 3,
+        "ride": 2,
+        "shop": 2,
+        "out_of_scope": 4
+      },
+      "oors": 10,
+      "oos_right": 4,
+      "oos_as_action": 6,
+      "false_greeting": 0,
+      "non_greeting": 66,
+      "json_valid": 70,
+      "total": 72
+    },
+    "action": {
+      "positives": 50,
+      "positives_right": 47,
+      "positives_kind_ok": 49,
+      "negatives": 22,
+      "negatives_not_action": 10,
+      "negatives_right": 10,
+      "kinds": {
+        "cart.add": {
+          "right": 3,
+          "total": 3
+        },
+        "cart.remove": {
+          "right": 3,
+          "total": 3
+        },
+        "cart.set_qty": {
+          "right": 2,
+          "total": 2
+        },
+        "cart.show": {
+          "right": 2,
+          "total": 2
+        },
+        "cart.clear": {
+          "right": 1,
+          "total": 1
+        },
+        "checkout": {
+          "right": 2,
+          "total": 2
+        },
+        "group.create": {
+          "right": 2,
+          "total": 2
+        },
+        "group.show": {
+          "right": 1,
+          "total": 1
+        },
+        "select": {
+          "right": 2,
+          "total": 3
+        },
+        "ride.book": {
+          "right": 1,
+          "total": 1
+        },
+        "ride.group": {
+          "right": 2,
+          "total": 2
+        },
+        "ride.group_mode": {
+          "right": 1,
+          "total": 2
+        },
+        "settings.toggle": {
+          "right": 6,
+          "total": 6
+        },
+        "settings.visibility": {
+          "right": 2,
+          "total": 3
+        },
+        "settings.budget": {
+          "right": 2,
+          "total": 2
+        },
+        "settings.language": {
+          "right": 2,
+          "total": 2
+        },
+        "settings.theme": {
+          "right": 2,
+          "total": 2
+        },
+        "navigate": {
+          "right": 11,
+          "total": 11
+        }
+      },
+      "positives_pct": "94.0%"
+    }
+  },
+  "v5_v6prompt": {
+    "total": 72,
+    "right": 15,
+    "fields_right": 15,
+    "domain_right": 15,
+    "parse_ok": 68,
+    "json_valid": 51,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 0,
+    "injection_held": 0,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 15,
+        "total": 72
+      },
+      "action.kind": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.targetBy": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.targetPosition": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.targetName": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.qty": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.members": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.withMyItems": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.pick": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.setting": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.on": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.value": {
+        "ok": 0,
+        "total": 50
+      },
+      "action.weeklyRupees": {
+        "ok": 0,
+        "total": 50
+      },
+      "reply": {
+        "ok": 0,
+        "total": 4
+      },
+      "food.item": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.maxEtaMinutes": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.dietary": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.priority": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.pickup": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.drop": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.vehicle": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.priority": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.scheduleAt": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.item": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.category": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.priority": {
+        "ok": 2,
+        "total": 2
+      }
+    },
+    "confusion": {
+      "action->None": 1,
+      "action->cart": 3,
+      "action->food": 8,
+      "action->group": 3,
+      "action->out_of_scope": 20,
+      "action->ride": 5,
+      "action->settings": 10,
+      "food->food": 2,
+      "greeting->None": 2,
+      "greeting->out_of_scope": 4,
+      "out_of_scope->None": 1,
+      "out_of_scope->out_of_scope": 9,
+      "ride->ride": 2,
+      "shop->shop": 2
+    },
+    "slices": {
+      "action": {
+        "right": 0,
+        "domain": 0,
+        "total": 50
+      },
+      "budget": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "food": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "greeting": {
+        "right": 0,
+        "domain": 0,
+        "total": 6
+      },
+      "missing_field": {
+        "right": 5,
+        "domain": 5,
+        "total": 5
+      },
+      "nested": {
+        "right": 6,
+        "domain": 6,
+        "total": 6
+      },
+      "out_of_scope": {
+        "right": 9,
+        "domain": 9,
+        "total": 10
+      },
+      "priority_price": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "ride": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "shop": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      }
+    },
+    "latency": {
+      "p50": 3431.8,
+      "p95": 9477.2,
+      "max": 9911.1
+    },
+    "behaviour": {
+      "domains_expected": {
+        "action": 50,
+        "food": 2,
+        "ride": 2,
+        "shop": 2,
+        "greeting": 6,
+        "out_of_scope": 10
+      },
+      "domains_actual": {
+        "food": 10,
+        "out_of_scope": 33,
+        "cart": 3,
+        "null": 4,
+        "group": 3,
+        "ride": 7,
+        "settings": 10,
+        "shop": 2
+      },
+      "oors": 10,
+      "oos_right": 9,
+      "oos_as_action": 0,
+      "false_greeting": 0,
+      "non_greeting": 66,
+      "json_valid": 51,
+      "total": 72
+    },
+    "action": {
+      "positives": 50,
+      "positives_right": 0,
+      "positives_kind_ok": 0,
+      "negatives": 22,
+      "negatives_not_action": 22,
+      "negatives_right": 15,
+      "kinds": {
+        "cart.add": {
+          "right": 0,
+          "total": 3
+        },
+        "cart.remove": {
+          "right": 0,
+          "total": 3
+        },
+        "cart.set_qty": {
+          "right": 0,
+          "total": 2
+        },
+        "cart.show": {
+          "right": 0,
+          "total": 2
+        },
+        "cart.clear": {
+          "right": 0,
+          "total": 1
+        },
+        "checkout": {
+          "right": 0,
+          "total": 2
+        },
+        "group.create": {
+          "right": 0,
+          "total": 2
+        },
+        "group.show": {
+          "right": 0,
+          "total": 1
+        },
+        "select": {
+          "right": 0,
+          "total": 3
+        },
+        "ride.book": {
+          "right": 0,
+          "total": 1
+        },
+        "ride.group": {
+          "right": 0,
+          "total": 2
+        },
+        "ride.group_mode": {
+          "right": 0,
+          "total": 2
+        },
+        "settings.toggle": {
+          "right": 0,
+          "total": 6
+        },
+        "settings.visibility": {
+          "right": 0,
+          "total": 3
+        },
+        "settings.budget": {
+          "right": 0,
+          "total": 2
+        },
+        "settings.language": {
+          "right": 0,
+          "total": 2
+        },
+        "settings.theme": {
+          "right": 0,
+          "total": 2
+        },
+        "navigate": {
+          "right": 0,
+          "total": 11
+        }
+      },
+      "positives_pct": "0.0%"
+    }
+  },
+  "v6_production_prompt": {
+    "total": 72,
+    "right": 47,
+    "fields_right": 47,
+    "domain_right": 59,
+    "parse_ok": 72,
+    "json_valid": 67,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 0,
+    "injection_held": 0,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 59,
+        "total": 72
+      },
+      "action.kind": {
+        "ok": 44,
+        "total": 50
+      },
+      "action.targetBy": {
+        "ok": 45,
+        "total": 50
+      },
+      "action.targetPosition": {
+        "ok": 48,
+        "total": 50
+      },
+      "action.targetName": {
+        "ok": 50,
+        "total": 50
+      },
+      "action.qty": {
+        "ok": 48,
+        "total": 50
+      },
+      "action.members": {
+        "ok": 50,
+        "total": 50
+      },
+      "action.withMyItems": {
+        "ok": 50,
+        "total": 50
+      },
+      "action.pick": {
+        "ok": 50,
+        "total": 50
+      },
+      "action.setting": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.on": {
+        "ok": 48,
+        "total": 50
+      },
+      "action.value": {
+        "ok": 45,
+        "total": 50
+      },
+      "action.weeklyRupees": {
+        "ok": 50,
+        "total": 50
+      },
+      "food.item": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.maxEtaMinutes": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.dietary": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.priority": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.pickup": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.drop": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.vehicle": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.priority": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.scheduleAt": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.item": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.category": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.priority": {
+        "ok": 2,
+        "total": 2
+      }
+    },
+    "confusion": {
+      "action->action": 50,
+      "food->food": 2,
+      "greeting->action": 6,
+      "out_of_scope->action": 7,
+      "out_of_scope->out_of_scope": 3,
+      "ride->ride": 2,
+      "shop->shop": 2
+    },
+    "slices": {
+      "action": {
+        "right": 38,
+        "domain": 50,
+        "total": 50
+      },
+      "budget": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "food": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "greeting": {
+        "right": 0,
+        "domain": 0,
+        "total": 6
+      },
+      "missing_field": {
+        "right": 5,
+        "domain": 5,
+        "total": 5
+      },
+      "nested": {
+        "right": 6,
+        "domain": 6,
+        "total": 6
+      },
+      "out_of_scope": {
+        "right": 3,
+        "domain": 3,
+        "total": 10
+      },
+      "priority_price": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "ride": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "shop": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      }
+    },
+    "latency": {
+      "p50": 5377.1,
+      "p95": 8292.8,
+      "max": 8326.1
+    },
+    "behaviour": {
+      "domains_expected": {
+        "action": 50,
+        "food": 2,
+        "ride": 2,
+        "shop": 2,
+        "greeting": 6,
+        "out_of_scope": 10
+      },
+      "domains_actual": {
+        "action": 63,
+        "food": 2,
+        "ride": 2,
+        "shop": 2,
+        "out_of_scope": 3
+      },
+      "oors": 10,
+      "oos_right": 3,
+      "oos_as_action": 7,
+      "false_greeting": 0,
+      "non_greeting": 66,
+      "json_valid": 67,
+      "total": 72
+    },
+    "action": {
+      "positives": 50,
+      "positives_right": 38,
+      "positives_kind_ok": 44,
+      "negatives": 22,
+      "negatives_not_action": 9,
+      "negatives_right": 9,
+      "kinds": {
+        "cart.add": {
+          "right": 2,
+          "total": 3
+        },
+        "cart.remove": {
+          "right": 2,
+          "total": 3
+        },
+        "cart.set_qty": {
+          "right": 2,
+          "total": 2
+        },
+        "cart.show": {
+          "right": 2,
+          "total": 2
+        },
+        "cart.clear": {
+          "right": 1,
+          "total": 1
+        },
+        "checkout": {
+          "right": 2,
+          "total": 2
+        },
+        "group.create": {
+          "right": 2,
+          "total": 2
+        },
+        "group.show": {
+          "right": 0,
+          "total": 1
+        },
+        "select": {
+          "right": 1,
+          "total": 3
+        },
+        "ride.book": {
+          "right": 0,
+          "total": 1
+        },
+        "ride.group": {
+          "right": 2,
+          "total": 2
+        },
+        "ride.group_mode": {
+          "right": 1,
+          "total": 2
+        },
+        "settings.toggle": {
+          "right": 4,
+          "total": 6
+        },
+        "settings.visibility": {
+          "right": 3,
+          "total": 3
+        },
+        "settings.budget": {
+          "right": 2,
+          "total": 2
+        },
+        "settings.language": {
+          "right": 2,
+          "total": 2
+        },
+        "settings.theme": {
+          "right": 2,
+          "total": 2
+        },
+        "navigate": {
+          "right": 8,
+          "total": 11
+        }
+      },
+      "positives_pct": "76.0%"
+    }
+  },
+  "error_analysis": {
+    "set": "action",
+    "total": 72,
+    "correct": 57,
+    "incorrect": 15,
+    "accuracy": 79.17,
+    "categories": {
+      "domain classification": {
+        "n": 7,
+        "pct_of_failures": 46.7
+      },
+      "out-of-scope": {
+        "n": 4,
+        "pct_of_failures": 26.7
+      },
+      "other": {
+        "n": 2,
+        "pct_of_failures": 13.3
+      },
+      "label/schema mismatch": {
+        "n": 2,
+        "pct_of_failures": 13.3
+      }
+    },
+    "failures": [
+      {
+        "id": "action-17",
+        "expected": {
+          "domain": "action",
+          "reply": "Okay, doing that now.",
+          "action": {
+            "kind": "select",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "cheapest",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best food options for you.",
+          "food": {
+            "item": "food",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "price"
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain action -> food",
+        "fields": [
+          "domain",
+          "action.kind",
+          "action.targetBy",
+          "action.targetPosition",
+          "action.targetName",
+          "action.qty",
+          "action.members",
+          "action.withMyItems",
+          "action.pick",
+          "action.setting",
+          "action.on",
+          "action.value",
+          "action.weeklyRupees"
+        ]
+      },
+      {
+        "id": "action-24",
+        "expected": {
+          "domain": "action",
+          "reply": "Understood.",
+          "action": {
+            "kind": "ride.group_mode",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "mine",
+            "weeklyRupees": 0
+          }
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Got it.",
+          "action": {
+            "kind": "ride.group_mode",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": true,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "mine",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "other",
+        "detail": "action.withMyItems: False -> True",
+        "fields": [
+          "action.withMyItems"
+        ]
+      },
+      {
+        "id": "action-32",
+        "expected": {
+          "domain": "action",
+          "reply": "Got it.",
+          "action": {
+            "kind": "settings.visibility",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "nobody",
+            "weeklyRupees": 0
+          }
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Got it.",
+          "action": {
+            "kind": "settings.visibility",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "mine",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "other",
+        "detail": "action.value: 'nobody' -> 'mine'",
+        "fields": [
+          "action.value"
+        ]
+      },
+      {
+        "id": "action-54",
+        "expected": {
+          "domain": "greeting",
+          "reply": "Hi! I can help you order food, book rides, or compare shopping deals. What do you need?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Got it.",
+          "action": {
+            "kind": "cart.add",
+            "targetBy": "last",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 1,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain greeting -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-55",
+        "expected": {
+          "domain": "greeting",
+          "reply": "Hey there! Tell me what you need, food, a ride, or something to buy."
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Under the settings, you can change your language.",
+          "action": {
+            "kind": "navigate",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "settings.language",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain greeting -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-56",
+        "expected": {
+          "domain": "greeting",
+          "reply": "Hey there! Tell me what you need, food, a ride, or something to buy."
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Sure, on it.",
+          "action": {
+            "kind": "navigate",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "checkout",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain greeting -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-57",
+        "expected": {
+          "domain": "greeting",
+          "reply": "Hello! I'm Flouna. I can find you the best food, rides, and shopping deals. What are you looking for?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Got it.",
+          "action": {
+            "kind": "settings.theme",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "dark",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain greeting -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-58",
+        "expected": {
+          "domain": "greeting",
+          "reply": "Hello! I'm Flouna. I can find you the best food, rides, and shopping deals. What are you looking for?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Got it.",
+          "action": {
+            "kind": "settings.budget",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain greeting -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-59",
+        "expected": {
+          "domain": "greeting",
+          "reply": "Hey there! Tell me what you need, food, a ride, or something to buy."
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Understood.",
+          "action": {
+            "kind": "navigate",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "orders",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain greeting -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-61",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Understood.",
+          "action": {
+            "kind": "cart.remove",
+            "targetBy": "last",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "out-of-scope",
+        "detail": "domain out_of_scope -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-62",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Got it.",
+          "action": {
+            "kind": "out_of_scope",
+            "reply": "I can help you order food, book rides, or shop. What would you like?"
+          }
+        },
+        "category": "label/schema mismatch",
+        "detail": "action has unexpected keys: ['reply']; action missing keys: ['members', 'on', 'pick', 'qty', 'setting', 'targetBy', 'targetName', 'targetPosition', 'value', 'weeklyRupees', 'withMyItems']; action.kind",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-64",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Understood.",
+          "action": {
+            "kind": "cancel",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "label/schema mismatch",
+        "detail": "action.kind 'cancel' not in ('cart.add', 'cart.remove', 'cart.set_qty', 'cart.show', 'cart.clear', 'checkout', 'group.create', 'group.show', 'select', 'ride.book', 'ride.group', 'ride.group_mode', 'se",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-65",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Understood.",
+          "action": {
+            "kind": "cart.add",
+            "targetBy": "last",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "out-of-scope",
+        "detail": "domain out_of_scope -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-66",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Understood.",
+          "action": {
+            "kind": "cart.clear",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "out-of-scope",
+        "detail": "domain out_of_scope -> action",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "action-68",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Understood.",
+          "action": {
+            "kind": "cart.remove",
+            "targetBy": "last",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "out-of-scope",
+        "detail": "domain out_of_scope -> action",
+        "fields": [
+          "domain"
+        ]
+      }
+    ],
+    "harness": {
+      "total": 72,
+      "right": 57,
+      "fields_right": 57,
+      "domain_right": 59,
+      "parse_ok": 72,
+      "json_valid": 70,
+      "errors": 0,
+      "timeouts": 0,
+      "leaks": 0,
+      "injection_total": 0,
+      "injection_held": 0,
+      "false_greeting": 0,
+      "fields": {
+        "domain": {
+          "ok": 59,
+          "total": 72
+        },
+        "action.kind": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.targetBy": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.targetPosition": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.targetName": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.qty": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.members": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.withMyItems": {
+          "ok": 48,
+          "total": 50
+        },
+        "action.pick": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.setting": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.on": {
+          "ok": 49,
+          "total": 50
+        },
+        "action.value": {
+          "ok": 48,
+          "total": 50
+        },
+        "action.weeklyRupees": {
+          "ok": 49,
+          "total": 50
+        },
+        "food.item": {
+          "ok": 2,
+          "total": 2
+        },
+        "food.budgetPaise": {
+          "ok": 2,
+          "total": 2
+        },
+        "food.maxEtaMinutes": {
+          "ok": 2,
+          "total": 2
+        },
+        "food.dietary": {
+          "ok": 2,
+          "total": 2
+        },
+        "food.priority": {
+          "ok": 2,
+          "total": 2
+        },
+        "ride.pickup": {
+          "ok": 2,
+          "total": 2
+        },
+        "ride.drop": {
+          "ok": 2,
+          "total": 2
+        },
+        "ride.vehicle": {
+          "ok": 2,
+          "total": 2
+        },
+        "ride.budgetPaise": {
+          "ok": 2,
+          "total": 2
+        },
+        "ride.maxPickupMinutes": {
+          "ok": 2,
+          "total": 2
+        },
+        "ride.priority": {
+          "ok": 2,
+          "total": 2
+        },
+        "ride.scheduleAt": {
+          "ok": 2,
+          "total": 2
+        },
+        "shop.item": {
+          "ok": 2,
+          "total": 2
+        },
+        "shop.budgetPaise": {
+          "ok": 2,
+          "total": 2
+        },
+        "shop.category": {
+          "ok": 2,
+          "total": 2
+        },
+        "shop.priority": {
+          "ok": 2,
+          "total": 2
+        }
+      },
+      "confusion": {
+        "action->action": 49,
+        "action->food": 1,
+        "food->food": 2,
+        "greeting->action": 6,
+        "out_of_scope->action": 6,
+        "out_of_scope->out_of_scope": 4,
+        "ride->ride": 2,
+        "shop->shop": 2
+      },
+      "slices": {
+        "action": {
+          "right": 47,
+          "domain": 49,
+          "total": 50
+        },
+        "budget": {
+          "right": 1,
+          "domain": 1,
+          "total": 1
+        },
+        "food": {
+          "right": 2,
+          "domain": 2,
+          "total": 2
+        },
+        "greeting": {
+          "right": 0,
+          "domain": 0,
+          "total": 6
+        },
+        "missing_field": {
+          "right": 5,
+          "domain": 5,
+          "total": 5
+        },
+        "nested": {
+          "right": 6,
+          "domain": 6,
+          "total": 6
+        },
+        "out_of_scope": {
+          "right": 4,
+          "domain": 4,
+          "total": 10
+        },
+        "priority_price": {
+          "right": 1,
+          "domain": 1,
+          "total": 1
+        },
+        "ride": {
+          "right": 2,
+          "domain": 2,
+          "total": 2
+        },
+        "shop": {
+          "right": 2,
+          "domain": 2,
+          "total": 2
+        }
+      },
+      "latency": {
+        "p50": 3564.5,
+        "p95": 3656.8,
+        "max": 3720.1
+      },
+      "behaviour": {
+        "domains_expected": {
+          "action": 50,
+          "food": 2,
+          "ride": 2,
+          "shop": 2,
+          "greeting": 6,
+          "out_of_scope": 10
+        },
+        "domains_actual": {
+          "action": 61,
+          "food": 3,
+          "ride": 2,
+          "shop": 2,
+          "out_of_scope": 4
+        },
+        "oors": 10,
+        "oos_right": 4,
+        "oos_as_action": 6,
+        "false_greeting": 0,
+        "non_greeting": 66,
+        "json_valid": 70,
+        "total": 72
+      },
+      "action": {
+        "positives": 50,
+        "positives_right": 47,
+        "positives_kind_ok": 49,
+        "negatives": 22,
+        "negatives_not_action": 10,
+        "negatives_right": 10,
+        "kinds": {
+          "cart.add": {
+            "right": 3,
+            "total": 3
+          },
+          "cart.remove": {
+            "right": 3,
+            "total": 3
+          },
+          "cart.set_qty": {
+            "right": 2,
+            "total": 2
+          },
+          "cart.show": {
+            "right": 2,
+            "total": 2
+          },
+          "cart.clear": {
+            "right": 1,
+            "total": 1
+          },
+          "checkout": {
+            "right": 2,
+            "total": 2
+          },
+          "group.create": {
+            "right": 2,
+            "total": 2
+          },
+          "group.show": {
+            "right": 1,
+            "total": 1
+          },
+          "select": {
+            "right": 2,
+            "total": 3
+          },
+          "ride.book": {
+            "right": 1,
+            "total": 1
+          },
+          "ride.group": {
+            "right": 2,
+            "total": 2
+          },
+          "ride.group_mode": {
+            "right": 1,
+            "total": 2
+          },
+          "settings.toggle": {
+            "right": 6,
+            "total": 6
+          },
+          "settings.visibility": {
+            "right": 2,
+            "total": 3
+          },
+          "settings.budget": {
+            "right": 2,
+            "total": 2
+          },
+          "settings.language": {
+            "right": 2,
+            "total": 2
+          },
+          "settings.theme": {
+            "right": 2,
+            "total": 2
+          },
+          "navigate": {
+            "right": 11,
+            "total": 11
+          }
+        },
+        "positives_pct": "94.0%"
+      }
+    },
+    "harness_checks": {
+      "json_valid": 70,
+      "domain_right": 59,
+      "parse_ok": 72,
+      "false_greeting": 0,
+      "latency": {
+        "p50": 3564.5,
+        "p95": 3656.8,
+        "max": 3720.1
+      }
+    }
+  }
+}

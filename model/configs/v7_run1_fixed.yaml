@@ -1,0 +1,47 @@
+# V7 run 1, fixed. Same recipe as configs/v7_run1.yaml, same base model,
+# same seed and hyperparameters. Only two things differ:
+#   - data: the repaired corpus in data/v7_fixed, where the 45% of rows that
+#     used the 6,053-character production prompt now use the compact training
+#     prompt FLOUNA_PRODUCTION_COMPACT_V1 (838 tokens). User text and assistant
+#     labels are unchanged. The production prompt.ts itself is untouched.
+#   - adapter_path: a new directory, so the failed run's artifacts stay intact.
+#
+# The pre-fix dataset used the full production prompt (1,589 tokens). At
+# max_seq_length 1152 every prod row's assistant target was truncated away,
+# the loss mask was empty, and training produced NaN. The token preflight now
+# blocks that class of row before training starts.
+#
+# UNCHANGED BY DESIGN: rank 16, scale 2.0, dropout 0.05, last 16 layers,
+# mask_prompt, AdamW, grad checkpoint, max_seq_length 1152, micro-batch 1 +
+# accumulation 4, lr 1.5e-4 cosine (warmup 50), 1,600 iterations, seed 11.
+# Do not raise max_seq_length on the 16 GB M2; 1,152 is the measured ceiling.
+#
+# PREFLIGHT: python data/v7/dry_run_v7_fixed.py
+# TRAINING (not run yet): cd model && caffeinate -i .venv/bin/python -u -m mlx_lm lora -c configs/v7_run1_fixed.yaml
+model: "Qwen/Qwen2.5-1.5B-Instruct"
+train: true
+data: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7_fixed/training"
+fine_tune_type: "lora"
+optimizer: "adamw"
+num_layers: 16
+mask_prompt: true
+lora_parameters:
+  rank: 16
+  scale: 2.0
+  dropout: 0.05
+batch_size: 1
+grad_accumulation_steps: 4
+iters: 1600
+learning_rate: 1.5e-4
+lr_schedule:
+  name: "cosine_decay"
+  arguments: [1.5e-4, 1600]
+  warmup: 50
+max_seq_length: 1152
+grad_checkpoint: true
+val_batches: 2
+steps_per_report: 20
+steps_per_eval: 200
+save_every: 200
+adapter_path: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v7-run1-fixed"
+seed: 11

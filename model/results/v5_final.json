@@ -1,0 +1,898 @@
+{
+  "fixtures": {
+    "total": 113,
+    "right": 107,
+    "fields_right": 107,
+    "domain_right": 112,
+    "parse_ok": 113,
+    "json_valid": 113,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 6,
+    "injection_held": 6,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 112,
+        "total": 113
+      },
+      "food.item": {
+        "ok": 31,
+        "total": 32
+      },
+      "food.dietary": {
+        "ok": 6,
+        "total": 6
+      },
+      "food.priority": {
+        "ok": 17,
+        "total": 18
+      },
+      "food.budgetPaise": {
+        "ok": 20,
+        "total": 20
+      },
+      "ride.drop": {
+        "ok": 27,
+        "total": 28
+      },
+      "ride.vehicle": {
+        "ok": 15,
+        "total": 15
+      },
+      "ride.scheduleAt": {
+        "ok": 4,
+        "total": 4
+      },
+      "ride.pickup": {
+        "ok": 3,
+        "total": 3
+      },
+      "ride.priority": {
+        "ok": 9,
+        "total": 11
+      },
+      "shop.budgetPaise": {
+        "ok": 4,
+        "total": 4
+      },
+      "shop.category": {
+        "ok": 5,
+        "total": 5
+      },
+      "shop.priority": {
+        "ok": 3,
+        "total": 3
+      },
+      "food.maxEtaMinutes": {
+        "ok": 4,
+        "total": 4
+      },
+      "ride.budgetPaise": {
+        "ok": 8,
+        "total": 8
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 4,
+        "total": 4
+      }
+    },
+    "confusion": {
+      "combo->combo": 4,
+      "food->food": 48,
+      "greeting->greeting": 5,
+      "out_of_scope->out_of_scope": 11,
+      "out_of_scope->shop": 1,
+      "ride->ride": 36,
+      "shop->shop": 8
+    },
+    "slices": {
+      "budget": {
+        "right": 25,
+        "domain": 27,
+        "total": 27
+      },
+      "combo": {
+        "right": 4,
+        "domain": 4,
+        "total": 4
+      },
+      "dietary_nonveg": {
+        "right": 3,
+        "domain": 3,
+        "total": 3
+      },
+      "dietary_veg": {
+        "right": 3,
+        "domain": 3,
+        "total": 3
+      },
+      "eta": {
+        "right": 4,
+        "domain": 4,
+        "total": 4
+      },
+      "food": {
+        "right": 46,
+        "domain": 48,
+        "total": 48
+      },
+      "greeting": {
+        "right": 5,
+        "domain": 5,
+        "total": 5
+      },
+      "missing_field": {
+        "right": 8,
+        "domain": 8,
+        "total": 8
+      },
+      "multi_constraint": {
+        "right": 8,
+        "domain": 9,
+        "total": 9
+      },
+      "nested": {
+        "right": 85,
+        "domain": 90,
+        "total": 90
+      },
+      "out_of_scope": {
+        "right": 11,
+        "domain": 11,
+        "total": 12
+      },
+      "priority_price": {
+        "right": 11,
+        "domain": 12,
+        "total": 12
+      },
+      "priority_rating": {
+        "right": 5,
+        "domain": 6,
+        "total": 6
+      },
+      "priority_speed": {
+        "right": 9,
+        "domain": 10,
+        "total": 10
+      },
+      "ride": {
+        "right": 33,
+        "domain": 36,
+        "total": 36
+      },
+      "schedule": {
+        "right": 3,
+        "domain": 3,
+        "total": 3
+      },
+      "shop": {
+        "right": 8,
+        "domain": 8,
+        "total": 8
+      },
+      "wait": {
+        "right": 2,
+        "domain": 3,
+        "total": 3
+      }
+    },
+    "latency": {
+      "p50": 1480.7,
+      "p95": 1929.1,
+      "max": 3298.8
+    }
+  },
+  "fixtures-holdout": {
+    "total": 87,
+    "right": 85,
+    "fields_right": 85,
+    "domain_right": 86,
+    "parse_ok": 87,
+    "json_valid": 86,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 3,
+    "injection_held": 2,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 86,
+        "total": 87
+      },
+      "food.budgetPaise": {
+        "ok": 9,
+        "total": 9
+      },
+      "food.dietary": {
+        "ok": 10,
+        "total": 10
+      },
+      "food.priority": {
+        "ok": 11,
+        "total": 11
+      },
+      "food.item": {
+        "ok": 3,
+        "total": 3
+      },
+      "ride.drop": {
+        "ok": 4,
+        "total": 4
+      },
+      "ride.priority": {
+        "ok": 2,
+        "total": 3
+      },
+      "ride.vehicle": {
+        "ok": 16,
+        "total": 16
+      },
+      "ride.scheduleAt": {
+        "ok": 1,
+        "total": 1
+      },
+      "shop.category": {
+        "ok": 4,
+        "total": 4
+      },
+      "shop.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.priority": {
+        "ok": 3,
+        "total": 3
+      },
+      "ride.budgetPaise": {
+        "ok": 1,
+        "total": 1
+      },
+      "food.maxEtaMinutes": {
+        "ok": 1,
+        "total": 1
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 1,
+        "total": 1
+      }
+    },
+    "confusion": {
+      "combo->combo": 4,
+      "food->food": 37,
+      "greeting->greeting": 6,
+      "out_of_scope->admin": 1,
+      "out_of_scope->out_of_scope": 9,
+      "ride->ride": 22,
+      "shop->shop": 8
+    },
+    "slices": {
+      "budget": {
+        "right": 12,
+        "domain": 12,
+        "total": 12
+      },
+      "combo": {
+        "right": 4,
+        "domain": 4,
+        "total": 4
+      },
+      "dietary_nonveg": {
+        "right": 4,
+        "domain": 4,
+        "total": 4
+      },
+      "dietary_veg": {
+        "right": 6,
+        "domain": 6,
+        "total": 6
+      },
+      "eta": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "food": {
+        "right": 37,
+        "domain": 37,
+        "total": 37
+      },
+      "greeting": {
+        "right": 6,
+        "domain": 6,
+        "total": 6
+      },
+      "multi_constraint": {
+        "right": 3,
+        "domain": 3,
+        "total": 3
+      },
+      "nested": {
+        "right": 58,
+        "domain": 59,
+        "total": 59
+      },
+      "out_of_scope": {
+        "right": 9,
+        "domain": 9,
+        "total": 10
+      },
+      "priority_price": {
+        "right": 7,
+        "domain": 8,
+        "total": 8
+      },
+      "priority_rating": {
+        "right": 5,
+        "domain": 5,
+        "total": 5
+      },
+      "priority_speed": {
+        "right": 4,
+        "domain": 4,
+        "total": 4
+      },
+      "ride": {
+        "right": 21,
+        "domain": 22,
+        "total": 22
+      },
+      "schedule": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "shop": {
+        "right": 8,
+        "domain": 8,
+        "total": 8
+      },
+      "wait": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      }
+    },
+    "latency": {
+      "p50": 1456.0,
+      "p95": 1834.3,
+      "max": 1834.3
+    }
+  },
+  "valid": {
+    "total": 281,
+    "right": 250,
+    "fields_right": 250,
+    "domain_right": 281,
+    "parse_ok": 281,
+    "json_valid": 281,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 0,
+    "injection_held": 0,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 281,
+        "total": 281
+      },
+      "food.item": {
+        "ok": 201,
+        "total": 203
+      },
+      "food.budgetPaise": {
+        "ok": 203,
+        "total": 203
+      },
+      "food.maxEtaMinutes": {
+        "ok": 203,
+        "total": 203
+      },
+      "food.dietary": {
+        "ok": 200,
+        "total": 203
+      },
+      "food.priority": {
+        "ok": 187,
+        "total": 203
+      },
+      "ride.pickup": {
+        "ok": 73,
+        "total": 78
+      },
+      "ride.drop": {
+        "ok": 76,
+        "total": 78
+      },
+      "ride.vehicle": {
+        "ok": 78,
+        "total": 78
+      },
+      "ride.budgetPaise": {
+        "ok": 78,
+        "total": 78
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 77,
+        "total": 78
+      },
+      "ride.priority": {
+        "ok": 73,
+        "total": 78
+      },
+      "ride.scheduleAt": {
+        "ok": 78,
+        "total": 78
+      }
+    },
+    "confusion": {
+      "food->food": 203,
+      "ride->ride": 78
+    },
+    "slices": {
+      "budget": {
+        "right": 109,
+        "domain": 122,
+        "total": 122
+      },
+      "dietary_nonveg": {
+        "right": 51,
+        "domain": 54,
+        "total": 54
+      },
+      "dietary_veg": {
+        "right": 78,
+        "domain": 86,
+        "total": 86
+      },
+      "eta": {
+        "right": 70,
+        "domain": 83,
+        "total": 83
+      },
+      "food": {
+        "right": 183,
+        "domain": 203,
+        "total": 203
+      },
+      "missing_field": {
+        "right": 204,
+        "domain": 229,
+        "total": 229
+      },
+      "multi_constraint": {
+        "right": 156,
+        "domain": 177,
+        "total": 177
+      },
+      "nested": {
+        "right": 250,
+        "domain": 281,
+        "total": 281
+      },
+      "priority_price": {
+        "right": 44,
+        "domain": 46,
+        "total": 46
+      },
+      "priority_rating": {
+        "right": 24,
+        "domain": 28,
+        "total": 28
+      },
+      "priority_speed": {
+        "right": 74,
+        "domain": 88,
+        "total": 88
+      },
+      "ride": {
+        "right": 67,
+        "domain": 78,
+        "total": 78
+      },
+      "schedule": {
+        "right": 14,
+        "domain": 15,
+        "total": 15
+      },
+      "wait": {
+        "right": 7,
+        "domain": 12,
+        "total": 12
+      }
+    },
+    "latency": {
+      "p50": 2083.3,
+      "p95": 2183.6,
+      "max": 4603.8
+    }
+  },
+  "holdout": {
+    "total": 382,
+    "right": 344,
+    "fields_right": 344,
+    "domain_right": 377,
+    "parse_ok": 382,
+    "json_valid": 381,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 0,
+    "injection_held": 0,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 377,
+        "total": 382
+      },
+      "food.item": {
+        "ok": 189,
+        "total": 195
+      },
+      "food.budgetPaise": {
+        "ok": 192,
+        "total": 195
+      },
+      "food.maxEtaMinutes": {
+        "ok": 192,
+        "total": 195
+      },
+      "food.dietary": {
+        "ok": 187,
+        "total": 195
+      },
+      "food.priority": {
+        "ok": 187,
+        "total": 195
+      },
+      "ride.pickup": {
+        "ok": 119,
+        "total": 125
+      },
+      "ride.drop": {
+        "ok": 123,
+        "total": 125
+      },
+      "ride.vehicle": {
+        "ok": 118,
+        "total": 125
+      },
+      "ride.budgetPaise": {
+        "ok": 125,
+        "total": 125
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 121,
+        "total": 125
+      },
+      "ride.priority": {
+        "ok": 123,
+        "total": 125
+      },
+      "ride.scheduleAt": {
+        "ok": 125,
+        "total": 125
+      },
+      "shop.item": {
+        "ok": 49,
+        "total": 50
+      },
+      "shop.budgetPaise": {
+        "ok": 49,
+        "total": 50
+      },
+      "shop.category": {
+        "ok": 48,
+        "total": 50
+      },
+      "shop.priority": {
+        "ok": 47,
+        "total": 50
+      }
+    },
+    "confusion": {
+      "combo->combo": 20,
+      "food->food": 172,
+      "food->out_of_scope": 3,
+      "greeting->greeting": 11,
+      "greeting->out_of_scope": 1,
+      "out_of_scope->out_of_scope": 20,
+      "ride->ride": 105,
+      "shop->out_of_scope": 1,
+      "shop->shop": 49
+    },
+    "slices": {
+      "budget": {
+        "right": 150,
+        "domain": 159,
+        "total": 159
+      },
+      "combo": {
+        "right": 11,
+        "domain": 20,
+        "total": 20
+      },
+      "dietary_nonveg": {
+        "right": 40,
+        "domain": 45,
+        "total": 45
+      },
+      "dietary_veg": {
+        "right": 79,
+        "domain": 89,
+        "total": 89
+      },
+      "eta": {
+        "right": 79,
+        "domain": 82,
+        "total": 82
+      },
+      "food": {
+        "right": 162,
+        "domain": 172,
+        "total": 175
+      },
+      "greeting": {
+        "right": 11,
+        "domain": 11,
+        "total": 12
+      },
+      "missing_field": {
+        "right": 242,
+        "domain": 280,
+        "total": 284
+      },
+      "multi_constraint": {
+        "right": 160,
+        "domain": 173,
+        "total": 173
+      },
+      "nested": {
+        "right": 324,
+        "domain": 366,
+        "total": 370
+      },
+      "out_of_scope": {
+        "right": 20,
+        "domain": 20,
+        "total": 20
+      },
+      "priority_price": {
+        "right": 47,
+        "domain": 53,
+        "total": 53
+      },
+      "priority_rating": {
+        "right": 23,
+        "domain": 27,
+        "total": 27
+      },
+      "priority_speed": {
+        "right": 105,
+        "domain": 111,
+        "total": 113
+      },
+      "ride": {
+        "right": 94,
+        "domain": 105,
+        "total": 105
+      },
+      "schedule": {
+        "right": 11,
+        "domain": 11,
+        "total": 11
+      },
+      "shop": {
+        "right": 46,
+        "domain": 49,
+        "total": 50
+      },
+      "wait": {
+        "right": 27,
+        "domain": 33,
+        "total": 33
+      }
+    },
+    "latency": {
+      "p50": 1742.2,
+      "p95": 2222.8,
+      "max": 2369.0
+    }
+  },
+  "v4eval": {
+    "total": 540,
+    "right": 285,
+    "fields_right": 285,
+    "domain_right": 536,
+    "parse_ok": 540,
+    "json_valid": 539,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 0,
+    "injection_held": 0,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 536,
+        "total": 540
+      },
+      "ride.pickup": {
+        "ok": 262,
+        "total": 322
+      },
+      "ride.drop": {
+        "ok": 320,
+        "total": 322
+      },
+      "ride.vehicle": {
+        "ok": 266,
+        "total": 322
+      },
+      "ride.budgetPaise": {
+        "ok": 320,
+        "total": 322
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 320,
+        "total": 322
+      },
+      "ride.priority": {
+        "ok": 265,
+        "total": 322
+      },
+      "ride.scheduleAt": {
+        "ok": 321,
+        "total": 322
+      },
+      "shop.item": {
+        "ok": 71,
+        "total": 73
+      },
+      "shop.budgetPaise": {
+        "ok": 71,
+        "total": 73
+      },
+      "shop.category": {
+        "ok": 71,
+        "total": 73
+      },
+      "shop.priority": {
+        "ok": 42,
+        "total": 73
+      },
+      "food.item": {
+        "ok": 162,
+        "total": 162
+      },
+      "food.budgetPaise": {
+        "ok": 157,
+        "total": 162
+      },
+      "food.maxEtaMinutes": {
+        "ok": 162,
+        "total": 162
+      },
+      "food.dietary": {
+        "ok": 100,
+        "total": 162
+      },
+      "food.priority": {
+        "ok": 101,
+        "total": 162
+      }
+    },
+    "confusion": {
+      "combo->combo": 20,
+      "food->food": 141,
+      "food->speed": 1,
+      "greeting->greeting": 1,
+      "out_of_scope->out_of_scope": 2,
+      "ride->out_of_scope": 1,
+      "ride->ride": 301,
+      "shop->out_of_scope": 2,
+      "shop->shop": 71
+    },
+    "slices": {
+      "budget": {
+        "right": 80,
+        "domain": 172,
+        "total": 173
+      },
+      "combo": {
+        "right": 6,
+        "domain": 20,
+        "total": 20
+      },
+      "dietary_nonveg": {
+        "right": 4,
+        "domain": 7,
+        "total": 7
+      },
+      "dietary_veg": {
+        "right": 0,
+        "domain": 2,
+        "total": 2
+      },
+      "eta": {
+        "right": 2,
+        "domain": 36,
+        "total": 36
+      },
+      "food": {
+        "right": 45,
+        "domain": 141,
+        "total": 142
+      },
+      "greeting": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "missing_field": {
+        "right": 269,
+        "domain": 499,
+        "total": 503
+      },
+      "multi_constraint": {
+        "right": 68,
+        "domain": 165,
+        "total": 166
+      },
+      "nested": {
+        "right": 288,
+        "domain": 553,
+        "total": 557
+      },
+      "out_of_scope": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "priority_price": {
+        "right": 49,
+        "domain": 102,
+        "total": 103
+      },
+      "priority_rating": {
+        "right": 41,
+        "domain": 60,
+        "total": 60
+      },
+      "priority_speed": {
+        "right": 45,
+        "domain": 100,
+        "total": 103
+      },
+      "ride": {
+        "right": 189,
+        "domain": 301,
+        "total": 302
+      },
+      "schedule": {
+        "right": 33,
+        "domain": 48,
+        "total": 48
+      },
+      "shop": {
+        "right": 42,
+        "domain": 71,
+        "total": 73
+      },
+      "wait": {
+        "right": 16,
+        "domain": 61,
+        "total": 61
+      }
+    },
+    "latency": {
+      "p50": 3045.2,
+      "p95": 4044.1,
+      "max": 5910.1
+    }
+  }
+}

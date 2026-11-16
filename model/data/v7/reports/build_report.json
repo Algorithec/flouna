@@ -1,0 +1,429 @@
+{
+  "generated_at": "2026-11-16T06:43:59+00:00",
+  "seeds": {
+    "train": 7,
+    "valid": 404,
+    "eval": 2026
+  },
+  "files": {
+    "train": {
+      "path": "train_v7.jsonl",
+      "sha256": "678338cba7af5277e6e39c99ecfdcd3ee63b90be983865da71e61cc1797878bf",
+      "rows": 4147
+    },
+    "valid": {
+      "path": "valid_v7.jsonl",
+      "sha256": "6cf147ed4ae801d38999a8d3d418e443de574f44880983e1c3f9bff32737baee",
+      "rows": 225
+    },
+    "eval": {
+      "path": "validation/v7_validation.jsonl",
+      "sha256": "2467d61641064dda43bf829ef9c2c328344ddca0acf65e698248d54d432b8e8a",
+      "rows": 495
+    },
+    "sealed_holdout": {
+      "path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/eval_mlx_v5.jsonl",
+      "sha256": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a",
+      "rows": 382
+    }
+  },
+  "train": {
+    "label": "train",
+    "rows": 4147,
+    "domains": {
+      "food": 1465,
+      "ride": 1250,
+      "action": 490,
+      "shop": 389,
+      "out_of_scope": 295,
+      "combo": 140,
+      "greeting": 118
+    },
+    "primary": {
+      "core": 1636,
+      "action_positive": 440,
+      "action_hard_negative": 320,
+      "ride_boundary": 280,
+      "paraphrase": 260,
+      "domain_boundary": 230,
+      "nested": 230,
+      "production_robustness": 224,
+      "greeting_oos": 190,
+      "generic_food": 180,
+      "dietary": 157
+    },
+    "tags": {
+      "core": 1714,
+      "curated_v6": 1356,
+      "action": 760,
+      "action_positive": 440,
+      "ride": 351,
+      "action_hard_negative": 320,
+      "hard_negative": 320,
+      "ride_boundary": 280,
+      "paraphrase": 260,
+      "food": 233,
+      "domain_boundary": 230,
+      "price_boundary": 230,
+      "minimal_pair": 230,
+      "nested": 230,
+      "production_robustness": 224,
+      "prompt_robust": 224,
+      "new_core": 220,
+      "food_entity": 200,
+      "greeting_oos": 190,
+      "generic_food": 180,
+      "discovery": 160,
+      "dietary": 157,
+      "vehicle_pair": 142,
+      "bare": 141,
+      "oos": 125,
+      "oos_negative": 97,
+      "shop": 72,
+      "combo": 60,
+      "pickup_pair": 48,
+      "wait_vs_trip": 43,
+      "dish_implied": 40,
+      "vehicle_any": 35,
+      "comparison": 29,
+      "vehicle_missing": 28,
+      "greeting": 28,
+      "explicit_phrase": 28,
+      "ceiling": 28,
+      "action_overfire": 25,
+      "question_form": 24,
+      "thanks": 23,
+      "ack": 21,
+      "vehicle_cab": 20,
+      "greeting_negative": 19,
+      "budget": 19,
+      "bare_price": 17,
+      "bare_dietary": 16,
+      "app_info": 15,
+      "explicit": 12,
+      "farewell": 11,
+      "same_phrase": 8,
+      "pair:food-base-5": 8,
+      "pair:food-base-6": 8,
+      "pair:food-base-7": 8,
+      "pair:food-base-8": 8,
+      "pair:food-base-9": 8,
+      "pair:food-base-10": 8,
+      "pair:food-base-11": 8,
+      "pair:food-base-12": 8,
+      "pair:food-base-13": 8,
+      "pair:food-base-14": 8,
+      "pair:food-base-15": 8,
+      "pair:food-base-17": 8,
+      "pair:food-base-18": 8,
+      "pair:food-base-19": 8,
+      "pair:food-base-16": 7,
+      "pair:ride-base-0": 7,
+      "pair:ride-base-1": 7,
+      "pair:ride-base-2": 7,
+      "pair:ride-base-3": 7,
+      "pair:ride-base-4": 7,
+      "pair:ride-base-5": 7,
+      "pair:ride-base-6": 7,
+      "pair:ride-base-7": 7,
+      "pair:ride-base-8": 7,
+      "pair:ride-base-9": 7,
+      "pair:ride-base-10": 7,
+      "pair:ride-base-11": 7,
+      "pair:ride-base-12": 7,
+      "pair:ride-base-13": 7,
+      "pair:ride-base-14": 7,
+      "mood": 6,
+      "pair:food-base-4": 5,
+      "oos_boundary": 3,
+      "pair:ride-base-15": 1
+    },
+    "systems": {
+      "prod": 1871,
+      "v6": 1732,
+      "short": 544
+    },
+    "rejected": 0,
+    "rejected_duplicate": 853,
+    "rejected_leak": 25,
+    "rejected_invalid": 1,
+    "reasons": {
+      "holdout/fixture exact": 25,
+      "label conflict": 1
+    }
+  },
+  "valid": {
+    "label": "valid",
+    "rows": 225,
+    "domains": {
+      "food": 78,
+      "ride": 60,
+      "action": 30,
+      "greeting": 21,
+      "shop": 19,
+      "combo": 10,
+      "out_of_scope": 7
+    },
+    "primary": {
+      "core": 65,
+      "ride_boundary": 35,
+      "action_positive": 30,
+      "domain_boundary": 25,
+      "action_hard_negative": 20,
+      "greeting_oos": 20,
+      "generic_food": 15,
+      "dietary": 15
+    },
+    "tags": {
+      "core": 65,
+      "new_core": 55,
+      "action": 50,
+      "ride": 41,
+      "ride_boundary": 35,
+      "vehicle_pair": 35,
+      "action_positive": 30,
+      "food": 26,
+      "domain_boundary": 25,
+      "price_boundary": 25,
+      "action_hard_negative": 20,
+      "hard_negative": 20,
+      "greeting": 20,
+      "greeting_oos": 20,
+      "food_entity": 15,
+      "generic_food": 15,
+      "dietary": 15,
+      "bare": 13,
+      "discovery": 10,
+      "combo": 10,
+      "shop": 8,
+      "oos_negative": 7,
+      "comparison": 2,
+      "greeting_negative": 1,
+      "bare_price": 1,
+      "bare_dietary": 1
+    },
+    "systems": {
+      "v6": 99,
+      "prod": 97,
+      "short": 29
+    },
+    "rejected": 0,
+    "rejected_duplicate": 191,
+    "rejected_leak": 8,
+    "rejected_invalid": 0,
+    "reasons": {
+      "holdout/fixture exact": 8
+    }
+  },
+  "eval": {
+    "label": "eval",
+    "rows": 495,
+    "domains": {
+      "food": 167,
+      "ride": 117,
+      "action": 70,
+      "out_of_scope": 45,
+      "shop": 42,
+      "greeting": 34,
+      "combo": 20
+    },
+    "primary": {
+      "ride_boundary": 75,
+      "action_positive": 70,
+      "action_hard_negative": 70,
+      "domain_boundary": 65,
+      "greeting_oos": 50,
+      "nested": 35,
+      "paraphrase": 30,
+      "production_robustness": 30,
+      "generic_food": 25,
+      "dietary": 25,
+      "core": 20
+    },
+    "tags": {
+      "action": 140,
+      "ride": 97,
+      "ride_boundary": 75,
+      "vehicle_pair": 75,
+      "action_positive": 70,
+      "action_hard_negative": 70,
+      "hard_negative": 70,
+      "domain_boundary": 65,
+      "price_boundary": 65,
+      "greeting_oos": 50,
+      "food": 47,
+      "discovery": 35,
+      "minimal_pair": 35,
+      "nested": 35,
+      "greeting": 30,
+      "paraphrase": 30,
+      "ceiling": 30,
+      "production_robustness": 30,
+      "prompt_robust": 30,
+      "food_entity": 25,
+      "generic_food": 25,
+      "dietary": 25,
+      "oos_negative": 23,
+      "shop": 21,
+      "bare": 21,
+      "eval_only": 20,
+      "oos": 20,
+      "combo": 20,
+      "core": 20,
+      "pair:food-base-0": 8,
+      "pair:food-base-1": 8,
+      "pair:food-base-2": 8,
+      "pair:food-base-3": 8,
+      "comparison": 6,
+      "greeting_negative": 4,
+      "pair:food-base-4": 3,
+      "app_info": 2,
+      "bare_price": 2,
+      "bare_dietary": 2
+    },
+    "systems": {
+      "prod": 221,
+      "v6": 213,
+      "short": 61
+    },
+    "rejected": 0,
+    "rejected_duplicate": 5,
+    "rejected_leak": 7,
+    "rejected_invalid": 0,
+    "reasons": {
+      "holdout/fixture exact": 7
+    }
+  },
+  "rejected_examples": [
+    {
+      "text": "book a cab to Hitech City",
+      "category": "action_hard_negative",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "ride to Kompally, I can wait at most 10 minutes for pickup",
+      "category": "ride_boundary",
+      "reason": "label conflict: ride.budgetPaise null but text states an amount"
+    },
+    {
+      "text": "I want manchurian",
+      "category": "generic_food",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "biryani",
+      "category": "generic_food",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "samosa",
+      "category": "generic_food",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "veg fried rice",
+      "category": "generic_food",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "something spicy",
+      "category": "generic_food",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "hi",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "namaste",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "hello flouna",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "good morning",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "hii",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "hello there",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "nice to meet you",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "thanks",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "thank you so much",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "what is the weather today",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "tell me a joke",
+      "category": "greeting_oos",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "I want chicken biryani",
+      "category": "dietary",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "I want chicken curry",
+      "category": "dietary",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "I want mutton curry",
+      "category": "dietary",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "biryani",
+      "category": "production_robustness",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "samosa",
+      "category": "production_robustness",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "tell me a joke",
+      "category": "production_robustness",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "what's the capital of Japan",
+      "category": "production_robustness",
+      "reason": "holdout/fixture exact"
+    },
+    {
+      "text": "recommend a movie",
+      "category": "production_robustness",
+      "reason": "holdout/fixture exact"
+    }
+  ]
+}
