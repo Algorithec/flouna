@@ -217,6 +217,10 @@ export function buildIssue(i: IssueInput) {
           code: sub.code,
           short_desc: sub.label,
           long_desc: i.description,
+          additional_desc: {
+            url: "https://flouna.com/help",
+            content_type: "text/html",
+          },
           ...(i.images?.length ? { images: i.images.map((url) => ({ url })) } : {}),
         },
         last_action_id: last.id,
