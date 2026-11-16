@@ -318,7 +318,11 @@ def aggregate(results: list[dict]) -> dict:
             r["want_domain"] not in (None, "greeting") and r["got_domain"] == "greeting" for r in results
         ),
         "fields": dict(fields),
-        "confusion": {f"{a}->{b}": n for (a, b), n in sorted(confusion.items())},
+        # str() keys so an unparsable output (got_domain None) can't crash the sort
+        "confusion": {
+            f"{a}->{b}": n
+            for (a, b), n in sorted(confusion.items(), key=lambda kv: (str(kv[0][0]), str(kv[0][1])))
+        },
         "slices": {k: dict(v) for k, v in sorted(slice_stats.items())},
         "latency": {
             "p50": round(statistics.median(latencies), 1) if latencies else None,

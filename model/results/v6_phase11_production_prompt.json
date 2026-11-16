@@ -1,0 +1,2661 @@
+{
+  "metadata": {
+    "v6_checkpoint": "flouna-lora-v6-run2/0001600_adapters.safetensors",
+    "v6_checkpoint_sha256": "8b1324fc08d2fe2f0e6d403f5463ec492e321f1a26a97827a259feb007a3391e",
+    "v6_loaded_via": "flouna-lora-v6-run2 (adapters.safetensors is byte-identical to 0001600)",
+    "v6_loaded_sha256": "8b1324fc08d2fe2f0e6d403f5463ec492e321f1a26a97827a259feb007a3391e",
+    "holdout": "eval_mlx_v5.jsonl",
+    "holdout_sha256": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a",
+    "v5_baseline": "results/v5_run2.json",
+    "eval_script": "eval_v6.py",
+    "eval_harness": "eval_v5.py",
+    "analysis_script": "analyze_phase11.py",
+    "production_prompt": "prompt.ts (read through eval_v5.production_prompt)",
+    "eval_config": {
+      "backend": "mlx",
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "batch_size": 4,
+      "max_tokens": 512
+    },
+    "git_branch": "feat/flouna-1.5b-v6-training",
+    "git_head": "10db26a5c86d63ba3d0e0c1a0b4e92b7a6bd2fb0",
+    "python": "3.12.16",
+    "mlx": "0.32.4",
+    "mlx_lm": "0.32.2",
+    "safetensors": "0.8.0",
+    "gguf": "0.19.0"
+  },
+  "holdout": {
+    "total": 382,
+    "right": 325,
+    "fields_right": 326,
+    "domain_right": 371,
+    "parse_ok": 382,
+    "json_valid": 377,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 0,
+    "injection_held": 0,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 371,
+        "total": 382
+      },
+      "food.item": {
+        "ok": 188,
+        "total": 195
+      },
+      "food.budgetPaise": {
+        "ok": 191,
+        "total": 195
+      },
+      "food.maxEtaMinutes": {
+        "ok": 191,
+        "total": 195
+      },
+      "food.dietary": {
+        "ok": 187,
+        "total": 195
+      },
+      "food.priority": {
+        "ok": 178,
+        "total": 195
+      },
+      "ride.pickup": {
+        "ok": 122,
+        "total": 125
+      },
+      "ride.drop": {
+        "ok": 125,
+        "total": 125
+      },
+      "ride.vehicle": {
+        "ok": 121,
+        "total": 125
+      },
+      "ride.budgetPaise": {
+        "ok": 125,
+        "total": 125
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 124,
+        "total": 125
+      },
+      "ride.priority": {
+        "ok": 118,
+        "total": 125
+      },
+      "ride.scheduleAt": {
+        "ok": 125,
+        "total": 125
+      },
+      "shop.item": {
+        "ok": 49,
+        "total": 50
+      },
+      "shop.budgetPaise": {
+        "ok": 49,
+        "total": 50
+      },
+      "shop.category": {
+        "ok": 49,
+        "total": 50
+      },
+      "shop.priority": {
+        "ok": 38,
+        "total": 50
+      }
+    },
+    "confusion": {
+      "combo->combo": 20,
+      "food->food": 170,
+      "food->ride": 1,
+      "food->shop": 3,
+      "food->speed": 1,
+      "greeting->greeting": 10,
+      "greeting->out_of_scope": 2,
+      "out_of_scope->action": 2,
+      "out_of_scope->food": 1,
+      "out_of_scope->out_of_scope": 17,
+      "ride->ride": 105,
+      "shop->action": 1,
+      "shop->shop": 49
+    },
+    "slices": {
+      "budget": {
+        "right": 135,
+        "domain": 156,
+        "total": 159
+      },
+      "combo": {
+        "right": 15,
+        "domain": 20,
+        "total": 20
+      },
+      "dietary_nonveg": {
+        "right": 39,
+        "domain": 44,
+        "total": 45
+      },
+      "dietary_veg": {
+        "right": 77,
+        "domain": 88,
+        "total": 89
+      },
+      "eta": {
+        "right": 74,
+        "domain": 81,
+        "total": 82
+      },
+      "food": {
+        "right": 152,
+        "domain": 170,
+        "total": 175
+      },
+      "greeting": {
+        "right": 10,
+        "domain": 10,
+        "total": 12
+      },
+      "missing_field": {
+        "right": 239,
+        "domain": 279,
+        "total": 284
+      },
+      "multi_constraint": {
+        "right": 145,
+        "domain": 171,
+        "total": 173
+      },
+      "nested": {
+        "right": 313,
+        "domain": 364,
+        "total": 370
+      },
+      "out_of_scope": {
+        "right": 17,
+        "domain": 17,
+        "total": 20
+      },
+      "priority_price": {
+        "right": 35,
+        "domain": 51,
+        "total": 53
+      },
+      "priority_rating": {
+        "right": 22,
+        "domain": 27,
+        "total": 27
+      },
+      "priority_speed": {
+        "right": 102,
+        "domain": 111,
+        "total": 113
+      },
+      "ride": {
+        "right": 93,
+        "domain": 105,
+        "total": 105
+      },
+      "schedule": {
+        "right": 9,
+        "domain": 11,
+        "total": 11
+      },
+      "shop": {
+        "right": 38,
+        "domain": 49,
+        "total": 50
+      },
+      "wait": {
+        "right": 28,
+        "domain": 33,
+        "total": 33
+      }
+    },
+    "latency": {
+      "p50": 6895.6,
+      "p95": 13666.2,
+      "max": 17810.8
+    },
+    "behaviour": {
+      "domains_expected": {
+        "food": 175,
+        "out_of_scope": 20,
+        "greeting": 12,
+        "ride": 105,
+        "shop": 50,
+        "combo": 20
+      },
+      "domains_actual": {
+        "food": 171,
+        "speed": 1,
+        "ride": 106,
+        "out_of_scope": 19,
+        "action": 3,
+        "greeting": 10,
+        "shop": 52,
+        "combo": 20
+      },
+      "oors": 20,
+      "oos_right": 17,
+      "oos_as_action": 2,
+      "false_greeting": 0,
+      "non_greeting": 370,
+      "json_valid": 377,
+      "total": 382
+    }
+  },
+  "action_set": {
+    "total": 72,
+    "right": 47,
+    "fields_right": 47,
+    "domain_right": 59,
+    "parse_ok": 72,
+    "json_valid": 67,
+    "errors": 0,
+    "timeouts": 0,
+    "leaks": 0,
+    "injection_total": 0,
+    "injection_held": 0,
+    "false_greeting": 0,
+    "fields": {
+      "domain": {
+        "ok": 59,
+        "total": 72
+      },
+      "action.kind": {
+        "ok": 44,
+        "total": 50
+      },
+      "action.targetBy": {
+        "ok": 45,
+        "total": 50
+      },
+      "action.targetPosition": {
+        "ok": 48,
+        "total": 50
+      },
+      "action.targetName": {
+        "ok": 50,
+        "total": 50
+      },
+      "action.qty": {
+        "ok": 48,
+        "total": 50
+      },
+      "action.members": {
+        "ok": 50,
+        "total": 50
+      },
+      "action.withMyItems": {
+        "ok": 50,
+        "total": 50
+      },
+      "action.pick": {
+        "ok": 50,
+        "total": 50
+      },
+      "action.setting": {
+        "ok": 49,
+        "total": 50
+      },
+      "action.on": {
+        "ok": 48,
+        "total": 50
+      },
+      "action.value": {
+        "ok": 45,
+        "total": 50
+      },
+      "action.weeklyRupees": {
+        "ok": 50,
+        "total": 50
+      },
+      "food.item": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.maxEtaMinutes": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.dietary": {
+        "ok": 2,
+        "total": 2
+      },
+      "food.priority": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.pickup": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.drop": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.vehicle": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.maxPickupMinutes": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.priority": {
+        "ok": 2,
+        "total": 2
+      },
+      "ride.scheduleAt": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.item": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.budgetPaise": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.category": {
+        "ok": 2,
+        "total": 2
+      },
+      "shop.priority": {
+        "ok": 2,
+        "total": 2
+      }
+    },
+    "confusion": {
+      "action->action": 50,
+      "food->food": 2,
+      "greeting->action": 6,
+      "out_of_scope->action": 7,
+      "out_of_scope->out_of_scope": 3,
+      "ride->ride": 2,
+      "shop->shop": 2
+    },
+    "slices": {
+      "action": {
+        "right": 38,
+        "domain": 50,
+        "total": 50
+      },
+      "budget": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "food": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "greeting": {
+        "right": 0,
+        "domain": 0,
+        "total": 6
+      },
+      "missing_field": {
+        "right": 5,
+        "domain": 5,
+        "total": 5
+      },
+      "nested": {
+        "right": 6,
+        "domain": 6,
+        "total": 6
+      },
+      "out_of_scope": {
+        "right": 3,
+        "domain": 3,
+        "total": 10
+      },
+      "priority_price": {
+        "right": 1,
+        "domain": 1,
+        "total": 1
+      },
+      "ride": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      },
+      "shop": {
+        "right": 2,
+        "domain": 2,
+        "total": 2
+      }
+    },
+    "latency": {
+      "p50": 5377.1,
+      "p95": 8292.8,
+      "max": 8326.1
+    },
+    "behaviour": {
+      "domains_expected": {
+        "action": 50,
+        "food": 2,
+        "ride": 2,
+        "shop": 2,
+        "greeting": 6,
+        "out_of_scope": 10
+      },
+      "domains_actual": {
+        "action": 63,
+        "food": 2,
+        "ride": 2,
+        "shop": 2,
+        "out_of_scope": 3
+      },
+      "oors": 10,
+      "oos_right": 3,
+      "oos_as_action": 7,
+      "false_greeting": 0,
+      "non_greeting": 66,
+      "json_valid": 67,
+      "total": 72
+    },
+    "action": {
+      "positives": 50,
+      "positives_right": 38,
+      "positives_kind_ok": 44,
+      "negatives": 22,
+      "negatives_not_action": 9,
+      "negatives_right": 9,
+      "kinds": {
+        "cart.add": {
+          "right": 2,
+          "total": 3
+        },
+        "cart.remove": {
+          "right": 2,
+          "total": 3
+        },
+        "cart.set_qty": {
+          "right": 2,
+          "total": 2
+        },
+        "cart.show": {
+          "right": 2,
+          "total": 2
+        },
+        "cart.clear": {
+          "right": 1,
+          "total": 1
+        },
+        "checkout": {
+          "right": 2,
+          "total": 2
+        },
+        "group.create": {
+          "right": 2,
+          "total": 2
+        },
+        "group.show": {
+          "right": 0,
+          "total": 1
+        },
+        "select": {
+          "right": 1,
+          "total": 3
+        },
+        "ride.book": {
+          "right": 0,
+          "total": 1
+        },
+        "ride.group": {
+          "right": 2,
+          "total": 2
+        },
+        "ride.group_mode": {
+          "right": 1,
+          "total": 2
+        },
+        "settings.toggle": {
+          "right": 4,
+          "total": 6
+        },
+        "settings.visibility": {
+          "right": 3,
+          "total": 3
+        },
+        "settings.budget": {
+          "right": 2,
+          "total": 2
+        },
+        "settings.language": {
+          "right": 2,
+          "total": 2
+        },
+        "settings.theme": {
+          "right": 2,
+          "total": 2
+        },
+        "navigate": {
+          "right": 8,
+          "total": 11
+        }
+      },
+      "positives_pct": "76.0%"
+    }
+  },
+  "error_analysis": {
+    "set": "holdout",
+    "total": 382,
+    "correct": 325,
+    "incorrect": 57,
+    "accuracy": 85.08,
+    "categories": {
+      "priority": {
+        "n": 31,
+        "pct_of_failures": 54.4
+      },
+      "ride": {
+        "n": 8,
+        "pct_of_failures": 14.0
+      },
+      "domain classification": {
+        "n": 6,
+        "pct_of_failures": 10.5
+      },
+      "label/schema mismatch": {
+        "n": 5,
+        "pct_of_failures": 8.8
+      },
+      "dietary": {
+        "n": 3,
+        "pct_of_failures": 5.3
+      },
+      "entity extraction": {
+        "n": 3,
+        "pct_of_failures": 5.3
+      },
+      "out-of-scope": {
+        "n": 1,
+        "pct_of_failures": 1.8
+      }
+    },
+    "failures": [
+      {
+        "id": "holdout-12",
+        "expected": {
+          "domain": "food",
+          "reply": "Searching for dosa across platforms.",
+          "food": {
+            "item": "dosa",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "speed"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best dosa options for you.",
+          "food": {
+            "item": "dosa",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "speed"
+          }
+        },
+        "category": "dietary",
+        "detail": "food.dietary: 'any' -> 'veg'",
+        "fields": [
+          "food.dietary"
+        ]
+      },
+      {
+        "id": "holdout-13",
+        "expected": {
+          "domain": "food",
+          "reply": "On it, finding momos options now.",
+          "food": {
+            "item": "momos",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "speed"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best momos options for you.",
+          "food": {
+            "item": "momos",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "price"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'speed' -> 'price'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-14",
+        "expected": {
+          "domain": "food",
+          "reply": "Searching for food across platforms.",
+          "food": {
+            "item": "food",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "speed"
+          }
+        },
+        "actual": {
+          "domain": "speed",
+          "reply": "Let me find the best food, ride, or shopping deal for you.",
+          "food": {
+            "item": "food",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "speed"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": null,
+            "vehicle": "any",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "speed",
+            "scheduleAt": null
+          },
+          "shop": {
+            "item": "shop",
+            "budgetPaise": null,
+            "category": "any",
+            "priority": "speed"
+          }
+        },
+        "category": "label/schema mismatch",
+        "detail": "domain 'speed' not in ('food', 'ride', 'shop', 'combo', 'action', 'greeting', 'out_of_scope'); ride.drop has type NoneType",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "holdout-15",
+        "expected": {
+          "domain": "food",
+          "reply": "Let me pull up some food options.",
+          "food": {
+            "item": "food",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "speed"
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride at the best price.",
+          "ride": {
+            "pickup": null,
+            "drop": null,
+            "vehicle": "any",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "speed",
+            "scheduleAt": null
+          }
+        },
+        "category": "label/schema mismatch",
+        "detail": "ride.drop has type NoneType",
+        "fields": [
+          "domain",
+          "food.item",
+          "food.budgetPaise",
+          "food.maxEtaMinutes",
+          "food.dietary",
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-26",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Understood.",
+          "action": {
+            "kind": "translate",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "label/schema mismatch",
+        "detail": "action.kind 'translate' not in ('cart.add', 'cart.remove', 'cart.set_qty', 'cart.show', 'cart.clear', 'checkout', 'group.create', 'group.show', 'select', 'ride.book', 'ride.group', 'ride.group_mode', ",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "holdout-35",
+        "expected": {
+          "domain": "greeting",
+          "reply": "Hey there! Tell me what you need, food, a ride, or something to buy."
+        },
+        "actual": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "category": "domain classification",
+        "detail": "domain greeting -> out_of_scope",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "holdout-41",
+        "expected": {
+          "domain": "greeting",
+          "reply": "Hi! I can help you order food, book rides, or compare shopping deals. What do you need?"
+        },
+        "actual": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "category": "domain classification",
+        "detail": "domain greeting -> out_of_scope",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "holdout-46",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "I'll get you pasta at the best price.",
+          "food": {
+            "item": "pasta",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "balanced"
+          }
+        },
+        "category": "out-of-scope",
+        "detail": "domain out_of_scope -> food",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "holdout-49",
+        "expected": {
+          "domain": "out_of_scope",
+          "reply": "I can help you order food, book rides, or shop. What would you like?"
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Sure, on it.",
+          "action": {
+            "kind": "currency.convert",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": 10000
+          }
+        },
+        "category": "label/schema mismatch",
+        "detail": "action missing keys: ['weeklyRupees']; action.value must be a string; action.kind 'currency.convert' not in ('cart.add', 'cart.remove', 'cart.set_qty', 'cart.show', 'cart.clear', 'checkout', 'group.cr",
+        "fields": [
+          "domain"
+        ]
+      },
+      {
+        "id": "holdout-57",
+        "expected": {
+          "domain": "food",
+          "reply": "On it, finding seekh kebab options now.",
+          "food": {
+            "item": "seekh kebab",
+            "budgetPaise": 10000,
+            "maxEtaMinutes": 30,
+            "dietary": "nonveg",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best seekh kebab options for you.",
+          "food": {
+            "item": "seekh kebab",
+            "budgetPaise": 10000,
+            "maxEtaMinutes": 30,
+            "dietary": "nonveg",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'price' -> 'speed'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-58",
+        "expected": {
+          "domain": "food",
+          "reply": "Let me find the best fried rice options for you.",
+          "food": {
+            "item": "fried rice",
+            "budgetPaise": 80000,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "speed"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best fried rice options for you.",
+          "food": {
+            "item": "fried rice",
+            "budgetPaise": 80000,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "balanced"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'speed' -> 'balanced'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-63",
+        "expected": {
+          "domain": "food",
+          "reply": "Great choice, let me compare dinner prices.",
+          "food": {
+            "item": "dinner",
+            "budgetPaise": 20000,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "Searching for ceiling across platforms.",
+          "shop": {
+            "item": "ceiling",
+            "budgetPaise": 20000,
+            "category": "home",
+            "priority": "balanced"
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain food -> shop",
+        "fields": [
+          "domain",
+          "food.item",
+          "food.budgetPaise",
+          "food.maxEtaMinutes",
+          "food.dietary",
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-65",
+        "expected": {
+          "domain": "food",
+          "reply": "On it, finding something light options now.",
+          "food": {
+            "item": "something light",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "rating"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me pull up some something light options.",
+          "food": {
+            "item": "something light",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'rating' -> 'speed'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-71",
+        "expected": {
+          "domain": "food",
+          "reply": "Great choice, let me compare something light prices.",
+          "food": {
+            "item": "something light",
+            "budgetPaise": 40000,
+            "maxEtaMinutes": null,
+            "dietary": "nonveg",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "Searching for something light across platforms.",
+          "shop": {
+            "item": "something light",
+            "budgetPaise": 40000,
+            "category": "home",
+            "priority": "rating"
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain food -> shop",
+        "fields": [
+          "domain",
+          "food.item",
+          "food.budgetPaise",
+          "food.maxEtaMinutes",
+          "food.dietary",
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-76",
+        "expected": {
+          "domain": "food",
+          "reply": "Searching for fish fry across platforms.",
+          "food": {
+            "item": "fish fry",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "nonveg",
+            "priority": "speed"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best fish fry options for you.",
+          "food": {
+            "item": "fish fry",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "nonveg",
+            "priority": "balanced"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'speed' -> 'balanced'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-77",
+        "expected": {
+          "domain": "food",
+          "reply": "Great choice, let me compare palak paneer prices.",
+          "food": {
+            "item": "palak paneer",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me pull up some palak paneer options.",
+          "food": {
+            "item": "palak paneer",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "rating"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'price' -> 'rating'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-83",
+        "expected": {
+          "domain": "food",
+          "reply": "I'll get you dhokla at the best price.",
+          "food": {
+            "item": "dhokla",
+            "budgetPaise": 120000,
+            "maxEtaMinutes": 30,
+            "dietary": "veg",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best dhokla options for you.",
+          "food": {
+            "item": "dhokla",
+            "budgetPaise": 120000,
+            "maxEtaMinutes": 30,
+            "dietary": "veg",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'balanced' -> 'speed'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-95",
+        "expected": {
+          "domain": "food",
+          "reply": "Let me find the best sushi options for you.",
+          "food": {
+            "item": "sushi",
+            "budgetPaise": 80000,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best sushi options for you.",
+          "food": {
+            "item": "sushi",
+            "budgetPaise": 80000,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "price"
+          }
+        },
+        "category": "dietary",
+        "detail": "food.dietary: 'veg' -> 'any'",
+        "fields": [
+          "food.dietary"
+        ]
+      },
+      {
+        "id": "holdout-106",
+        "expected": {
+          "domain": "food",
+          "reply": "On it, finding fish curry options now.",
+          "food": {
+            "item": "fish curry",
+            "budgetPaise": null,
+            "maxEtaMinutes": 35,
+            "dietary": "nonveg",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best fish curry options for you.",
+          "food": {
+            "item": "fish curry",
+            "budgetPaise": null,
+            "maxEtaMinutes": 35,
+            "dietary": "nonveg",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'balanced' -> 'speed'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-111",
+        "expected": {
+          "domain": "food",
+          "reply": "Looking up something healthy deals for you.",
+          "food": {
+            "item": "something healthy",
+            "budgetPaise": 40000,
+            "maxEtaMinutes": 20,
+            "dietary": "any",
+            "priority": "rating"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me pull up some food options.",
+          "food": {
+            "item": "food",
+            "budgetPaise": 40000,
+            "maxEtaMinutes": 20,
+            "dietary": "any",
+            "priority": "rating"
+          }
+        },
+        "category": "entity extraction",
+        "detail": "food.item: 'something healthy' -> 'food'",
+        "fields": [
+          "food.item"
+        ]
+      },
+      {
+        "id": "holdout-119",
+        "expected": {
+          "domain": "food",
+          "reply": "Looking up chicken roll deals for you.",
+          "food": {
+            "item": "chicken roll",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "nonveg",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best chicken roll options for you.",
+          "food": {
+            "item": "chicken roll",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "nonveg",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'balanced' -> 'speed'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-122",
+        "expected": {
+          "domain": "food",
+          "reply": "Looking up something spicy deals for you.",
+          "food": {
+            "item": "something spicy",
+            "budgetPaise": 10000,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me pull up some something spicy options.",
+          "food": {
+            "item": "something spicy",
+            "budgetPaise": 10000,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'balanced' -> 'speed'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-132",
+        "expected": {
+          "domain": "food",
+          "reply": "Let me pull up some jeera rice options.",
+          "food": {
+            "item": "jeera rice",
+            "budgetPaise": 50000,
+            "maxEtaMinutes": 20,
+            "dietary": "veg",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "Searching for ceiling across platforms.",
+          "shop": {
+            "item": "ceiling",
+            "budgetPaise": 50000,
+            "category": "home",
+            "priority": "price"
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain food -> shop",
+        "fields": [
+          "domain",
+          "food.item",
+          "food.budgetPaise",
+          "food.maxEtaMinutes",
+          "food.dietary",
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-133",
+        "expected": {
+          "domain": "food",
+          "reply": "I'll get you aloo gobi at the best price.",
+          "food": {
+            "item": "aloo gobi",
+            "budgetPaise": 100000,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best aloo gobi options for you.",
+          "food": {
+            "item": "aloo gobi",
+            "budgetPaise": 100000,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "balanced"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'price' -> 'balanced'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-141",
+        "expected": {
+          "domain": "food",
+          "reply": "Let me find the best something cheesy options for you.",
+          "food": {
+            "item": "something cheesy",
+            "budgetPaise": null,
+            "maxEtaMinutes": 35,
+            "dietary": "any",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best something cheesy options for you.",
+          "food": {
+            "item": "something cheesy",
+            "budgetPaise": null,
+            "maxEtaMinutes": 35,
+            "dietary": "any",
+            "priority": "rating"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'price' -> 'rating'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-145",
+        "expected": {
+          "domain": "food",
+          "reply": "Let me pull up some sev puri options.",
+          "food": {
+            "item": "sev puri",
+            "budgetPaise": 70000,
+            "maxEtaMinutes": 15,
+            "dietary": "veg",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best lunch options for you.",
+          "food": {
+            "item": "lunch",
+            "budgetPaise": 70000,
+            "maxEtaMinutes": 15,
+            "dietary": "veg",
+            "priority": "price"
+          }
+        },
+        "category": "entity extraction",
+        "detail": "food.item: 'sev puri' -> 'lunch'",
+        "fields": [
+          "food.item"
+        ]
+      },
+      {
+        "id": "holdout-154",
+        "expected": {
+          "domain": "food",
+          "reply": "On it, finding vada pav options now.",
+          "food": {
+            "item": "vada pav",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me find the best sasta vada pav for you.",
+          "food": {
+            "item": "sasta vada pav",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "food.priority: 'price' -> 'speed'",
+        "fields": [
+          "food.priority"
+        ]
+      },
+      {
+        "id": "holdout-169",
+        "expected": {
+          "domain": "ride",
+          "reply": "Searching for the best way to reach Electronic City.",
+          "ride": {
+            "pickup": "Secunderabad",
+            "drop": "Electronic City",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Electronic City.",
+          "ride": {
+            "pickup": null,
+            "drop": "Electronic City",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "category": "ride",
+        "detail": "ride.pickup: 'Secunderabad' -> None",
+        "fields": [
+          "ride.pickup"
+        ]
+      },
+      {
+        "id": "holdout-174",
+        "expected": {
+          "domain": "ride",
+          "reply": "Finding rides to Banjara Hills for you.",
+          "ride": {
+            "pickup": null,
+            "drop": "Banjara Hills",
+            "vehicle": "auto",
+            "budgetPaise": 30000,
+            "maxPickupMinutes": 4,
+            "priority": "rating",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Banjara Hills.",
+          "ride": {
+            "pickup": null,
+            "drop": "Banjara Hills",
+            "vehicle": "auto",
+            "budgetPaise": 30000,
+            "maxPickupMinutes": 4,
+            "priority": "rating"
+          }
+        },
+        "category": "label/schema mismatch",
+        "detail": "ride missing keys: ['scheduleAt']",
+        "fields": []
+      },
+      {
+        "id": "holdout-175",
+        "expected": {
+          "domain": "ride",
+          "reply": "Finding rides to Kothapet for you.",
+          "ride": {
+            "pickup": null,
+            "drop": "Kothapet",
+            "vehicle": "bike",
+            "budgetPaise": 35000,
+            "maxPickupMinutes": 8,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Kothapet.",
+          "ride": {
+            "pickup": null,
+            "drop": "Kothapet",
+            "vehicle": "bike",
+            "budgetPaise": 35000,
+            "maxPickupMinutes": 8,
+            "priority": "speed",
+            "scheduleAt": null
+          }
+        },
+        "category": "priority",
+        "detail": "ride.priority: 'balanced' -> 'speed'",
+        "fields": [
+          "ride.priority"
+        ]
+      },
+      {
+        "id": "holdout-176",
+        "expected": {
+          "domain": "ride",
+          "reply": "On it, checking rides to Bachupally.",
+          "ride": {
+            "pickup": null,
+            "drop": "Bachupally",
+            "vehicle": "bike",
+            "budgetPaise": 10000,
+            "maxPickupMinutes": 5,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Bachupally.",
+          "ride": {
+            "pickup": null,
+            "drop": "Bachupally",
+            "vehicle": "bike",
+            "budgetPaise": 10000,
+            "maxPickupMinutes": 5,
+            "priority": "speed",
+            "scheduleAt": null
+          }
+        },
+        "category": "priority",
+        "detail": "ride.priority: 'balanced' -> 'speed'",
+        "fields": [
+          "ride.priority"
+        ]
+      },
+      {
+        "id": "holdout-181",
+        "expected": {
+          "domain": "ride",
+          "reply": "Let me compare ride options to Nizampet.",
+          "ride": {
+            "pickup": null,
+            "drop": "Nizampet",
+            "vehicle": "any",
+            "budgetPaise": 20000,
+            "maxPickupMinutes": null,
+            "priority": "price",
+            "scheduleAt": "23:00"
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Nizampet.",
+          "ride": {
+            "pickup": null,
+            "drop": "Nizampet",
+            "vehicle": "any",
+            "budgetPaise": 20000,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": "23:00"
+          }
+        },
+        "category": "priority",
+        "detail": "ride.priority: 'price' -> 'balanced'",
+        "fields": [
+          "ride.priority"
+        ]
+      },
+      {
+        "id": "holdout-182",
+        "expected": {
+          "domain": "ride",
+          "reply": "Let me compare ride options to Charminar.",
+          "ride": {
+            "pickup": null,
+            "drop": "Charminar",
+            "vehicle": "auto",
+            "budgetPaise": 60000,
+            "maxPickupMinutes": null,
+            "priority": "speed",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Charminar.",
+          "ride": {
+            "pickup": null,
+            "drop": "Charminar",
+            "vehicle": "auto",
+            "budgetPaise": 60000,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "category": "priority",
+        "detail": "ride.priority: 'speed' -> 'balanced'",
+        "fields": [
+          "ride.priority"
+        ]
+      },
+      {
+        "id": "holdout-183",
+        "expected": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Indiranagar.",
+          "ride": {
+            "pickup": null,
+            "drop": "Indiranagar",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": 15,
+            "priority": "speed",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Indiranagar.",
+          "ride": {
+            "pickup": null,
+            "drop": "Indiranagar",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "speed",
+            "scheduleAt": null
+          }
+        },
+        "category": "ride",
+        "detail": "ride.maxPickupMinutes: 15 -> None",
+        "fields": [
+          "ride.maxPickupMinutes"
+        ]
+      },
+      {
+        "id": "holdout-184",
+        "expected": {
+          "domain": "ride",
+          "reply": "Finding rides to Forum Mall for you.",
+          "ride": {
+            "pickup": null,
+            "drop": "Forum Mall",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": 5,
+            "priority": "price",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Forum Mall.",
+          "ride": {
+            "pickup": null,
+            "drop": "Forum Mall",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": 5,
+            "priority": "speed",
+            "scheduleAt": null
+          }
+        },
+        "category": "priority",
+        "detail": "ride.priority: 'price' -> 'speed'",
+        "fields": [
+          "ride.priority"
+        ]
+      },
+      {
+        "id": "holdout-210",
+        "expected": {
+          "domain": "ride",
+          "reply": "On it, checking rides to Bachupally.",
+          "ride": {
+            "pickup": null,
+            "drop": "Bachupally",
+            "vehicle": "auto",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "speed",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Bachupally.",
+          "ride": {
+            "pickup": null,
+            "drop": "Bachupally",
+            "vehicle": "auto",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "rating",
+            "scheduleAt": null
+          }
+        },
+        "category": "priority",
+        "detail": "ride.priority: 'speed' -> 'rating'",
+        "fields": [
+          "ride.priority"
+        ]
+      },
+      {
+        "id": "holdout-227",
+        "expected": {
+          "domain": "ride",
+          "reply": "On it, checking rides to the market.",
+          "ride": {
+            "pickup": null,
+            "drop": "the market",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "price",
+            "scheduleAt": "17:00"
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to the market.",
+          "ride": {
+            "pickup": null,
+            "drop": "the market",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "speed",
+            "scheduleAt": "17:00"
+          }
+        },
+        "category": "priority",
+        "detail": "ride.priority: 'price' -> 'speed'",
+        "fields": [
+          "ride.priority"
+        ]
+      },
+      {
+        "id": "holdout-230",
+        "expected": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Forum Mall.",
+          "ride": {
+            "pickup": "Kothapet",
+            "drop": "Forum Mall",
+            "vehicle": "cab",
+            "budgetPaise": 15000,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Forum Mall.",
+          "ride": {
+            "pickup": null,
+            "drop": "Forum Mall",
+            "vehicle": "cab",
+            "budgetPaise": 15000,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "category": "ride",
+        "detail": "ride.pickup: 'Kothapet' -> None",
+        "fields": [
+          "ride.pickup"
+        ]
+      },
+      {
+        "id": "holdout-231",
+        "expected": {
+          "domain": "ride",
+          "reply": "Searching for the best way to reach Gachibowli.",
+          "ride": {
+            "pickup": "Charminar",
+            "drop": "Gachibowli",
+            "vehicle": "auto",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "rating",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "ride",
+          "reply": "Let me find you a ride to Gachibowli.",
+          "ride": {
+            "pickup": null,
+            "drop": "Gachibowli",
+            "vehicle": "auto",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "rating",
+            "scheduleAt": null
+          }
+        },
+        "category": "ride",
+        "detail": "ride.pickup: 'Charminar' -> None",
+        "fields": [
+          "ride.pickup"
+        ]
+      },
+      {
+        "id": "holdout-233",
+        "expected": {
+          "domain": "shop",
+          "reply": "Let me find the best hoodie deals for you.",
+          "shop": {
+            "item": "hoodie",
+            "budgetPaise": 500000,
+            "category": "fashion",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "On it, finding hoodie options now.",
+          "shop": {
+            "item": "hoodie",
+            "budgetPaise": 500000,
+            "category": "fashion",
+            "priority": "rating"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'price' -> 'rating'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-235",
+        "expected": {
+          "domain": "shop",
+          "reply": "Let me find the best smart TV deals for you.",
+          "shop": {
+            "item": "smart TV",
+            "budgetPaise": 150000,
+            "category": "electronics",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "On it, finding smart TV options now.",
+          "shop": {
+            "item": "smart TV",
+            "budgetPaise": 150000,
+            "category": "electronics",
+            "priority": "rating"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'balanced' -> 'rating'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-240",
+        "expected": {
+          "domain": "shop",
+          "reply": "On it, finding iron options now.",
+          "shop": {
+            "item": "iron",
+            "budgetPaise": null,
+            "category": "appliances",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "Searching for iron across platforms.",
+          "shop": {
+            "item": "iron",
+            "budgetPaise": null,
+            "category": "appliances",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'balanced' -> 'speed'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-242",
+        "expected": {
+          "domain": "shop",
+          "reply": "On it, finding trackpants options now.",
+          "shop": {
+            "item": "trackpants",
+            "budgetPaise": null,
+            "category": "fashion",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "On it, finding trackpants options now.",
+          "shop": {
+            "item": "trackpants",
+            "budgetPaise": null,
+            "category": "fashion",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'price' -> 'speed'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-249",
+        "expected": {
+          "domain": "shop",
+          "reply": "Comparing rug prices for you.",
+          "shop": {
+            "item": "rug",
+            "budgetPaise": 150000,
+            "category": "home",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "On it, finding rug options now.",
+          "shop": {
+            "item": "rug",
+            "budgetPaise": 150000,
+            "category": "home",
+            "priority": "rating"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'price' -> 'rating'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-250",
+        "expected": {
+          "domain": "shop",
+          "reply": "Comparing vacuum cleaner prices for you.",
+          "shop": {
+            "item": "vacuum cleaner",
+            "budgetPaise": null,
+            "category": "appliances",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "On it, finding vacuum cleaner options now.",
+          "shop": {
+            "item": "vacuum cleaner",
+            "budgetPaise": null,
+            "category": "appliances",
+            "priority": "balanced"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'price' -> 'balanced'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-252",
+        "expected": {
+          "domain": "shop",
+          "reply": "On it, finding saree options now.",
+          "shop": {
+            "item": "saree",
+            "budgetPaise": 500000,
+            "category": "fashion",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "On it, finding saree options now.",
+          "shop": {
+            "item": "saree",
+            "budgetPaise": 500000,
+            "category": "fashion",
+            "priority": "rating"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'price' -> 'rating'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-256",
+        "expected": {
+          "domain": "shop",
+          "reply": "Searching for SSD across platforms.",
+          "shop": {
+            "item": "SSD",
+            "budgetPaise": null,
+            "category": "electronics",
+            "priority": "price"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "Comparing SSD prices for you.",
+          "shop": {
+            "item": "SSD",
+            "budgetPaise": null,
+            "category": "electronics",
+            "priority": "speed"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'price' -> 'speed'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-260",
+        "expected": {
+          "domain": "shop",
+          "reply": "Let me find the best sneakers deals for you.",
+          "shop": {
+            "item": "sneakers",
+            "budgetPaise": null,
+            "category": "fashion",
+            "priority": "speed"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "On it, finding sneakers options now.",
+          "shop": {
+            "item": "sneakers",
+            "budgetPaise": null,
+            "category": "fashion",
+            "priority": "rating"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'speed' -> 'rating'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-262",
+        "expected": {
+          "domain": "shop",
+          "reply": "Comparing washing machine prices for you.",
+          "shop": {
+            "item": "washing machine",
+            "budgetPaise": 3000000,
+            "category": "appliances",
+            "priority": "rating"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "Comparing washing machine prices for you.",
+          "shop": {
+            "item": "washing machine",
+            "budgetPaise": 3000000,
+            "category": "appliances",
+            "priority": "balanced"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'rating' -> 'balanced'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-263",
+        "expected": {
+          "domain": "shop",
+          "reply": "On it, finding wallet options now.",
+          "shop": {
+            "item": "wallet",
+            "budgetPaise": null,
+            "category": "fashion",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "action",
+          "reply": "Sure, on it.",
+          "action": {
+            "kind": "navigate",
+            "targetBy": "none",
+            "targetPosition": 0,
+            "targetName": "",
+            "qty": 0,
+            "members": 0,
+            "withMyItems": false,
+            "pick": "none",
+            "setting": "none",
+            "on": false,
+            "value": "",
+            "weeklyRupees": 0
+          }
+        },
+        "category": "domain classification",
+        "detail": "domain shop -> action",
+        "fields": [
+          "domain",
+          "shop.item",
+          "shop.budgetPaise",
+          "shop.category",
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-267",
+        "expected": {
+          "domain": "shop",
+          "reply": "On it, finding smartwatch options now.",
+          "shop": {
+            "item": "smartwatch",
+            "budgetPaise": 3000000,
+            "category": "electronics",
+            "priority": "balanced"
+          }
+        },
+        "actual": {
+          "domain": "shop",
+          "reply": "Searching for smartwatch across platforms.",
+          "shop": {
+            "item": "smartwatch",
+            "budgetPaise": 3000000,
+            "category": "electronics",
+            "priority": "rating"
+          }
+        },
+        "category": "priority",
+        "detail": "shop.priority: 'balanced' -> 'rating'",
+        "fields": [
+          "shop.priority"
+        ]
+      },
+      {
+        "id": "holdout-273",
+        "expected": {
+          "domain": "combo",
+          "reply": "Let me handle both, dahi puri and a ride to Somajiguda.",
+          "food": {
+            "item": "dahi puri",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Somajiguda",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "combo",
+          "reply": "I'll find dahi puri and a ride to Somajiguda for you.",
+          "food": {
+            "item": "dahi puri",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Somajiguda",
+            "vehicle": "any",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "category": "ride",
+        "detail": "ride.vehicle: 'cab' -> 'any'",
+        "fields": [
+          "ride.vehicle"
+        ]
+      },
+      {
+        "id": "holdout-274",
+        "expected": {
+          "domain": "combo",
+          "reply": "I'll find chicken pizza and a ride to Nanakramguda for you.",
+          "food": {
+            "item": "chicken pizza",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "nonveg",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Nanakramguda",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "combo",
+          "reply": "Let me handle both, chicken pizza and a ride to Nanakramguda.",
+          "food": {
+            "item": "chicken pizza",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "nonveg",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Nanakramguda",
+            "vehicle": "any",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "category": "ride",
+        "detail": "ride.vehicle: 'cab' -> 'any'",
+        "fields": [
+          "ride.vehicle"
+        ]
+      },
+      {
+        "id": "holdout-279",
+        "expected": {
+          "domain": "combo",
+          "reply": "Let me handle both, coffee and a ride to Whitefield.",
+          "food": {
+            "item": "coffee",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Whitefield",
+            "vehicle": "auto",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "combo",
+          "reply": "Let me handle both, coffee and a ride to Whitefield.",
+          "food": {
+            "item": "coffee",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Whitefield",
+            "vehicle": "any",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "category": "ride",
+        "detail": "ride.vehicle: 'auto' -> 'any'",
+        "fields": [
+          "ride.vehicle"
+        ]
+      },
+      {
+        "id": "holdout-282",
+        "expected": {
+          "domain": "combo",
+          "reply": "Let me handle both, something light and a ride to Lingampally.",
+          "food": {
+            "item": "something light",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Lingampally",
+            "vehicle": "cab",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "combo",
+          "reply": "Let me handle both, something light and a ride to Lingampally.",
+          "food": {
+            "item": "something light",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Lingampally",
+            "vehicle": "any",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "category": "ride",
+        "detail": "ride.vehicle: 'cab' -> 'any'",
+        "fields": [
+          "ride.vehicle"
+        ]
+      },
+      {
+        "id": "holdout-284",
+        "expected": {
+          "domain": "combo",
+          "reply": "Let me handle both, cake and a ride to Forum Mall.",
+          "food": {
+            "item": "cake",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "veg",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Forum Mall",
+            "vehicle": "auto",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "actual": {
+          "domain": "combo",
+          "reply": "Let me handle both, cake and a ride to Forum Mall.",
+          "food": {
+            "item": "cake",
+            "budgetPaise": null,
+            "maxEtaMinutes": null,
+            "dietary": "any",
+            "priority": "balanced"
+          },
+          "ride": {
+            "pickup": null,
+            "drop": "Forum Mall",
+            "vehicle": "auto",
+            "budgetPaise": null,
+            "maxPickupMinutes": null,
+            "priority": "balanced",
+            "scheduleAt": null
+          }
+        },
+        "category": "dietary",
+        "detail": "food.dietary: 'veg' -> 'any'",
+        "fields": [
+          "food.dietary"
+        ]
+      },
+      {
+        "id": "holdout-330",
+        "expected": {
+          "domain": "food",
+          "reply": "On it, finding poha options now.",
+          "food": {
+            "item": "poha",
+            "budgetPaise": 40000,
+            "maxEtaMinutes": 40,
+            "dietary": "veg",
+            "priority": "speed"
+          }
+        },
+        "actual": {
+          "domain": "food",
+          "reply": "Let me pull up some food options.",
+          "food": {
+            "item": "food",
+            "budgetPaise": 40000,
+            "maxEtaMinutes": 40,
+            "dietary": "any",
+            "priority": "speed"
+          }
+        },
+        "category": "entity extraction",
+        "detail": "food.item: 'poha' -> 'food'; food.dietary: 'veg' -> 'any'",
+        "fields": [
+          "food.item",
+          "food.dietary"
+        ]
+      }
+    ],
+    "harness": {
+      "total": 382,
+      "right": 325,
+      "fields_right": 326,
+      "domain_right": 371,
+      "parse_ok": 382,
+      "json_valid": 377,
+      "errors": 0,
+      "timeouts": 0,
+      "leaks": 0,
+      "injection_total": 0,
+      "injection_held": 0,
+      "false_greeting": 0,
+      "fields": {
+        "domain": {
+          "ok": 371,
+          "total": 382
+        },
+        "food.item": {
+          "ok": 188,
+          "total": 195
+        },
+        "food.budgetPaise": {
+          "ok": 191,
+          "total": 195
+        },
+        "food.maxEtaMinutes": {
+          "ok": 191,
+          "total": 195
+        },
+        "food.dietary": {
+          "ok": 187,
+          "total": 195
+        },
+        "food.priority": {
+          "ok": 178,
+          "total": 195
+        },
+        "ride.pickup": {
+          "ok": 122,
+          "total": 125
+        },
+        "ride.drop": {
+          "ok": 125,
+          "total": 125
+        },
+        "ride.vehicle": {
+          "ok": 121,
+          "total": 125
+        },
+        "ride.budgetPaise": {
+          "ok": 125,
+          "total": 125
+        },
+        "ride.maxPickupMinutes": {
+          "ok": 124,
+          "total": 125
+        },
+        "ride.priority": {
+          "ok": 118,
+          "total": 125
+        },
+        "ride.scheduleAt": {
+          "ok": 125,
+          "total": 125
+        },
+        "shop.item": {
+          "ok": 49,
+          "total": 50
+        },
+        "shop.budgetPaise": {
+          "ok": 49,
+          "total": 50
+        },
+        "shop.category": {
+          "ok": 49,
+          "total": 50
+        },
+        "shop.priority": {
+          "ok": 38,
+          "total": 50
+        }
+      },
+      "confusion": {
+        "combo->combo": 20,
+        "food->food": 170,
+        "food->ride": 1,
+        "food->shop": 3,
+        "food->speed": 1,
+        "greeting->greeting": 10,
+        "greeting->out_of_scope": 2,
+        "out_of_scope->action": 2,
+        "out_of_scope->food": 1,
+        "out_of_scope->out_of_scope": 17,
+        "ride->ride": 105,
+        "shop->action": 1,
+        "shop->shop": 49
+      },
+      "slices": {
+        "budget": {
+          "right": 135,
+          "domain": 156,
+          "total": 159
+        },
+        "combo": {
+          "right": 15,
+          "domain": 20,
+          "total": 20
+        },
+        "dietary_nonveg": {
+          "right": 39,
+          "domain": 44,
+          "total": 45
+        },
+        "dietary_veg": {
+          "right": 77,
+          "domain": 88,
+          "total": 89
+        },
+        "eta": {
+          "right": 74,
+          "domain": 81,
+          "total": 82
+        },
+        "food": {
+          "right": 152,
+          "domain": 170,
+          "total": 175
+        },
+        "greeting": {
+          "right": 10,
+          "domain": 10,
+          "total": 12
+        },
+        "missing_field": {
+          "right": 239,
+          "domain": 279,
+          "total": 284
+        },
+        "multi_constraint": {
+          "right": 145,
+          "domain": 171,
+          "total": 173
+        },
+        "nested": {
+          "right": 313,
+          "domain": 364,
+          "total": 370
+        },
+        "out_of_scope": {
+          "right": 17,
+          "domain": 17,
+          "total": 20
+        },
+        "priority_price": {
+          "right": 35,
+          "domain": 51,
+          "total": 53
+        },
+        "priority_rating": {
+          "right": 22,
+          "domain": 27,
+          "total": 27
+        },
+        "priority_speed": {
+          "right": 102,
+          "domain": 111,
+          "total": 113
+        },
+        "ride": {
+          "right": 93,
+          "domain": 105,
+          "total": 105
+        },
+        "schedule": {
+          "right": 9,
+          "domain": 11,
+          "total": 11
+        },
+        "shop": {
+          "right": 38,
+          "domain": 49,
+          "total": 50
+        },
+        "wait": {
+          "right": 28,
+          "domain": 33,
+          "total": 33
+        }
+      },
+      "latency": {
+        "p50": 6895.6,
+        "p95": 13666.2,
+        "max": 17810.8
+      },
+      "behaviour": {
+        "domains_expected": {
+          "food": 175,
+          "out_of_scope": 20,
+          "greeting": 12,
+          "ride": 105,
+          "shop": 50,
+          "combo": 20
+        },
+        "domains_actual": {
+          "food": 171,
+          "speed": 1,
+          "ride": 106,
+          "out_of_scope": 19,
+          "action": 3,
+          "greeting": 10,
+          "shop": 52,
+          "combo": 20
+        },
+        "oors": 20,
+        "oos_right": 17,
+        "oos_as_action": 2,
+        "false_greeting": 0,
+        "non_greeting": 370,
+        "json_valid": 377,
+        "total": 382
+      }
+    },
+    "harness_checks": {
+      "json_valid": 377,
+      "domain_right": 371,
+      "parse_ok": 382,
+      "false_greeting": 0,
+      "latency": {
+        "p50": 6895.6,
+        "p95": 13666.2,
+        "max": 17810.8
+      }
+    }
+  }
+}

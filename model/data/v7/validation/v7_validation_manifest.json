@@ -1,0 +1,5312 @@
+[
+  {
+    "text": "get me a taxi to Gachibowli",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "book me a any option is fine to Gachibowli",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "book me a rickshaw to Gachibowli",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I need a motorbike to Gachibowli",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "any vehicle to Gachibowli please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "taxi to Ameerpet please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "Ameerpet ke liye whoever comes fastest chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I need a auto to Ameerpet",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "bike taxi to Ameerpet please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Ameerpet ke liye no vehicle preference chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "book me a taxi to Madhapur",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I need a whoever comes fastest to Madhapur",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "Madhapur ke liye auto rickshaw chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Madhapur ke liye bike taxi chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "Madhapur ke liye any vehicle chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I need a car to Kondapur",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me a anything that works to Kondapur",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I need a auto to Kondapur",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "Kondapur ke liye bike chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "any option is fine to Kondapur please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "car to Kukatpally please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me a don't care which vehicle to Kukatpally",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "Kukatpally ke liye auto rickshaw chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me a bike taxi to Kukatpally",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "book me a anything that works to Kukatpally",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "taxi to Hitech City please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I need a any option is fine to Hitech City",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "Hitech City ke liye rickshaw chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me a bike to Hitech City",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "book me a no vehicle preference to Hitech City",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me a taxi to Banjara Hills",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I need a any vehicle to Banjara Hills",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "Banjara Hills ke liye auto chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me a motorbike to Banjara Hills",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I need a any cab or auto to Banjara Hills",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "Jubilee Hills ke liye car chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "book me a whoever comes fastest to Jubilee Hills",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "book me a auto to Jubilee Hills",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Jubilee Hills ke liye bike chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Begumpet ke liye taxi chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I need a any option is fine to Begumpet",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I need a auto rickshaw to Begumpet",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I need a bike taxi to Begumpet",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "whatever is available to Begumpet please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me a taxi to Secunderabad",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "book me a don't care which vehicle to Secunderabad",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Secunderabad ke liye rickshaw chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I need a motorbike to Secunderabad",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me a whatever is available to Secunderabad",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I need a cab to Charminar",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me a don't care which vehicle to Charminar",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "get me a rickshaw to Charminar",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me a bike to Charminar",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Charminar ke liye don't care which vehicle chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "book me a taxi to Miyapur",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "book me a whatever is available to Miyapur",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "auto rickshaw to Miyapur please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I need a bike to Miyapur",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "no vehicle preference to Miyapur please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "book me a cab to Dilsukhnagar",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me a any vehicle to Dilsukhnagar",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me a auto rickshaw to Dilsukhnagar",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "Dilsukhnagar ke liye motorbike chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Dilsukhnagar ke liye whoever comes fastest chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "Uppal ke liye car chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "anything that works to Uppal please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "get me a rickshaw to Uppal",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "bike taxi to Uppal please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I need a no vehicle preference to Uppal",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "cab to LB Nagar please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "no vehicle preference to LB Nagar please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I need a auto rickshaw to LB Nagar",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "bike to LB Nagar please",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "LB Nagar ke liye no vehicle preference chahiye",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "book me a taxi to Mehdipatnam",
+    "domain": "ride",
+    "primary": "ride_boundary",
+    "tags": [
+      "ride",
+      "ride_boundary",
+      "vehicle_pair"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "paneer tikka ceiling of ₹200",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "ride to Gachibowli ceiling of ₹200",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "gaming laptop please ceiling of ₹200",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "want palak paneer ceiling of ₹250",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "cab to Ameerpet ceiling of ₹250",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "find laptop ceiling of ₹250",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "want paneer butter masala ceiling of ₹300",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "ride to Madhapur ceiling of ₹300",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "smartphone please ceiling of ₹300",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "shahi paneer ceiling of ₹400",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cab to Kondapur ceiling of ₹400",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "tablet ceiling of ₹400",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "get me kadai paneer ceiling of ₹500",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cab to Kukatpally ceiling of ₹500",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "find wireless earbuds ceiling of ₹500",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "want matar paneer ceiling of ₹800",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "ride to Hitech City ceiling of ₹800",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "headphones ceiling of ₹800",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "dal makhani ceiling of ₹1000",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "ride to Banjara Hills ceiling of ₹1000",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "buy bluetooth speaker ceiling of ₹1000",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "ceiling of ₹150 for dal fry",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Jubilee Hills ceiling of ₹150",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "smartwatch ceiling of ₹150",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "dal tadka upper limit of ₹200",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "ride to Begumpet upper limit of ₹200",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "buy power bank upper limit of ₹200",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "want chole bhature upper limit of ₹250",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Secunderabad tak cab upper limit of ₹250",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "buy phone charger upper limit of ₹250",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me rajma chawal upper limit of ₹300",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Charminar tak cab upper limit of ₹300",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "keyboard upper limit of ₹300",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me chana masala upper limit of ₹400",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "need a cab to Miyapur upper limit of ₹400",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "wireless mouse please upper limit of ₹400",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "masala dosa upper limit of ₹500",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "cab to Dilsukhnagar upper limit of ₹500",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "monitor please upper limit of ₹500",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "plain dosa upper limit of ₹800",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "ride to Uppal upper limit of ₹800",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "buy smart TV upper limit of ₹800",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "want idli upper limit of ₹1000",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "need a cab to LB Nagar upper limit of ₹1000",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "SSD upper limit of ₹1000",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "upper limit of ₹150 for medu vada",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Mehdipatnam tak cab upper limit of ₹150",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pen drive upper limit of ₹150",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "vada pav maximum ₹200",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Tolichowki maximum ₹200",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "webcam please maximum ₹200",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "maximum ₹250 for pav bhaji",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "need a cab to Manikonda maximum ₹250",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "router please maximum ₹250",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "upma maximum ₹300",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Kompally tak cab maximum ₹300",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "running shoes please maximum ₹300",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "want poha maximum ₹400",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Shamshabad tak cab maximum ₹400",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "sneakers please maximum ₹400",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "maximum ₹500 for uttapam",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "Abids tak cab maximum ₹500",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "buy jeans maximum ₹500",
+    "domain": "shop",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "shop"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me sambhar rice maximum ₹800",
+    "domain": "food",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "food",
+      "price_boundary"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Koti maximum ₹800",
+    "domain": "ride",
+    "primary": "domain_boundary",
+    "tags": [
+      "domain_boundary",
+      "price_boundary",
+      "ride"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add biryani to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cart me biryani daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "put momos in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "momos add kar do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add two pizza",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add three pizza",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "throw dosa into the cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I want dosa in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add noodles to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "cart me noodles daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "put burger in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "burger add kar do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add two thali",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add three thali",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "throw paneer tikka into the cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want paneer tikka in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add cake to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cart me cake daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "put coffee in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "coffee add kar do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add two chicken roll",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add three chicken roll",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "throw veg sandwich into the cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want veg sandwich in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add fried rice to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "cart me fried rice daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "put pav bhaji in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pav bhaji add kar do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "add two gulab jamun",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add three gulab jamun",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "throw cold coffee into the cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want cold coffee in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cake bhi cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "coffee bhi cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "chicken roll bhi cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "veg sandwich bhi cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "fried rice bhi cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pav bhaji bhi cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "gulab jamun bhi cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "cold coffee bhi cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add that to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "put it in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "add one more of that",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add two of those",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "throw that in the cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "yeh cart me daal do",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add option 2 to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "put the second option in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add option 3 to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "put the third option in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add option 4 to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "put the fourth option in my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "add the first momos to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "add the second pizza to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "add the third dosa to my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "remove biryani from my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "delete biryani from my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get rid of the biryani",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "remove momos from my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "delete momos from my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get rid of the momos",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "remove pizza from my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "delete pizza from my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get rid of the pizza",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "remove dosa from my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "delete dosa from my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "get rid of the dosa",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "remove noodles from my cart",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "delete noodles from my basket",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get rid of the noodles",
+    "domain": "action",
+    "primary": "action_positive",
+    "tags": [
+      "action",
+      "action_positive"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "order paneer tikka for me",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "can you arrange paneer tikka",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I want to order palak paneer",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "place an order for palak paneer",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "grab me paneer butter masala",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get paneer butter masala ordered",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "please order shahi paneer",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I'd like shahi paneer ordered",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "order kadai paneer for me",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "can you arrange kadai paneer",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want to order matar paneer",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "place an order for matar paneer",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "grab me dal makhani",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get dal makhani ordered",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "please order dal fry",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I'd like dal fry ordered",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "order dal tadka for me",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "can you arrange dal tadka",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I want to order chole bhature",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "place an order for chole bhature",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "grab me rajma chawal",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get rajma chawal ordered",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "please order chana masala",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I'd like chana masala ordered",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "order masala dosa for me",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "can you arrange masala dosa",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want to order plain dosa",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "place an order for plain dosa",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "grab me idli",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get idli ordered",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "please order medu vada",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I'd like medu vada ordered",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "order vada pav for me",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "can you arrange vada pav",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want to order pav bhaji",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "discovery",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "why was my order cancelled",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "my cab never arrived last night",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "the pizza I ordered was cold",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "how do I cancel an order",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "what is your refund policy",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I was charged twice for my order",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "my friend booked a cab yesterday",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I ordered biryani last week and it was great",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "cancel my ride",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cancel the cab",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cancel my order",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "cancel my last booking",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "the driver cancelled on me",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "my order is running late, why",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want to complain about my last delivery",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "is the cab I booked coming",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "why did my cart empty itself",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "my payment failed yesterday",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "the app logged me out",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "someone used my account to order food",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I need a refund for last night",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "why is my order still preparing",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "can I get my money back for a cancelled ride",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "hard_negative",
+      "oos_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "thanks for the quick delivery",
+    "domain": "greeting",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "greeting_negative",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "thanks, the cab was on time",
+    "domain": "greeting",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "greeting_negative",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "good job with my order",
+    "domain": "greeting",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "greeting_negative",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "thank you for sorting my cart out",
+    "domain": "greeting",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "greeting_negative",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "should I order momos or noodles",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "comparison",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "which is better, pizza or burger",
+    "domain": "food",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "comparison",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "is a cab cheaper than an auto",
+    "domain": "ride",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "comparison",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "should I book a cab or take the bus",
+    "domain": "ride",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "comparison",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "do you think I should buy the laptop",
+    "domain": "shop",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "comparison",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "which one is better, the tablet or the laptop",
+    "domain": "shop",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "comparison",
+      "hard_negative"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "what does checkout mean",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "app_info",
+      "hard_negative"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "where is the cart button",
+    "domain": "out_of_scope",
+    "primary": "action_hard_negative",
+    "tags": [
+      "action",
+      "action_hard_negative",
+      "app_info",
+      "hard_negative"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "manchurian",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "manchurian please",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me manchurian",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "craving manchurian",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need manchurian",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "manchurian only",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "just manchurian",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "only want manchurian",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "manchurian under ₹150",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare_price",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "veg manchurian",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare_dietary",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "noodles",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "noodles please",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I want noodles",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "get me noodles",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "craving noodles",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need noodles",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "noodles only",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "just noodles",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "only want noodles",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "noodles under ₹200",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare_price",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "veg noodles",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare_dietary",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pizza",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pizza please",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want pizza",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me pizza",
+    "domain": "food",
+    "primary": "generic_food",
+    "tags": [
+      "bare",
+      "food_entity",
+      "generic_food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "hello",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "hey",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "yo",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "sup",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "howdy",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "hey there",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "hi there",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "hey flouna",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "good afternoon",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "good evening",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "kya haal hai",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "hi, I just downloaded the app",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "hello, I am new here",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "hey, what can you do",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "what is flouna",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "start",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "help",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "who are you",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "what is your name",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "are you a bot",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "you there",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "how does this work",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "love this app",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "this app is great",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "hey buddy",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "morning",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "evening",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "gm",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "hi, what's up",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "hey, how are you",
+    "domain": "greeting",
+    "primary": "greeting_oos",
+    "tags": [
+      "greeting",
+      "greeting_oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "what's the best way to learn a new language",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "how do I jump start a car",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "what's a good podcast about history",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "how to make sourdough bread",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "what's the exchange rate for euros",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "how does a refrigerator work",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "who discovered gravity",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "what's the deepest lake",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "how many continents are there",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "what is the tallest waterfall",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "how do I renew my passport",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "what's the best time to visit Goa",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "how to write a resignation letter",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "what's the difference between a crocodile and an alligator",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "how to get rid of a headache",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "what's the capital of Brazil",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "how do solar panels work",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "what's the largest mammal",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "how to fold a fitted sheet",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "what's a good way to save electricity",
+    "domain": "out_of_scope",
+    "primary": "greeting_oos",
+    "tags": [
+      "eval_only",
+      "greeting_oos",
+      "oos"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "paneer tikka please",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-0"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "paneer tikka under ₹200",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-0"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "paneer tikka under ₹200 within 30 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-0"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "veg paneer tikka under ₹200",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-0"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "paneer tikka delivered within 25 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-0"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cheapest paneer tikka",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-0"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "best rated paneer tikka",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-0"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "paneer tikka, no preference on price or rating",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-0"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "palak paneer please",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-1"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "palak paneer under ₹300",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-1"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "palak paneer under ₹300 within 30 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-1"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "veg palak paneer under ₹300",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-1"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "palak paneer delivered within 25 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-1"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cheapest palak paneer",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-1"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "best rated palak paneer",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-1"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "palak paneer, no preference on price or rating",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-1"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "paneer butter masala please",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-2"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "paneer butter masala under ₹400",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-2"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "paneer butter masala under ₹400 within 30 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-2"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "veg paneer butter masala under ₹400",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-2"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "paneer butter masala delivered within 25 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-2"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "cheapest paneer butter masala",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-2"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "best rated paneer butter masala",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-2"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "paneer butter masala, no preference on price or rating",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-2"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "shahi paneer please",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-3"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "shahi paneer under ₹500",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-3"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "shahi paneer under ₹500 within 30 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-3"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "veg shahi paneer under ₹500",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-3"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "shahi paneer delivered within 25 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-3"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "cheapest shahi paneer",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-3"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "best rated shahi paneer",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-3"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "shahi paneer, no preference on price or rating",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-3"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "kadai paneer please",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-4"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "kadai paneer under ₹200",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-4"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "kadai paneer under ₹200 within 30 minutes",
+    "domain": "food",
+    "primary": "nested",
+    "tags": [
+      "minimal_pair",
+      "nested",
+      "pair:food-base-4"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "veg paneer tikka",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "vegetarian palak paneer",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pure veg paneer butter masala",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "jain shahi paneer",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "eggless kadai paneer",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "veg matar paneer",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "vegetarian dal makhani",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pure veg dal fry",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "jain dal tadka",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "eggless chole bhature",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "veg rajma chawal",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "vegetarian chana masala",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "pure veg masala dosa",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "jain plain dosa",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "eggless idli",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "veg medu vada",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "vegetarian vada pav",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pure veg pav bhaji",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "jain upma",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "eggless poha",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "veg uttapam",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "vegetarian sambhar rice",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "pure veg rasam",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "jain dahi puri",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "eggless gulab jamun",
+    "domain": "food",
+    "primary": "dietary",
+    "tags": [
+      "dietary",
+      "food"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I'm craving pizza tonight a ceiling of 300 rupees",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I want to eat biryani in under 30 minutes",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "let's get momos",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I have to be at the airport",
+    "domain": "ride",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I'm heading to office, need transport",
+    "domain": "ride",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I'd like to get running shoes my budget is 3000",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I need to pick up gaming laptop",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "mujhe pizza khana hai a ceiling of 300 rupees",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I'm craving biryani tonight",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I want to eat momos",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "the airport jaana hai jaldi",
+    "domain": "ride",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "office jaana hai jaldi not more than ₹150",
+    "domain": "ride",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "I'd like to get running shoes under 3000 rupees",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I'm in the market for gaming laptop",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "in the mood for pizza",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "send over some biryani",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I'd like to order some momos",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "take me across town to the airport",
+    "domain": "ride",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "office ke liye gaadi chahiye",
+    "domain": "ride",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "looking around for running shoes max ₹3000",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "help me purchase gaming laptop",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "could really go for pizza my budget is 300",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "could really go for biryani",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I'm craving momos tonight",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get something to take me to office under ₹150",
+    "domain": "ride",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I'd like to get running shoes",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "looking around for gaming laptop",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I'm craving biryani tonight in under 20 minutes",
+    "domain": "food",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "I'm heading to office, need transport 150 tak",
+    "domain": "ride",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "looking around for running shoes",
+    "domain": "shop",
+    "primary": "paraphrase",
+    "tags": [
+      "paraphrase"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "paneer tikka, hard cap of ₹150",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Gachibowli, absolute ceiling ₹150 for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "gaming laptop, I can spend ₹1500 at most",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "palak paneer, price cap ₹175",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Kondapur, fixed budget of ₹175 for this for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "laptop, nothing above ₹1750",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "paneer butter masala, total not to exceed ₹200",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Banjara Hills, ₹200 is the limit for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "smartphone, maximum spend ₹2000",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "shahi paneer, spend up to ₹225",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Secunderabad, keep the total at ₹225 or less for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "tablet, stay within ₹2250 total",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "kadai paneer, absolute ceiling ₹250",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Dilsukhnagar, I can spend ₹250 at most for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "wireless earbuds, hard cap of ₹2500",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "matar paneer, fixed budget of ₹275 for this",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Mehdipatnam, nothing above ₹275 for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "headphones, price cap ₹2750",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "dal makhani, ₹300 is the limit",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Kompally, maximum spend ₹300 for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "bluetooth speaker, total not to exceed ₹3000",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "dal fry, keep the total at ₹325 or less",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Koti, stay within ₹325 total for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "smartwatch, spend up to ₹3250",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "dal tadka, I can spend ₹350 at most",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Lingampally, hard cap of ₹350 for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "power bank, absolute ceiling ₹3500",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "chole bhature, nothing above ₹400",
+    "domain": "food",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "need a cab to Attapur, price cap ₹400 for the fare",
+    "domain": "ride",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "phone charger, fixed budget of ₹4000 for this",
+    "domain": "shop",
+    "primary": "production_robustness",
+    "tags": [
+      "ceiling",
+      "production_robustness",
+      "prompt_robust"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me veg cutlet and a ride to Gachibowli",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me gobi paratha and a ride to Bachupally",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "bhel puri delivered and a cab to Jubilee Hills after",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "order fruit bowl and book a cab to the office",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me upma and a ride to Forum Mall",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "chana masala delivered and a cab to Dilsukhnagar after",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "get me chicken roll and a ride to Manikonda",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "order mutton biryani and book a cab to Koti",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "short"
+  },
+  {
+    "text": "lassi chahiye aur Jubilee Hills tak cab",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "dinner is chicken momos, then I need a ride to Lingampally",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get me egg curry and a ride to Bachupally",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "veg burger delivered and a cab to Attapur after",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "send matar paneer and arrange a ride to Bachupally",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "order smoothie and book a cab to Panjagutta",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I need chicken pizza for dinner and a ride to Inorbit Mall",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "veg sandwich delivered and a cab to Forum Mall after",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  },
+  {
+    "text": "get khandvi and taxi to Koti",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "send halwa and arrange a ride to Manikonda",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "dinner is chicken shawarma, then I need a ride to Uppal",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "v6"
+  },
+  {
+    "text": "I need egg curry for dinner and a ride to Electronic City",
+    "domain": "combo",
+    "primary": "core",
+    "tags": [
+      "combo",
+      "core"
+    ],
+    "system": "prod"
+  }
+]

@@ -1,0 +1,303 @@
+{
+  "phase": 13,
+  "generated_at": "2026-11-16T06:44:09+00:00",
+  "pass": true,
+  "checks": [
+    {
+      "name": "sealed holdout sha256 unchanged",
+      "pass": true,
+      "detail": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a"
+    },
+    {
+      "name": "v6 source copy sha256 intact",
+      "pass": true,
+      "detail": "3b8a991102b1aab0f5ce075b6ad23690773d7a625c5e6104d267da392f5d3fde"
+    },
+    {
+      "name": "train: rows parsed and valid",
+      "pass": true,
+      "detail": {
+        "rows": 4147,
+        "errors": 0,
+        "examples": []
+      }
+    },
+    {
+      "name": "valid: rows parsed and valid",
+      "pass": true,
+      "detail": {
+        "rows": 225,
+        "errors": 0,
+        "examples": []
+      }
+    },
+    {
+      "name": "eval: rows parsed and valid",
+      "pass": true,
+      "detail": {
+        "rows": 495,
+        "errors": 0,
+        "examples": []
+      }
+    },
+    {
+      "name": "train rows",
+      "pass": true,
+      "detail": {
+        "value": 4147,
+        "expected": "3500..4500"
+      }
+    },
+    {
+      "name": "eval rows",
+      "pass": true,
+      "detail": {
+        "value": 495,
+        "expected": "300..500"
+      }
+    },
+    {
+      "name": "category core",
+      "pass": true,
+      "detail": {
+        "value": 1636,
+        "expected": "1500..1800"
+      }
+    },
+    {
+      "name": "category action_positive",
+      "pass": true,
+      "detail": {
+        "value": 440,
+        "expected": "400..600"
+      }
+    },
+    {
+      "name": "category action_hard_negative",
+      "pass": true,
+      "detail": {
+        "value": 320,
+        "expected": "280..360"
+      }
+    },
+    {
+      "name": "category ride_boundary",
+      "pass": true,
+      "detail": {
+        "value": 280,
+        "expected": "250..340"
+      }
+    },
+    {
+      "name": "category domain_boundary",
+      "pass": true,
+      "detail": {
+        "value": 230,
+        "expected": "200..280"
+      }
+    },
+    {
+      "name": "category generic_food",
+      "pass": true,
+      "detail": {
+        "value": 180,
+        "expected": "150..220"
+      }
+    },
+    {
+      "name": "category greeting_oos",
+      "pass": true,
+      "detail": {
+        "value": 190,
+        "expected": "170..230"
+      }
+    },
+    {
+      "name": "category nested",
+      "pass": true,
+      "detail": {
+        "value": 230,
+        "expected": "200..280"
+      }
+    },
+    {
+      "name": "category dietary",
+      "pass": true,
+      "detail": {
+        "value": 157,
+        "expected": "140..200"
+      }
+    },
+    {
+      "name": "category production_robustness",
+      "pass": true,
+      "detail": {
+        "value": 224,
+        "expected": "200..320"
+      }
+    },
+    {
+      "name": "category paraphrase",
+      "pass": true,
+      "detail": {
+        "value": 260,
+        "expected": "240..320"
+      }
+    },
+    {
+      "name": "action hard-negative share",
+      "pass": true,
+      "detail": {
+        "value": 0.4211,
+        "expected": "0.4..0.45"
+      }
+    },
+    {
+      "name": "train uses all three system prompts",
+      "pass": true,
+      "detail": {
+        "prod": 1871,
+        "short": 544,
+        "v6": 1732
+      }
+    },
+    {
+      "name": "every system prompt has at least 5% of train rows",
+      "pass": true,
+      "detail": {
+        "prod": 1871,
+        "short": 544,
+        "v6": 1732
+      }
+    },
+    {
+      "name": "train domains cover every schema domain",
+      "pass": true,
+      "detail": [
+        "action",
+        "combo",
+        "food",
+        "greeting",
+        "out_of_scope",
+        "ride",
+        "shop"
+      ]
+    },
+    {
+      "name": "eval domains cover action, greeting, OOS and the three search domains",
+      "pass": true,
+      "detail": [
+        "action",
+        "combo",
+        "food",
+        "greeting",
+        "out_of_scope",
+        "ride",
+        "shop"
+      ]
+    },
+    {
+      "name": "MLX staging files match the split files",
+      "pass": true,
+      "detail": {
+        "train_v7": "678338cba7af5277"
+      }
+    }
+  ],
+  "summary": {
+    "train": {
+      "rows": 4147,
+      "domains": {
+        "food": 1465,
+        "ride": 1250,
+        "action": 490,
+        "shop": 389,
+        "out_of_scope": 295,
+        "combo": 140,
+        "greeting": 118
+      },
+      "systems": {
+        "prod": 1871,
+        "short": 544,
+        "v6": 1732
+      },
+      "system_variants": 3
+    },
+    "valid": {
+      "rows": 225,
+      "domains": {
+        "food": 78,
+        "ride": 60,
+        "action": 30,
+        "greeting": 21,
+        "shop": 19,
+        "combo": 10,
+        "out_of_scope": 7
+      },
+      "systems": {
+        "prod": 97,
+        "v6": 99,
+        "short": 29
+      },
+      "system_variants": 3
+    },
+    "eval": {
+      "rows": 495,
+      "domains": {
+        "food": 167,
+        "ride": 117,
+        "action": 70,
+        "out_of_scope": 45,
+        "shop": 42,
+        "greeting": 34,
+        "combo": 20
+      },
+      "systems": {
+        "prod": 221,
+        "v6": 213,
+        "short": 61
+      },
+      "system_variants": 3
+    }
+  },
+  "composition": {
+    "core": 1636,
+    "action_positive": 440,
+    "action_hard_negative": 320,
+    "ride_boundary": 280,
+    "paraphrase": 260,
+    "domain_boundary": 230,
+    "nested": 230,
+    "production_robustness": 224,
+    "greeting_oos": 190,
+    "generic_food": 180,
+    "dietary": 157
+  },
+  "action_hard_negative_share": 0.4211,
+  "counts": {
+    "sealed holdout sha256 unchanged": true,
+    "v6 source copy sha256 intact": true,
+    "train: rows parsed and valid": true,
+    "valid: rows parsed and valid": true,
+    "eval: rows parsed and valid": true,
+    "train rows": true,
+    "eval rows": true,
+    "category core": true,
+    "category action_positive": true,
+    "category action_hard_negative": true,
+    "category ride_boundary": true,
+    "category domain_boundary": true,
+    "category generic_food": true,
+    "category greeting_oos": true,
+    "category nested": true,
+    "category dietary": true,
+    "category production_robustness": true,
+    "category paraphrase": true,
+    "action hard-negative share": true,
+    "train uses all three system prompts": true,
+    "every system prompt has at least 5% of train rows": true,
+    "train domains cover every schema domain": true,
+    "eval domains cover action, greeting, OOS and the three search domains": true,
+    "MLX staging files match the split files": true
+  }
+}

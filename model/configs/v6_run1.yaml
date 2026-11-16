@@ -1,0 +1,45 @@
+# V6 run 1. Fresh LoRA from Qwen2.5-1.5B-Instruct on the canonicalised V6
+# corpus (11,418 rows: 10,165 V5 rows relabelled to the audit D1-D7 rules plus
+# 1,253 targeted rows for the audited failure classes, 193 action rows, and
+# the hard-negative set). The V5 adapters are not resumed: the V5 corpus
+# taught phantom pickups, arbitrary vehicles and mixed priority conventions,
+# so starting clean is what removes those behaviours.
+#
+# 2,400 steps x batch 1 with grad accumulation 4 = 2,400 samples at an
+# effective batch of 4, the same budget V5 run 1 used.
+# max_seq_length is 1152 because every V6 row is 980-1092 tokens (933-token
+# system prompt); at 640 mlx_lm would truncate the tail, which is the
+# assistant JSON. Batch 4 at this length peaked at 10.5 GB on this 16 GB M2;
+# batch 2 wired ~9.5 GB and then stalled waiting on Metal completion against
+# the GPU wired limit, so the micro-batch is 1 and gradient accumulation keeps
+# the effective batch at 4. Launchd/nohup runs of batch 2 also stalled, so the
+# runner opens the job from an interactive Terminal session.
+# The LoRA recipe is unchanged from V5 (rank 16, scale 2.0 = PEFT alpha 32,
+# last 16 layers, dropout 0.05) so adapters stay comparable and stackable.
+model: "Qwen/Qwen2.5-1.5B-Instruct"
+train: true
+data: "/tmp/flouna_v6_data"
+fine_tune_type: "lora"
+optimizer: "adamw"
+num_layers: 16
+mask_prompt: true
+lora_parameters:
+  rank: 16
+  scale: 2.0
+  dropout: 0.05
+batch_size: 1
+grad_accumulation_steps: 4
+iters: 2400
+learning_rate: 2.0e-4
+lr_schedule:
+  name: "cosine_decay"
+  arguments: [2.0e-4, 2400]
+  warmup: 60
+max_seq_length: 1152
+grad_checkpoint: true
+val_batches: 2
+steps_per_report: 20
+steps_per_eval: 200
+save_every: 200
+adapter_path: "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v6-run1"
+seed: 42

@@ -102,6 +102,8 @@ def validate_file(path: Path) -> dict:
         "categories": Counter(),
         "constraints": Counter(),
         "null_fields": Counter(),
+        "action_kinds": Counter(),
+        "action_fields": Counter(),
         "injections": 0,
         "texts": [],
     }
@@ -142,6 +144,17 @@ def validate_file(path: Path) -> dict:
             report["conflicts"].append({"line": item["line"], "text": text, "problems": conflicts})
         domain = output["domain"]
         report["domains"][domain] += 1
+        if domain == "action":
+            body = output["action"]
+            report["action_kinds"][body["kind"]] += 1
+            for key in ("targetBy", "pick", "setting", "value", "weeklyRupees"):
+                if body[key] not in ("", "none", 0):
+                    report["action_fields"][key] += 1
+            semantics = fs.validate_action_semantics(body)
+            if semantics:
+                report["schema_errors"].append(
+                    {"line": item["line"], "text": text, "errors": ["action semantics: " + e for e in semantics]}
+                )
         for part in ("food", "ride", "shop"):
             body = output.get(part)
             if not isinstance(body, dict):
@@ -236,6 +249,9 @@ def summarize(name: str, report: dict) -> list[str]:
         lines.append(f"  vehicles: {dict(report['vehicles'])}")
     if report["categories"]:
         lines.append(f"  categories: {dict(report['categories'])}")
+    if report["action_kinds"]:
+        lines.append(f"  action kinds: {dict(sorted(report['action_kinds'].items()))}")
+        lines.append(f"  action fields used: {dict(report['action_fields'])}")
     lines.append(f"  hard failures: {hard}")
     return lines
 

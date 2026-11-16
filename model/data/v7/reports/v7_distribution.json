@@ -1,0 +1,836 @@
+{
+  "phase": 14,
+  "generated_at": "2026-11-16T06:44:09+00:00",
+  "train": {
+    "rows": 4147,
+    "domains": {
+      "food": {
+        "count": 1465,
+        "share": 0.3533
+      },
+      "ride": {
+        "count": 1250,
+        "share": 0.3014
+      },
+      "action": {
+        "count": 490,
+        "share": 0.1182
+      },
+      "shop": {
+        "count": 389,
+        "share": 0.0938
+      },
+      "out_of_scope": {
+        "count": 295,
+        "share": 0.0711
+      },
+      "combo": {
+        "count": 140,
+        "share": 0.0338
+      },
+      "greeting": {
+        "count": 118,
+        "share": 0.0285
+      }
+    },
+    "systems": {
+      "prod": {
+        "count": 1871,
+        "share": 0.4512
+      },
+      "v6": {
+        "count": 1732,
+        "share": 0.4177
+      },
+      "short": {
+        "count": 544,
+        "share": 0.1312
+      }
+    },
+    "primary_priority": {
+      "balanced": {
+        "count": 2440,
+        "share": 0.721
+      },
+      "speed": {
+        "count": 488,
+        "share": 0.1442
+      },
+      "price": {
+        "count": 284,
+        "share": 0.0839
+      },
+      "rating": {
+        "count": 172,
+        "share": 0.0508
+      }
+    },
+    "priority_by_domain": {
+      "food": {
+        "balanced": {
+          "count": 1081,
+          "share": 0.6735
+        },
+        "speed": {
+          "count": 316,
+          "share": 0.1969
+        },
+        "price": {
+          "count": 135,
+          "share": 0.0841
+        },
+        "rating": {
+          "count": 73,
+          "share": 0.0455
+        }
+      },
+      "ride": {
+        "balanced": {
+          "count": 1097,
+          "share": 0.7892
+        },
+        "speed": {
+          "count": 155,
+          "share": 0.1115
+        },
+        "price": {
+          "count": 86,
+          "share": 0.0619
+        },
+        "rating": {
+          "count": 52,
+          "share": 0.0374
+        }
+      },
+      "shop": {
+        "balanced": {
+          "count": 262,
+          "share": 0.6735
+        },
+        "price": {
+          "count": 63,
+          "share": 0.162
+        },
+        "rating": {
+          "count": 47,
+          "share": 0.1208
+        },
+        "speed": {
+          "count": 17,
+          "share": 0.0437
+        }
+      }
+    },
+    "ride_vehicle": {
+      "any": {
+        "count": 468,
+        "share": 0.3367
+      },
+      "cab": {
+        "count": 442,
+        "share": 0.318
+      },
+      "auto": {
+        "count": 300,
+        "share": 0.2158
+      },
+      "bike": {
+        "count": 180,
+        "share": 0.1295
+      }
+    },
+    "food_dietary": {
+      "any": {
+        "count": 580,
+        "share": 0.3959
+      },
+      "veg": {
+        "count": 576,
+        "share": 0.3932
+      },
+      "nonveg": {
+        "count": 309,
+        "share": 0.2109
+      }
+    },
+    "shop_category": {
+      "fashion": {
+        "count": 101,
+        "share": 0.2596
+      },
+      "any": {
+        "count": 87,
+        "share": 0.2237
+      },
+      "electronics": {
+        "count": 81,
+        "share": 0.2082
+      },
+      "home": {
+        "count": 64,
+        "share": 0.1645
+      },
+      "appliances": {
+        "count": 56,
+        "share": 0.144
+      }
+    },
+    "action_kinds": {
+      "cart.add": {
+        "count": 101,
+        "share": 0.2061
+      },
+      "cart.set_qty": {
+        "count": 72,
+        "share": 0.1469
+      },
+      "cart.remove": {
+        "count": 46,
+        "share": 0.0939
+      },
+      "group.create": {
+        "count": 32,
+        "share": 0.0653
+      },
+      "select": {
+        "count": 31,
+        "share": 0.0633
+      },
+      "settings.toggle": {
+        "count": 23,
+        "share": 0.0469
+      },
+      "checkout": {
+        "count": 23,
+        "share": 0.0469
+      },
+      "navigate": {
+        "count": 22,
+        "share": 0.0449
+      },
+      "cart.show": {
+        "count": 18,
+        "share": 0.0367
+      },
+      "cart.clear": {
+        "count": 18,
+        "share": 0.0367
+      },
+      "ride.group": {
+        "count": 17,
+        "share": 0.0347
+      },
+      "ride.book": {
+        "count": 17,
+        "share": 0.0347
+      },
+      "group.show": {
+        "count": 15,
+        "share": 0.0306
+      },
+      "settings.budget": {
+        "count": 14,
+        "share": 0.0286
+      },
+      "settings.language": {
+        "count": 13,
+        "share": 0.0265
+      },
+      "settings.visibility": {
+        "count": 11,
+        "share": 0.0224
+      },
+      "ride.group_mode": {
+        "count": 9,
+        "share": 0.0184
+      },
+      "settings.theme": {
+        "count": 8,
+        "share": 0.0163
+      }
+    },
+    "field_rates": {
+      "food": {
+        "total": 1465,
+        "dietary_any": 0.3959,
+        "dietary_veg": 0.3932,
+        "dietary_nonveg": 0.2109,
+        "eta": 0.2102,
+        "budget": 0.3788
+      },
+      "ride": {
+        "total": 1250,
+        "pickup": 0.2064,
+        "budget": 0.2656,
+        "wait": 0.0792,
+        "schedule": 0.0512
+      },
+      "shop": {
+        "total": 389,
+        "budget": 0.6041
+      }
+    },
+    "coverage": {
+      "distinct_food_items": 152,
+      "distinct_ride_drops": 69,
+      "distinct_shop_items": 75
+    },
+    "template_redundancy": {
+      "distinct_4gram_prefixes": 3157,
+      "prefixes_used_more_than_40_times": {
+        "pick me up from": 42
+      }
+    }
+  },
+  "valid": {
+    "rows": 225,
+    "domains": {
+      "food": {
+        "count": 78,
+        "share": 0.3467
+      },
+      "ride": {
+        "count": 60,
+        "share": 0.2667
+      },
+      "action": {
+        "count": 30,
+        "share": 0.1333
+      },
+      "greeting": {
+        "count": 21,
+        "share": 0.0933
+      },
+      "shop": {
+        "count": 19,
+        "share": 0.0844
+      },
+      "combo": {
+        "count": 10,
+        "share": 0.0444
+      },
+      "out_of_scope": {
+        "count": 7,
+        "share": 0.0311
+      }
+    },
+    "systems": {
+      "v6": {
+        "count": 99,
+        "share": 0.44
+      },
+      "prod": {
+        "count": 97,
+        "share": 0.4311
+      },
+      "short": {
+        "count": 29,
+        "share": 0.1289
+      }
+    },
+    "primary_priority": {
+      "balanced": {
+        "count": 148,
+        "share": 0.8362
+      },
+      "speed": {
+        "count": 17,
+        "share": 0.096
+      },
+      "price": {
+        "count": 7,
+        "share": 0.0395
+      },
+      "rating": {
+        "count": 5,
+        "share": 0.0282
+      }
+    },
+    "priority_by_domain": {
+      "food": {
+        "balanced": {
+          "count": 65,
+          "share": 0.7386
+        },
+        "speed": {
+          "count": 17,
+          "share": 0.1932
+        },
+        "price": {
+          "count": 6,
+          "share": 0.0682
+        }
+      },
+      "ride": {
+        "balanced": {
+          "count": 69,
+          "share": 0.9857
+        },
+        "price": {
+          "count": 1,
+          "share": 0.0143
+        }
+      },
+      "shop": {
+        "balanced": {
+          "count": 14,
+          "share": 0.7368
+        },
+        "rating": {
+          "count": 5,
+          "share": 0.2632
+        }
+      }
+    },
+    "ride_vehicle": {
+      "any": {
+        "count": 24,
+        "share": 0.3429
+      },
+      "cab": {
+        "count": 23,
+        "share": 0.3286
+      },
+      "auto": {
+        "count": 13,
+        "share": 0.1857
+      },
+      "bike": {
+        "count": 10,
+        "share": 0.1429
+      }
+    },
+    "food_dietary": {
+      "veg": {
+        "count": 43,
+        "share": 0.5513
+      },
+      "any": {
+        "count": 18,
+        "share": 0.2308
+      },
+      "nonveg": {
+        "count": 17,
+        "share": 0.2179
+      }
+    },
+    "shop_category": {
+      "any": {
+        "count": 8,
+        "share": 0.4211
+      },
+      "fashion": {
+        "count": 5,
+        "share": 0.2632
+      },
+      "home": {
+        "count": 4,
+        "share": 0.2105
+      },
+      "appliances": {
+        "count": 1,
+        "share": 0.0526
+      },
+      "electronics": {
+        "count": 1,
+        "share": 0.0526
+      }
+    },
+    "action_kinds": {
+      "cart.remove": {
+        "count": 27,
+        "share": 0.9
+      },
+      "cart.set_qty": {
+        "count": 3,
+        "share": 0.1
+      }
+    },
+    "field_rates": {
+      "food": {
+        "budget": 0.4872,
+        "total": 78,
+        "dietary_any": 0.2308,
+        "dietary_veg": 0.5513,
+        "dietary_nonveg": 0.2179,
+        "eta": 0.3333
+      },
+      "ride": {
+        "total": 60,
+        "pickup": 0.3,
+        "budget": 0.4,
+        "wait": 0.0,
+        "schedule": 0.0
+      },
+      "shop": {
+        "budget": 1.0,
+        "total": 19
+      }
+    },
+    "coverage": {
+      "distinct_food_items": 49,
+      "distinct_ride_drops": 31,
+      "distinct_shop_items": 16
+    },
+    "template_redundancy": {
+      "distinct_4gram_prefixes": 184,
+      "prefixes_used_more_than_40_times": {}
+    }
+  },
+  "eval": {
+    "rows": 495,
+    "domains": {
+      "food": {
+        "count": 167,
+        "share": 0.3374
+      },
+      "ride": {
+        "count": 117,
+        "share": 0.2364
+      },
+      "action": {
+        "count": 70,
+        "share": 0.1414
+      },
+      "out_of_scope": {
+        "count": 45,
+        "share": 0.0909
+      },
+      "shop": {
+        "count": 42,
+        "share": 0.0848
+      },
+      "greeting": {
+        "count": 34,
+        "share": 0.0687
+      },
+      "combo": {
+        "count": 20,
+        "share": 0.0404
+      }
+    },
+    "systems": {
+      "prod": {
+        "count": 221,
+        "share": 0.4465
+      },
+      "v6": {
+        "count": 213,
+        "share": 0.4303
+      },
+      "short": {
+        "count": 61,
+        "share": 0.1232
+      }
+    },
+    "primary_priority": {
+      "balanced": {
+        "count": 338,
+        "share": 0.9235
+      },
+      "speed": {
+        "count": 17,
+        "share": 0.0464
+      },
+      "price": {
+        "count": 7,
+        "share": 0.0191
+      },
+      "rating": {
+        "count": 4,
+        "share": 0.0109
+      }
+    },
+    "priority_by_domain": {
+      "ride": {
+        "balanced": {
+          "count": 130,
+          "share": 0.9489
+        },
+        "speed": {
+          "count": 6,
+          "share": 0.0438
+        },
+        "price": {
+          "count": 1,
+          "share": 0.0073
+        }
+      },
+      "food": {
+        "balanced": {
+          "count": 167,
+          "share": 0.893
+        },
+        "speed": {
+          "count": 11,
+          "share": 0.0588
+        },
+        "price": {
+          "count": 5,
+          "share": 0.0267
+        },
+        "rating": {
+          "count": 4,
+          "share": 0.0214
+        }
+      },
+      "shop": {
+        "balanced": {
+          "count": 41,
+          "share": 0.9762
+        },
+        "price": {
+          "count": 1,
+          "share": 0.0238
+        }
+      }
+    },
+    "ride_vehicle": {
+      "cab": {
+        "count": 59,
+        "share": 0.4307
+      },
+      "any": {
+        "count": 33,
+        "share": 0.2409
+      },
+      "auto": {
+        "count": 25,
+        "share": 0.1825
+      },
+      "bike": {
+        "count": 20,
+        "share": 0.146
+      }
+    },
+    "food_dietary": {
+      "veg": {
+        "count": 133,
+        "share": 0.7964
+      },
+      "any": {
+        "count": 34,
+        "share": 0.2036
+      }
+    },
+    "shop_category": {
+      "any": {
+        "count": 33,
+        "share": 0.7857
+      },
+      "fashion": {
+        "count": 5,
+        "share": 0.119
+      },
+      "electronics": {
+        "count": 4,
+        "share": 0.0952
+      }
+    },
+    "action_kinds": {
+      "cart.add": {
+        "count": 55,
+        "share": 0.7857
+      },
+      "cart.remove": {
+        "count": 15,
+        "share": 0.2143
+      }
+    },
+    "field_rates": {
+      "food": {
+        "budget": 0.3054,
+        "total": 167,
+        "dietary_any": 0.2036,
+        "dietary_veg": 0.7964,
+        "dietary_nonveg": 0.0,
+        "eta": 0.0659
+      },
+      "ride": {
+        "total": 117,
+        "pickup": 0.0,
+        "budget": 0.2991,
+        "wait": 0.0,
+        "schedule": 0.0
+      },
+      "shop": {
+        "budget": 0.8095,
+        "total": 42
+      }
+    },
+    "coverage": {
+      "distinct_food_items": 46,
+      "distinct_ride_drops": 32,
+      "distinct_shop_items": 21
+    },
+    "template_redundancy": {
+      "distinct_4gram_prefixes": 436,
+      "prefixes_used_more_than_40_times": {}
+    }
+  },
+  "imbalance_flags": [
+    {
+      "flag": "food_domain_share",
+      "ok": true,
+      "detail": {
+        "count": 1465,
+        "share": 0.3533
+      }
+    },
+    {
+      "flag": "ride_domain_share",
+      "ok": true,
+      "detail": {
+        "count": 1250,
+        "share": 0.3014
+      }
+    },
+    {
+      "flag": "action_domain_share",
+      "ok": true,
+      "detail": {
+        "count": 490,
+        "share": 0.1182
+      }
+    },
+    {
+      "flag": "combo_domain_present",
+      "ok": true,
+      "detail": {
+        "count": 140,
+        "share": 0.0338
+      }
+    },
+    {
+      "flag": "oos_domain_present",
+      "ok": true,
+      "detail": {
+        "count": 295,
+        "share": 0.0711
+      }
+    },
+    {
+      "flag": "greeting_domain_present",
+      "ok": true,
+      "detail": {
+        "count": 118,
+        "share": 0.0285
+      }
+    },
+    {
+      "flag": "short_prompt_share",
+      "ok": true,
+      "detail": {
+        "count": 544,
+        "share": 0.1312
+      }
+    },
+    {
+      "flag": "vehicle_any_share",
+      "ok": true,
+      "detail": {
+        "count": 468,
+        "share": 0.3367
+      }
+    },
+    {
+      "flag": "vehicle_cab_share",
+      "ok": true,
+      "detail": {
+        "count": 442,
+        "share": 0.318
+      }
+    },
+    {
+      "flag": "vehicle_bike_present",
+      "ok": true,
+      "detail": {
+        "count": 180,
+        "share": 0.1295
+      }
+    },
+    {
+      "flag": "dietary_veg_nonveg_ratio",
+      "ok": true,
+      "detail": {
+        "veg": 0.3932,
+        "nonveg": 0.2109
+      }
+    },
+    {
+      "flag": "priority_balanced_share",
+      "ok": true,
+      "detail": {
+        "count": 2440,
+        "share": 0.721
+      }
+    },
+    {
+      "flag": "priority_price_present",
+      "ok": true,
+      "detail": {
+        "count": 284,
+        "share": 0.0839
+      }
+    },
+    {
+      "flag": "priority_rating_present",
+      "ok": true,
+      "detail": {
+        "count": 172,
+        "share": 0.0508
+      }
+    },
+    {
+      "flag": "priority_speed_present",
+      "ok": true,
+      "detail": {
+        "count": 488,
+        "share": 0.1442
+      }
+    },
+    {
+      "flag": "shop_categories_covered",
+      "ok": true,
+      "detail": [
+        "fashion",
+        "any",
+        "electronics",
+        "home",
+        "appliances"
+      ]
+    },
+    {
+      "flag": "all_action_kinds_present",
+      "ok": true,
+      "detail": {
+        "kinds": 18
+      }
+    },
+    {
+      "flag": "template_prefix_redundancy",
+      "ok": true,
+      "detail": {
+        "pick me up from": 42
+      }
+    }
+  ],
+  "holdout_priority_reference": {
+    "balanced": {
+      "count": 177,
+      "share": 0.4784
+    },
+    "speed": {
+      "count": 113,
+      "share": 0.3054
+    },
+    "price": {
+      "count": 53,
+      "share": 0.1432
+    },
+    "rating": {
+      "count": 27,
+      "share": 0.073
+    }
+  }
+}

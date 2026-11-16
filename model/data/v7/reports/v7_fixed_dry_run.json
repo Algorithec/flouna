@@ -1,0 +1,175 @@
+{
+  "generated_at": "2026-11-16T07:32:55+00:00",
+  "config": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/configs/v7_run1_fixed.yaml",
+  "adapter_path": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v7-run1-fixed",
+  "optimizer_steps": 0,
+  "adapter_written": false,
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "data": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/data/v7_fixed/training",
+  "max_seq_length": 1152,
+  "checks": [
+    {
+      "name": "fixed output directory absent",
+      "pass": true,
+      "detail": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v7-run1-fixed"
+    },
+    {
+      "name": "no resume adapter requested",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "max_seq_length is 1152",
+      "pass": true,
+      "detail": 1152
+    },
+    {
+      "name": "LoRA recipe unchanged",
+      "pass": true,
+      "detail": {
+        "rank": 16,
+        "scale": 2.0,
+        "dropout": 0.05,
+        "layers": 16,
+        "batch": 1,
+        "accum": 4,
+        "seed": 11
+      }
+    },
+    {
+      "name": "tokenizer loads",
+      "pass": true,
+      "detail": "Qwen2Tokenizer"
+    },
+    {
+      "name": "train: every row tokenizes and fits",
+      "pass": true,
+      "detail": {
+        "rows": 4147,
+        "max_tokens": 1090,
+        "empty_masks": 0
+      }
+    },
+    {
+      "name": "valid: every row tokenizes and fits",
+      "pass": true,
+      "detail": {
+        "rows": 225,
+        "max_tokens": 1081,
+        "empty_masks": 0
+      }
+    },
+    {
+      "name": "eval: every row tokenizes and fits",
+      "pass": true,
+      "detail": {
+        "rows": 495,
+        "max_tokens": 1083,
+        "empty_masks": 0
+      }
+    },
+    {
+      "name": "training split loads",
+      "pass": true,
+      "detail": 4147
+    },
+    {
+      "name": "validation split loads",
+      "pass": true,
+      "detail": 225
+    },
+    {
+      "name": "no test split configured",
+      "pass": true,
+      "detail": 0
+    },
+    {
+      "name": "first training batch built",
+      "pass": true,
+      "detail": {
+        "shape": [
+          1,
+          417
+        ],
+        "loss_mask_tokens": [
+          76
+        ]
+      }
+    },
+    {
+      "name": "first validation batch built",
+      "pass": true,
+      "detail": {
+        "shape": [
+          1,
+          993
+        ],
+        "loss_mask_tokens": [
+          29
+        ]
+      }
+    },
+    {
+      "name": "first batches have non-empty loss masks",
+      "pass": true,
+      "detail": {
+        "train": [
+          76
+        ],
+        "valid": [
+          29
+        ]
+      }
+    },
+    {
+      "name": "base model loads",
+      "pass": true,
+      "detail": "Qwen/Qwen2.5-1.5B-Instruct"
+    },
+    {
+      "name": "LoRA configuration applies",
+      "pass": true,
+      "detail": {
+        "trainable": 10551296,
+        "total": 1543714304,
+        "percent": 0.684,
+        "layers": 16
+      }
+    },
+    {
+      "name": "forward loss finite on first training batch",
+      "pass": true,
+      "detail": {
+        "loss": 2.10264,
+        "tokens": 77
+      }
+    },
+    {
+      "name": "forward loss finite on first validation batch",
+      "pass": true,
+      "detail": {
+        "loss": 2.47592,
+        "tokens": 30
+      }
+    },
+    {
+      "name": "adapter directory still absent after preflight",
+      "pass": true,
+      "detail": "/Users/theaditronik/Desktop/Flouna engine/flouna/model/flouna-lora-v7-run1-fixed"
+    }
+  ],
+  "pass": true,
+  "forward": {
+    "train_loss": 2.10264,
+    "valid_loss": 2.47592,
+    "train_tokens": 77,
+    "valid_tokens": 30,
+    "seconds": 3.144
+  },
+  "lora": {
+    "trainable_params": 10551296,
+    "total_params": 1543714304,
+    "percent": 0.684
+  },
+  "elapsed_seconds": 18.66
+}

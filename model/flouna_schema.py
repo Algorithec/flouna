@@ -4,11 +4,50 @@ from __future__ import annotations
 import json
 import re
 
-DOMAINS = ("food", "ride", "shop", "combo", "greeting", "out_of_scope")
+DOMAINS = ("food", "ride", "shop", "combo", "action", "greeting", "out_of_scope")
 PRIORITIES = ("price", "rating", "speed", "balanced")
 DIETARY = ("veg", "nonveg", "any")
 VEHICLES = ("bike", "auto", "cab", "any")
 CATEGORIES = ("electronics", "fashion", "home", "appliances", "any")
+
+# Mirrors MODEL_ACTION_KINDS in server/src/modules/agent/fromModel.ts. The
+# model may name an action but never invent one, so this list is closed.
+ACTION_KINDS = (
+    "cart.add", "cart.remove", "cart.set_qty", "cart.show", "cart.clear",
+    "checkout", "group.create", "group.show", "select", "ride.book",
+    "ride.group", "ride.group_mode", "settings.toggle", "settings.visibility",
+    "settings.budget", "settings.language", "settings.theme", "navigate",
+)
+ACTION_TOGGLES = (
+    "emailUpdates", "smartSuggestions", "emailMoneyUpdates", "emailTips",
+    "shareLocation", "activityStatus",
+)
+ACTION_LANGS = ("en", "hi", "mr", "kn", "ta", "te")
+ACTION_VISIBILITY = ("everyone", "contacts", "nobody")
+ACTION_SCREENS = ("cart", "orders", "settings", "security", "profile", "groups", "help", "rewards")
+ACTION_THEMES = ("light", "dark")
+ACTION_GROUP_MODES = ("shared", "mine")
+
+ACTION_FIELDS = {
+    "kind": str,
+    "targetBy": str,
+    "targetPosition": int,
+    "targetName": str,
+    "qty": int,
+    "members": int,
+    "withMyItems": bool,
+    "pick": str,
+    "setting": str,
+    "on": bool,
+    "value": str,
+    "weeklyRupees": int,
+}
+ACTION_ENUMS = {
+    "kind": ACTION_KINDS,
+    "targetBy": ("last", "position", "name", "none"),
+    "pick": ("cheapest", "fastest", "none"),
+    "setting": ACTION_TOGGLES + ("none",),
+}
 
 ENUM_FIELDS = {
     "domain": DOMAINS,
@@ -43,7 +82,7 @@ SHOP_FIELDS = {
 
 SCHEDULE_RE = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
 
-ROOT_ALLOWED = {"domain", "reply", "food", "ride", "shop"}
+ROOT_ALLOWED = {"domain", "reply", "food", "ride", "shop", "action"}
 PART_FIELDS = {"food": FOOD_FIELDS, "ride": RIDE_FIELDS, "shop": SHOP_FIELDS}
 FLAT_KEYS = {
     "item", "budgetPaise", "maxEtaMinutes", "maxPickupMinutes", "dietary",
@@ -65,6 +104,133 @@ def _type_ok(value, expected) -> bool:
 
 def _number_ok(value) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0
+
+
+def _validate_action_schema(body: dict, errors: list[str]) -> None:
+    """Schema-level checks only: the shape the production JSON_SCHEMA allows."""
+    unknown = set(body) - set(ACTION_FIELDS)
+    if unknown:
+        errors.append(f"action has unexpected keys: {sorted(unknown)}")
+    missing = set(ACTION_FIELDS) - set(body)
+    if missing:
+        errors.append(f"action missing keys: {sorted(missing)}")
+    for key, expected in ACTION_FIELDS.items():
+        if key not in body:
+            continue
+        value = body[key]
+        if expected is bool:
+            if not isinstance(value, bool):
+                errors.append(f"action.{key} must be a boolean")
+        elif expected is int:
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                errors.append(f"action.{key} must be a non-negative integer")
+        elif not isinstance(value, str):
+            errors.append(f"action.{key} must be a string")
+    for key, allowed in ACTION_ENUMS.items():
+        if key in body and body[key] not in allowed:
+            errors.append(f"action.{key} {body[key]!r} not in {allowed}")
+    if isinstance(body.get("targetName"), str) and len(body["targetName"]) > 80:
+        errors.append("action.targetName is longer than 80 characters")
+    if isinstance(body.get("value"), str) and len(body["value"]) > 40:
+        errors.append("action.value is longer than 40 characters")
+
+
+TARGET_KINDS = {"cart.add", "cart.remove", "cart.set_qty"}
+QTY_KINDS = {"cart.add", "cart.set_qty"}
+MEMBER_KINDS = {"group.create", "ride.group"}
+VALUE_KINDS = {"settings.visibility", "settings.language", "settings.theme",
+               "navigate", "ride.group_mode"}
+
+
+def validate_action_semantics(body: dict) -> list[str]:
+    """Stricter than the server schema: every field carries what its kind means.
+
+    Used to bless training labels, not model answers. It rejects the flat
+    defaults that the production schema tolerates but that would teach the
+    model to leave, say, a cart quantity at zero.
+    """
+    errors: list[str] = []
+    if not isinstance(body, dict):
+        return ["action is not an object"]
+    _validate_action_schema(body, errors)
+    if errors:
+        return errors
+    kind = body["kind"]
+    target = body["targetBy"]
+    for field, default in (
+        ("targetBy", "none"), ("targetPosition", 0), ("targetName", ""),
+        ("qty", 0), ("members", 0), ("withMyItems", False), ("pick", "none"),
+        ("setting", "none"), ("on", False), ("value", ""), ("weeklyRupees", 0),
+    ):
+        if field not in body:
+            errors.append(f"action.{field} missing")
+    if target not in ("none",) and kind not in TARGET_KINDS and kind != "select":
+        errors.append(f"{kind} does not use targetBy")
+    if kind in TARGET_KINDS:
+        if target == "none":
+            errors.append(f"{kind} needs a target")
+        elif target == "position":
+            if body["targetPosition"] < 1:
+                errors.append(f"{kind} targetPosition is 1-based")
+            if body["targetName"]:
+                errors.append(f"{kind} cannot use targetName with position")
+        elif target == "name":
+            if not body["targetName"]:
+                errors.append(f"{kind} needs targetName")
+            if body["targetPosition"] != 0:
+                errors.append(f"{kind} cannot use targetPosition with name")
+        elif body["targetPosition"] != 0 or body["targetName"]:
+            errors.append(f"{kind} cannot use position or name with last")
+    elif kind == "select":
+        if target == "position":
+            if body["targetPosition"] < 1:
+                errors.append("select targetPosition is 1-based")
+            if body["pick"] != "none":
+                errors.append("select uses either a position or pick, not both")
+        elif target == "none":
+            if body["pick"] not in ("cheapest", "fastest"):
+                errors.append("select needs a position or cheapest/fastest")
+        else:
+            errors.append("select targetBy is position or none")
+    elif target != "none" or body["targetPosition"] or body["targetName"]:
+        errors.append(f"{kind} does not use a target")
+
+    if body["qty"] and kind not in QTY_KINDS:
+        errors.append(f"{kind} does not use qty")
+    if kind in QTY_KINDS and body["qty"] < 1:
+        errors.append(f"{kind} needs qty >= 1")
+    if body["members"] and kind not in MEMBER_KINDS:
+        errors.append(f"{kind} does not use members")
+    if kind == "group.create" and body["members"] < 2:
+        errors.append("group.create needs at least 2 members")
+    if kind == "ride.group" and not (2 <= body["members"] <= 10):
+        errors.append("ride.group members must be 2..10")
+    if body["withMyItems"] and kind != "group.create":
+        errors.append(f"{kind} does not use withMyItems")
+    if body["pick"] != "none" and kind != "select":
+        errors.append(f"{kind} does not use pick")
+    if body["setting"] != "none" and kind != "settings.toggle":
+        errors.append(f"{kind} does not use setting")
+    if kind == "settings.toggle" and body["setting"] == "none":
+        errors.append("settings.toggle needs a setting")
+    if body["value"] and kind not in VALUE_KINDS:
+        errors.append(f"{kind} does not use value")
+    if body["weeklyRupees"] and kind != "settings.budget":
+        errors.append(f"{kind} does not use weeklyRupees")
+
+    if kind == "settings.visibility" and body["value"] not in ACTION_VISIBILITY:
+        errors.append(f"settings.visibility value must be one of {ACTION_VISIBILITY}")
+    if kind == "settings.language" and body["value"] not in ACTION_LANGS:
+        errors.append(f"settings.language value must be one of {ACTION_LANGS}")
+    if kind == "settings.theme" and body["value"] not in ACTION_THEMES:
+        errors.append(f"settings.theme value must be one of {ACTION_THEMES}")
+    if kind == "navigate" and body["value"] not in ACTION_SCREENS:
+        errors.append(f"navigate value must be one of {ACTION_SCREENS}")
+    if kind == "ride.group_mode" and body["value"] not in ACTION_GROUP_MODES:
+        errors.append(f"ride.group_mode value must be one of {ACTION_GROUP_MODES}")
+    if kind == "settings.budget" and body["weeklyRupees"] != 0 and not (100 <= body["weeklyRupees"] <= 100000):
+        errors.append("settings.budget weeklyRupees is 0 or 100..100000")
+    return errors
 
 
 def validate_intent(obj: object, require_part: bool = True) -> list[str]:
@@ -97,6 +263,15 @@ def validate_intent(obj: object, require_part: bool = True) -> list[str]:
             errors.append("combo food object missing")
         if not isinstance(obj.get("ride"), dict):
             errors.append("combo ride object missing")
+    if require_part and domain == "action" and not isinstance(obj.get("action"), dict):
+        errors.append("action object missing")
+    if "action" in obj and domain != "action":
+        errors.append("action object present outside the action domain")
+
+    if isinstance(obj.get("action"), dict):
+        _validate_action_schema(obj["action"], errors)
+    elif "action" in obj and not isinstance(obj.get("action"), dict):
+        errors.append("action must be an object")
 
     for part, fields in PART_FIELDS.items():
         value = obj.get(part)
@@ -155,8 +330,14 @@ def _norm(value) -> str:
     return re.sub(r"\s+", " ", str(value)).strip().lower()
 
 
+EXACT_STRING_FIELDS = {
+    "domain", "priority", "dietary", "vehicle", "category", "scheduleAt",
+    "kind", "targetBy", "pick", "setting", "value",
+}
+
+
 def _string_match(want: str, got: str, field: str) -> bool:
-    if field in ENUM_FIELDS or field == "scheduleAt":
+    if field in ENUM_FIELDS or field in EXACT_STRING_FIELDS:
         return _norm(want) == _norm(got)
     return _norm(want) in _norm(got) or _norm(got) in _norm(want)
 
@@ -222,7 +403,11 @@ MONEY_RE = re.compile(
     re.I,
 )
 ETA_RE = re.compile(r"\d+\s*(?:minutes?|mins?|min\b)|half an hour", re.I)
-WAIT_RE = re.compile(r"\b(?:pickup|pick me up|come within|wait|reach me|driver|aao)\b", re.I)
+WAIT_RE = re.compile(
+    r"\b(?:pickup|pick\b|pick me up|come within|wait|reach me|driver|aao)\b[^.]{0,40}?\d{1,3}\s*(?:minutes?|mins?|min\b)"
+    r"|\b\d{1,3}\s*(?:minutes?|mins?|min\b)\b[^.]{0,25}?\b(?:pickup|pick\b|wait|driver|aao)\b",
+    re.I,
+)
 # "arrive in 30 minutes" is a trip deadline, not a pickup wait.
 TRIP_RE = re.compile(r"\b(?:arrive|reach)\b[^.]{0,30}\d+\s*(?:minutes?|mins?|min\b)", re.I)
 SCHEDULE_TEXT_RE = re.compile(

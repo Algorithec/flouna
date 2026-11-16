@@ -1,0 +1,993 @@
+{
+  "generated_at": "2026-11-16T06:29:21+00:00",
+  "source": {
+    "path": "train_mlx_v6.jsonl",
+    "sha256": "3b8a991102b1aab0f5ce075b6ad23690773d7a625c5e6104d267da392f5d3fde",
+    "bytes": 47518874
+  },
+  "holdout": {
+    "path": "eval_mlx_v5.jsonl",
+    "sha256": "f412d8fc2d53372ce5e43846f26ad7082f8526be022204f2b3f03efca10e603a",
+    "rows": 382
+  },
+  "counts": {
+    "rows": 11418,
+    "parsed_rows": 11418,
+    "valid_rows": 11418,
+    "schema_or_semantics_invalid": 0,
+    "rows_with_label_conflicts": 0,
+    "unique_normalized_texts": 11418,
+    "exact_duplicate_extra_rows": 0,
+    "duplicate_text_groups": 0,
+    "contradictory_text_groups": 0,
+    "near_duplicate_pairs_0.9": 1,
+    "near_duplicate_pairs_0.8": 9
+  },
+  "system_prompts": {
+    "len3555": 1
+  },
+  "invalid_json": [],
+  "structure_errors": [],
+  "schema_errors": [],
+  "schema_error_count": 0,
+  "action_semantics_errors": [],
+  "action_semantics_error_count": 0,
+  "label_conflicts": [],
+  "label_conflict_count": 0,
+  "ambiguous": [],
+  "ambiguous_count": 0,
+  "unjustifiable": [],
+  "unjustifiable_count": 0,
+  "contradictions": [],
+  "contradiction_families": {},
+  "duplicate_examples": [],
+  "holdout_leakage": {
+    "exact": [],
+    "exact_count": 0,
+    "near_0.8": [],
+    "near_0.8_count": 0
+  },
+  "fixture_leakage_count": 0,
+  "semantic_issues": {
+    "priority_balanced_with_cue": [
+      {
+        "line": 81,
+        "text": "Need good value dahi puri right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 276,
+        "text": "bike to office, arrive in 3 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 878,
+        "text": "taxi to airport, arrive in 15 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 880,
+        "text": "auto to university, arrive in 5 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 1263,
+        "text": "need good value something hot right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 1290,
+        "text": "NEED GOOD VALUE CAKE RIGHT NOW",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 1349,
+        "text": "bike to the market, arrive in 15 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 1463,
+        "text": "need some butter chicken right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 1509,
+        "text": "MOTO TO UNIVERSITY, ARRIVE IN 7 MIN",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 1681,
+        "text": "BIKE TAXI TO BUS STAND, ARRIVE IN 3 MIN",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 1706,
+        "text": "Cab to teh mall, arrive in 7 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 1915,
+        "text": "need good value milkshake right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 2149,
+        "text": "Taxi to home, arrive in 10 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 2180,
+        "text": "Need decent rasam right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 2377,
+        "text": "Need decent uttapam right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 2539,
+        "text": "moto to electronic city, arrive in 7 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 2748,
+        "text": "need accha manchurian right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 2960,
+        "text": "need decent sandwich right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 3181,
+        "text": "taxi to my hotel, arrive in 3 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 3200,
+        "text": "car to indiranagar, arrive in 10 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 3246,
+        "text": "moto to MG Road, arrive in 5 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 3633,
+        "text": "TAXI TO MG ROAD, ARRIVE IN 15 MIN",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 3808,
+        "text": "Auto to my hotel, arrive in 7 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 3897,
+        "text": "Need accha gulab jamun right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 4080,
+        "text": "bike taxi to MG Road, arrive in 5 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 4297,
+        "text": "moto to hinjewadi, arrive in 3 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 4389,
+        "text": "taxi to my hotel, arrive in 15 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 4435,
+        "text": "bike to MG Road, arrive in 10 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 4827,
+        "text": "taxi to kothrud, arrive in 5 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5093,
+        "text": "Bike taxi to hinjewadi, arrive in 10 min",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5487,
+        "text": "I need something healthy right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5488,
+        "text": "I NEED SOMETHING SPICY RIGHT NOW",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5489,
+        "text": "I need momos right now",
+        "domain": "food",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5871,
+        "text": "cab to Somajiguda, I need to arrive in 20 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5872,
+        "text": "how long to reach Somajiguda, I must be there in 20 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5873,
+        "text": "cab to Secunderabad, I need to arrive in 30 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5874,
+        "text": "how long to reach Secunderabad, I must be there in 30 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5875,
+        "text": "cab to Charminar, I need to arrive in 20 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5876,
+        "text": "how long to reach Charminar, I must be there in 20 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5877,
+        "text": "cab to Kothapet, I need to arrive in 45 minutes!",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5878,
+        "text": "how long to reach Kothapet, I must be there in 45 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5879,
+        "text": "CAB TO JUBILEE HILLS, I NEED TO ARRIVE IN 20 MINUTES",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5880,
+        "text": "how long to reach Jubilee Hills, I must be there in 20 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5881,
+        "text": "CAB TO KORAMANGALA, I NEED TO ARRIVE IN 20 MINUTES?",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5882,
+        "text": "how long to reach Koramangala, I must be there in 20 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5883,
+        "text": "cab to home, I need to arrive in 45 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5884,
+        "text": "how long to reach home, I must be there in 45 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5885,
+        "text": "Cab to attapur, i need to arrive in 25 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5886,
+        "text": "how long to reach Attapur, I must be there in 25 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5887,
+        "text": "cab to mg road, i need to arrive in 35 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5888,
+        "text": "how long to reach MG Road, I must be there in 35 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5889,
+        "text": "cab to Mehdipatnam, I need to arrive in 35 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5890,
+        "text": "how long to reach Mehdipatnam, I must be there in 35 minutes!",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5891,
+        "text": "cab to Panjagutta, I need to arrive in 20 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5892,
+        "text": "how long to reach panjagutta, i must be there in 20 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5893,
+        "text": "cab to Madhapur, I need to arrive in 30 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5894,
+        "text": "how long to reach Madhapur, I must be there in 30 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5895,
+        "text": "cab to Abids, I need to arrive in 45 minutes?",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5896,
+        "text": "how long to reach Abids, I must be there in 45 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      },
+      {
+        "line": 5897,
+        "text": "cab to the mall, I need to arrive in 25 minutes",
+        "domain": "ride",
+        "detail": "priority=balanced but text has a priority cue"
+      }
+    ],
+    "generic_food_item": [
+      {
+        "line": 5262,
+        "text": "cheap food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5295,
+        "text": "budget-friendly food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5347,
+        "text": "TAKKUVA RATE FOOD",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5358,
+        "text": "economical food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5546,
+        "text": "badhiya food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5553,
+        "text": "manchi food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5570,
+        "text": "Which food is top rated",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5635,
+        "text": "non-veg food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5660,
+        "text": "I want nonveg food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5696,
+        "text": "show me non vegetarian food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5697,
+        "text": "find non vegetarian food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5698,
+        "text": "show me non-veg options",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5699,
+        "text": "I ONLY EAT NON VEGETARIAN FOOD",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5700,
+        "text": "I want nonvegetarian food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5701,
+        "text": "Get me something non veg",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5702,
+        "text": "I only eat veg",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5703,
+        "text": "Show me vegetarian options",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5704,
+        "text": "no meat please",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5705,
+        "text": "i want vegetarian food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5706,
+        "text": "Give me something veg",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5707,
+        "text": "I am a vegetarian",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5708,
+        "text": "I don't eat meat!",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5709,
+        "text": "I don't eat non veg",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5710,
+        "text": "veg only",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5843,
+        "text": "FOOD BUDGET 500",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5844,
+        "text": "order food under 500",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5845,
+        "text": "Food under ₹500",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5846,
+        "text": "GET ME FOOD FOR 500 RUPEES.",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 5933,
+        "text": "hey, I'm hungry",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 6033,
+        "text": "food under ₹500 chahiye",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 6459,
+        "text": "I feel like having ASAP food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 6590,
+        "text": "Tondaraga non vegetarian food within 35 minutes chahiye",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 6764,
+        "text": "Get me food budget of ₹100 and deliver it in under 60 minutes",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 6865,
+        "text": "food delivered in 40 min chahiye",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 6877,
+        "text": "mujhe lowest price non veg food 350 rupaye mein chahiye",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7036,
+        "text": "non vegetarian food 200 lopala, delivered in 25 min",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7080,
+        "text": "I want food within 15 minutes",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7261,
+        "text": "We have guests coming over in a while, so I need jain food. My budget is under 100 rupees and I want it in under 20 minutes. With the fastest delivery",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7358,
+        "text": "order top rated food max ₹400",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7437,
+        "text": "I feel like having veg food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7579,
+        "text": "cheapest food chahiye",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7813,
+        "text": "veggie food within 40 mins chahiye",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7886,
+        "text": "GET ME FOOD",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 7895,
+        "text": "WE HAVE GUESTS COMING OVER IN A WHILE, SO I NEED FOOD. MY BUDGET IS BELOW ₹300 AND I WANT IT DELIVERED IN 20 MIN. NO SPECIAL PREFERENCE",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 8282,
+        "text": "I want food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 8384,
+        "text": "food budget of ₹300",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 8385,
+        "text": "Craving low-cost food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 10829,
+        "text": "I want cheapest food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11026,
+        "text": "show me non veg food",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11027,
+        "text": "non vegetarian options",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11028,
+        "text": "give me something pure veg",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11029,
+        "text": "NON VEG OPTIONS",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11030,
+        "text": "Vegetarian only please",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11031,
+        "text": "non-veg only please",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11032,
+        "text": "veggie only please",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11033,
+        "text": "give me something jain",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11034,
+        "text": "give me something non vegetarian",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11035,
+        "text": "i want non vegetarian options",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11036,
+        "text": "give me something veggie",
+        "domain": "food",
+        "detail": "item='food'"
+      },
+      {
+        "line": 11037,
+        "text": "jain only please",
+        "domain": "food",
+        "detail": "item='food'"
+      }
+    ],
+    "priority_speed_without_cue": [
+      {
+        "line": 10301,
+        "text": "I need taxi from Shamshabad to Kondapur, 250 lopala and I can wait no more than 4 minutes for pickup",
+        "domain": "ride",
+        "detail": "priority=speed but no speed words"
+      },
+      {
+        "line": 10408,
+        "text": "Uppal ke liye taxi book karo, 15 minutes lopala pick cheyandi",
+        "domain": "ride",
+        "detail": "priority=speed but no speed words"
+      },
+      {
+        "line": 10456,
+        "text": "I need a motorbike to madhapur, i can wait no more than 4 minutes for pickup",
+        "domain": "ride",
+        "detail": "priority=speed but no speed words"
+      },
+      {
+        "line": 11058,
+        "text": "I don't want a long wait",
+        "domain": "food",
+        "detail": "priority=speed but no speed words"
+      },
+      {
+        "line": 11059,
+        "text": "no waiting please",
+        "domain": "food",
+        "detail": "priority=speed but no speed words"
+      }
+    ],
+    "oos_greeting_short": [
+      {
+        "line": 11415,
+        "text": "okay",
+        "domain": "out_of_scope",
+        "detail": "short greeting-like text labelled out_of_scope"
+      }
+    ]
+  },
+  "semantic_issue_counts": {
+    "priority_balanced_with_cue": 425,
+    "generic_food_item": 75,
+    "priority_speed_without_cue": 5,
+    "oos_greeting_short": 1
+  },
+  "semantic_issue_rows": 503,
+  "template_redundancy": {
+    "top_first_three_tokens": [
+      [
+        "get me a",
+        265
+      ],
+      [
+        "i feel like",
+        135
+      ],
+      [
+        "i m ordering",
+        108
+      ],
+      [
+        "dinner for the",
+        106
+      ],
+      [
+        "could you find",
+        102
+      ],
+      [
+        "we have guests",
+        102
+      ],
+      [
+        "which app for",
+        91
+      ],
+      [
+        "book a ride",
+        81
+      ],
+      [
+        "need a ride",
+        78
+      ],
+      [
+        "i want to",
+        69
+      ],
+      [
+        "book a cab",
+        63
+      ],
+      [
+        "need a cab",
+        61
+      ],
+      [
+        "book a taxi",
+        58
+      ],
+      [
+        "book a bike",
+        53
+      ],
+      [
+        "book an auto",
+        48
+      ]
+    ],
+    "texts_in_templates_over_40": 1720
+  },
+  "priority_policy": "no-preference phrase > rating word > speed word > price word > deadline > balanced",
+  "priority_policy_mismatches": {
+    "count": 163,
+    "breakdown": {
+      "ride:speed->balanced": 86,
+      "food:balanced->price": 20,
+      "food:balanced->speed": 13,
+      "food:speed->price": 11,
+      "ride:balanced->price": 11,
+      "food:price->speed": 8,
+      "shop:balanced->price": 8,
+      "ride:speed->price": 2,
+      "ride:price->speed": 2,
+      "food:speed->balanced": 2
+    }
+  },
+  "multi_cue_rows": {
+    "count": 1098,
+    "breakdown": {
+      "deadline+price": 324,
+      "deadline+speed": 281,
+      "deadline+rating": 155,
+      "deadline+no_pref": 151,
+      "deadline+no_pref+price": 72,
+      "price+speed": 48,
+      "rating+speed": 25,
+      "deadline+price+rating": 18,
+      "deadline+price+speed": 15,
+      "price+rating": 8,
+      "price+rating+speed": 1
+    }
+  },
+  "coverage_gaps": {
+    "bare_generic_food_entities": {
+      "count": 4,
+      "labels": {
+        "thali->food": 1,
+        "sandwich->food": 1,
+        "pasta->food": 1,
+        "pizza->food": 1
+      }
+    },
+    "ceiling_phrase_rows": 0,
+    "action_rows": 193,
+    "greeting_rows": 40,
+    "oos_rows": 105,
+    "vehicle_any": 1068,
+    "vehicle_cab": 1431,
+    "system_prompt_variants": 1
+  },
+  "distributions": {
+    "domains": {
+      "food": 4905,
+      "ride": 4284,
+      "shop": 1321,
+      "combo": 570,
+      "action": 193,
+      "out_of_scope": 105,
+      "greeting": 40
+    },
+    "priorities": {
+      "balanced": 5340,
+      "speed": 2813,
+      "price": 1698,
+      "rating": 1229
+    },
+    "dietary": {
+      "veg": 2044,
+      "any": 1830,
+      "nonveg": 1031
+    },
+    "vehicles": {
+      "cab": 1431,
+      "any": 1068,
+      "auto": 1062,
+      "bike": 723
+    },
+    "categories": {
+      "home": 354,
+      "appliances": 336,
+      "electronics": 319,
+      "fashion": 312
+    },
+    "action_kinds": {
+      "cart.add": 38,
+      "navigate": 24,
+      "settings.toggle": 22,
+      "settings.budget": 16,
+      "ride.group": 13,
+      "group.create": 12,
+      "select": 10,
+      "settings.language": 10,
+      "cart.set_qty": 7,
+      "cart.remove": 6,
+      "cart.show": 6,
+      "ride.book": 5,
+      "ride.group_mode": 5,
+      "settings.visibility": 5,
+      "checkout": 4,
+      "settings.theme": 4,
+      "cart.clear": 3,
+      "group.show": 3
+    }
+  }
+}
